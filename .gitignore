@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# next.js
+.next/
+out/
+build/
+next-env.d.ts
+
+# production / data
+/data/
+*.db
+*.db-wal
+*.db-shm
+
+# env
+.env
+.env.*
+!.env.example
+
+# misc
+.DS_Store
+*.log
+coverage/
+playwright-report/
+test-results/
