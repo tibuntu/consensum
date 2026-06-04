@@ -324,6 +324,8 @@ git commit -m "feat: add Prisma/SQLite persistence and better-auth backend"
 
 **Verify:** `pnpm test:unit -- tests/unit/schema.test.ts` → passes.
 
+> ⚠️ **Correction (SQLite):** Prisma does **not** support `enum` blocks on SQLite. Replace every enum with a `String` column (keep the `@default("…")`) and define the allowed value-sets + union types in a new `lib/enums.ts` (const arrays + TS unions, enforced in app code/Zod). Field types become: `Document.state String @default("DRAFT")`, `Document.source String @default("WEB")`, `Annotation.kind String @default("COMMENT")`, `Annotation.status String @default("ACTIVE")`, `Annotation.threadStatus String @default("OPEN")`, `Review.verdict String`. Relations/indexes are otherwise as written below. Add `lib/enums.ts` to the Files list. The implementer prompt carries the corrected schema verbatim.
+
 **Steps:**
 
 - [ ] **Step 1: Append domain models to `prisma/schema.prisma`**
@@ -778,4 +780,7 @@ Expected: `1 passed`.
 - **Type/name consistency:** `prisma` client singleton name, `auth` export, `getSession()`, `signIn/signUp/signOut` client exports, `data-testid="current-user"`, and the `/app` protected path are used consistently across tasks. Domain field names match the spec's data model.
 
 ## Notes for the next plan (Review core)
-The re-anchoring algorithm and feedback consolidation are **pure functions** — ideal TDD targets — and should be Task 1 of the Review-core plan (`lib/anchoring.ts`, `lib/feedback.ts`) before any API/UI work.
+- The re-anchoring algorithm and feedback consolidation are **pure functions** — ideal TDD targets — and should be Task 1 of the Review-core plan (`lib/anchoring.ts`, `lib/feedback.ts`) before any API/UI work.
+- **Harden version references:** `Annotation.createdOnVersionId` and `Review.onVersionId` are currently bare `String`s (no FK). Safe under Foundation's delete topology (versions only die transitively with their Document, which cascades annotations/reviews), but convert them to proper relations to `DocumentVersion` (with explicit `onDelete`) **once independent version operations are introduced**, to avoid silent orphans. Also add indexes on author/reviewer FK columns (`Annotation.authorId`, `Comment.authorId`, `Review.reviewerId`, `DocumentVersion.createdById`).
+- **Component unit tests:** Foundation's Vitest is `node` env with no React/JSX transform (Task 3 verifies UI via Playwright e2e instead). When component unit tests are wanted, add `@vitejs/plugin-react` + `jsdom` + `@testing-library/react`.
+- **Prisma 7 migrate:** `prisma migrate dev` may need a PTY locally; the Docker path uses non-interactive `prisma migrate deploy` on container start (fine). `better-sqlite3` is a native addon — the Docker build stage needs a build toolchain and arch-matched output (`output: standalone` copies the `.node` binary).
