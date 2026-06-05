@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import type { Quote } from "@/lib/anchoring";
 import type { AnnotationKind, ThreadStatus } from "@/lib/enums";
+import { publish } from "@/lib/events";
 
 export async function createAnnotation(
   userId: string,
@@ -10,7 +11,7 @@ export async function createAnnotation(
 ) {
   const doc = await prisma.document.findUnique({ where: { id: documentId }, select: { currentVersionId: true } });
   if (!doc?.currentVersionId) throw new Error("document has no current version");
-  return prisma.annotation.create({
+  const annotation = await prisma.annotation.create({
     data: {
       documentId,
       createdOnVersionId: doc.currentVersionId,
@@ -23,14 +24,24 @@ export async function createAnnotation(
       authorId: userId,
       comments: { create: { authorId: userId, body } },
     },
-    include: { comments: true },
+    include: { comments: { include: { author: { select: { name: true, email: true } } } }, author: { select: { name: true, email: true } } },
   });
+  publish(documentId, { type: "annotation.created", annotation });
+  return annotation;
 }
 
 export async function addComment(userId: string, annotationId: string, body: string) {
-  return prisma.comment.create({ data: { annotationId, authorId: userId, body } });
+  const comment = await prisma.comment.create({
+    data: { annotationId, authorId: userId, body },
+    include: { author: { select: { name: true, email: true } } },
+  });
+  const ann = await prisma.annotation.findUnique({ where: { id: annotationId }, select: { documentId: true } });
+  if (ann) publish(ann.documentId, { type: "comment.created", annotationId, comment });
+  return comment;
 }
 
 export async function setThreadStatus(annotationId: string, status: ThreadStatus) {
-  return prisma.annotation.update({ where: { id: annotationId }, data: { threadStatus: status } });
+  const annotation = await prisma.annotation.update({ where: { id: annotationId }, data: { threadStatus: status } });
+  publish(annotation.documentId, { type: "annotation.updated", annotationId, threadStatus: status });
+  return annotation;
 }
