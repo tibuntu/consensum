@@ -139,7 +139,7 @@ export default function DocumentView({ doc }: { doc: ClientDocument }) {
         status: annotation.status ?? "ACTIVE",
         comments: (annotation.comments ?? []).map((c: ClientComment) => ({ id: c.id, body: c.body, author: c.author })),
       };
-      setAnnotations((prev) => [...prev, created]);
+      setAnnotations((prev) => (prev.some((x) => x.id === created.id) ? prev : [...prev, created]));
       setSelection(null);
       setPendingBody("");
       setFocusedId(created.id);
@@ -172,7 +172,7 @@ export default function DocumentView({ doc }: { doc: ClientDocument }) {
       es.onmessage = (ev) => {
         const e = JSON.parse(ev.data);
         if (e.type === "comment.created") {
-          setAnnotations((prev) => prev.map((a) => a.id === e.annotationId ? { ...a, comments: [...a.comments, { id: e.comment.id, body: e.comment.body, author: e.comment.author }] } : a));
+          setAnnotations((prev) => prev.map((a) => a.id === e.annotationId && !a.comments.some((c) => c.id === e.comment.id) ? { ...a, comments: [...a.comments, { id: e.comment.id, body: e.comment.body, author: e.comment.author }] } : a));
         } else if (e.type === "annotation.created") {
           const a = e.annotation;
           setAnnotations((prev) => prev.some((x) => x.id === a.id) ? prev : [...prev, {
@@ -226,7 +226,9 @@ export default function DocumentView({ doc }: { doc: ClientDocument }) {
       const { comment } = await res.json();
       setAnnotations((prev) =>
         prev.map((a) =>
-          a.id === annotationId ? { ...a, comments: [...a.comments, { id: comment.id, body: comment.body, author: comment.author }] } : a
+          a.id === annotationId && !a.comments.some((c) => c.id === comment.id)
+            ? { ...a, comments: [...a.comments, { id: comment.id, body: comment.body, author: comment.author }] }
+            : a
         )
       );
     }
