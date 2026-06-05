@@ -1,9 +1,15 @@
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
+import type { DocumentSource } from "@/lib/enums";
 
-export async function createDocument(userId: string, title: string, markdown: string) {
+export async function createDocument(
+  userId: string,
+  title: string,
+  markdown: string,
+  opts?: { source?: DocumentSource; agentContext?: string }
+) {
   const doc = await prisma.document.create({
-    data: { title, ownerId: userId, state: "OPEN", source: "WEB" },
+    data: { title, ownerId: userId, state: "OPEN", source: opts?.source ?? "WEB", agentContext: opts?.agentContext ?? null },
   });
   const version = await prisma.documentVersion.create({
     data: {
