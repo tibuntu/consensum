@@ -2,6 +2,7 @@ export interface HighlightRange {
   id: string;
   start: number;
   end: number;
+  status?: string; // "ACTIVE" | "MOVED"
 }
 
 /**
@@ -42,8 +43,11 @@ function wrapRange(container: HTMLElement, range: HighlightRange): void {
       domRange.setStart(node, localStart);
       domRange.setEnd(node, localEnd);
       const mark = document.createElement("mark");
-      mark.className = "bg-yellow-200 cursor-pointer";
+      const moved = range.status === "MOVED";
+      mark.className = `${moved ? "bg-orange-200" : "bg-yellow-200"} cursor-pointer`;
       mark.setAttribute("data-annotation-id", range.id);
+      mark.setAttribute("data-status", range.status ?? "ACTIVE");
+      if (moved) mark.title = "This comment moved when the document was edited.";
       try {
         domRange.surroundContents(mark);
       } catch {

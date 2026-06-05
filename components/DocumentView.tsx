@@ -2,7 +2,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { buildQuote, locate, type Quote } from "@/lib/anchoring";
+import { buildQuote, relocate, type Quote } from "@/lib/anchoring";
 import { applyHighlights, type HighlightRange } from "@/lib/highlight";
 import CommentSidebar from "@/components/CommentSidebar";
 import DocumentEditor from "@/components/DocumentEditor";
@@ -66,6 +66,7 @@ export default function DocumentView({ doc }: { doc: ClientDocument }) {
   const [versionNumber, setVersionNumber] = useState(doc.versionNumber);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [statusById, setStatusById] = useState<Record<string, string>>({});
 
   // Capture text selections via selectionchange so both real pointer selection
   // and programmatic selection (Playwright selectText) are picked up.
@@ -97,15 +98,14 @@ export default function DocumentView({ doc }: { doc: ClientDocument }) {
     if (!container) return;
     const containerText = container.textContent ?? "";
     const ranges: HighlightRange[] = [];
+    const statuses: Record<string, string> = {};
     for (const a of annotations) {
-      const loc = locate(containerText, {
-        exact: a.anchorExact ?? "",
-        prefix: a.anchorPrefix ?? "",
-        suffix: a.anchorSuffix ?? "",
-      });
-      if (loc) ranges.push({ id: a.id, start: loc.start, end: loc.end });
+      const r = relocate(containerText, { exact: a.anchorExact ?? "", prefix: a.anchorPrefix ?? "", suffix: a.anchorSuffix ?? "" });
+      statuses[a.id] = r.status;
+      if (r.range) ranges.push({ id: a.id, start: r.range.start, end: r.range.end, status: r.status });
     }
     applyHighlights(container, ranges);
+    setStatusById(statuses);
   }, [annotations, markdown, mode]);
 
   const onContainerClick = useCallback((e: React.MouseEvent) => {
@@ -161,6 +161,42 @@ export default function DocumentView({ doc }: { doc: ClientDocument }) {
       }))
     );
   }, [doc.id, versionNumber]);
+
+  useEffect(() => {
+    let es: EventSource | null = null;
+    let stopped = false;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+
+    function connect() {
+      es = new EventSource(`/api/documents/${doc.id}/stream`);
+      es.onmessage = (ev) => {
+        const e = JSON.parse(ev.data);
+        if (e.type === "comment.created") {
+          setAnnotations((prev) => prev.map((a) => a.id === e.annotationId ? { ...a, comments: [...a.comments, { id: e.comment.id, body: e.comment.body, author: e.comment.author }] } : a));
+        } else if (e.type === "annotation.created") {
+          const a = e.annotation;
+          setAnnotations((prev) => prev.some((x) => x.id === a.id) ? prev : [...prev, {
+            id: a.id, anchorExact: a.anchorExact, anchorPrefix: a.anchorPrefix, anchorSuffix: a.anchorSuffix,
+            startOffset: a.startOffset, endOffset: a.endOffset, threadStatus: a.threadStatus, status: a.status ?? "ACTIVE",
+            comments: (a.comments ?? []).map((c: ClientComment) => ({ id: c.id, body: c.body, author: c.author })),
+          }]);
+        } else if (e.type === "annotation.updated") {
+          setAnnotations((prev) => prev.map((a) => a.id === e.annotationId ? { ...a, threadStatus: e.threadStatus ?? a.threadStatus } : a));
+        } else if (e.type === "review.updated") {
+          setDocState(e.state);
+        } else if (e.type === "version.created") {
+          refetchDetail();
+        }
+      };
+      es.onerror = () => {
+        es?.close();
+        if (stopped) return;
+        retry = setTimeout(() => { refetchDetail(); connect(); }, 2000);
+      };
+    }
+    connect();
+    return () => { stopped = true; es?.close(); if (retry) clearTimeout(retry); };
+  }, [doc.id, refetchDetail]);
 
   async function saveVersion() {
     setSaving(true);
@@ -288,6 +324,7 @@ export default function DocumentView({ doc }: { doc: ClientDocument }) {
         <CommentSidebar
           annotations={annotations}
           focusedId={focusedId}
+          statusById={statusById}
           onSelectThread={setFocusedId}
           onAddComment={addComment}
           onToggleThread={toggleThread}
