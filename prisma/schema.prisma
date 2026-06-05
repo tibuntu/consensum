@@ -24,6 +24,7 @@ model User {
   annotations      Annotation[]
   comments         Comment[]
   reviews          Review[]
+  notifications    Notification[]
 }
 
 model Session {
@@ -99,6 +100,7 @@ model Document {
   versions          DocumentVersion[] @relation("DocumentVersions")
   annotations       Annotation[]
   reviews           Review[]
+  notifications     Notification[]
 
   @@index([ownerId])
   @@index([state])
@@ -171,4 +173,19 @@ model Review {
 
   @@index([documentId])
   @@index([onVersionId])
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  type       String
+  actorId    String?
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([documentId])
 }
