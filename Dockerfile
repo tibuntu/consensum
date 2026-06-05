@@ -10,6 +10,9 @@ WORKDIR /app
 FROM base AS deps
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ openssl && rm -rf /var/lib/apt/lists/*
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# prisma schema + config are needed because the `postinstall` lifecycle runs `prisma generate`
+COPY prisma ./prisma
+COPY prisma.config.ts ./prisma.config.ts
 RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
@@ -31,12 +34,12 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/generated ./generated
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-# prisma.config.ts does `import "dotenv/config"`; the prisma CLI loads that config
-# during `migrate deploy`, so dotenv must exist in the runner (DATABASE_URL is still
-# supplied via env — dotenv simply no-ops when no .env file is present).
-COPY --from=builder /app/node_modules/dotenv ./node_modules/dotenv
+# Full node_modules from the builder: pnpm uses a symlinked layout (top-level
+# packages link into node_modules/.pnpm), so selectively copying prisma/@prisma
+# breaks at runtime ("Cannot find module '@prisma/engines'"). Copying the whole
+# tree keeps the symlink targets, so the prisma CLI resolves for `migrate deploy`
+# on start. (dotenv — needed by prisma.config.ts — is included too.)
+COPY --from=builder /app/node_modules ./node_modules
 RUN mkdir -p /data
 VOLUME /data
 EXPOSE 3000
