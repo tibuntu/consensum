@@ -13,7 +13,8 @@
     "test:e2e": "playwright test",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "prepare": "husky"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.8.0",
@@ -30,6 +31,9 @@
       "kysely": "0.28.17"
     }
   },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs}": "eslint --fix"
+  },
   "devDependencies": {
     "@better-auth/cli": "^1.4.21",
     "@playwright/test": "^1.60.0",
@@ -42,6 +46,8 @@
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7",
     "prisma": "^7.8.0",
     "tailwindcss": "^4",
     "typescript": "^5",

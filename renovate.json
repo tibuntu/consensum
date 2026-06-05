@@ -18,6 +18,17 @@
       "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest", "lockFileMaintenance"],
       "automerge": true,
       "automergeType": "pr"
+    },
+    {
+      "description": "kysely is pinned via pnpm.overrides for better-auth compatibility; 0.29.x removes DEFAULT_MIGRATION_TABLE and breaks the Next build. Do not update until better-auth no longer needs the pin.",
+      "matchPackageNames": ["kysely"],
+      "enabled": false
+    },
+    {
+      "description": "ESLint 10 is not yet supported by eslint-config-next 16.x (its rules use a removed API, breaking `eslint .`). Hold the major until eslint-config-next supports it.",
+      "matchPackageNames": ["eslint"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
     }
   ]
 }
