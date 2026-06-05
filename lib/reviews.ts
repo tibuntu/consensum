@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { computeDocumentState } from "@/lib/review-state";
 import type { ReviewVerdict } from "@/lib/enums";
+import { publish } from "@/lib/events";
 
 export async function submitReview(userId: string, documentId: string, verdict: ReviewVerdict) {
   const doc = await prisma.document.findUnique({ where: { id: documentId }, select: { currentVersionId: true, requiredApprovals: true } });
@@ -13,5 +14,6 @@ export async function submitReview(userId: string, documentId: string, verdict: 
   const reviews = await prisma.review.findMany({ where: { documentId } });
   const state = computeDocumentState(reviews.map((r) => ({ verdict: r.verdict as ReviewVerdict, dismissed: r.dismissed })), doc.requiredApprovals);
   await prisma.document.update({ where: { id: documentId }, data: { state } });
+  publish(documentId, { type: "review.updated", state });
   return state;
 }
