@@ -1,7 +1,11 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { signIn } from "@/lib/auth-client";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,35 +22,34 @@ export default function LoginPage() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto mt-24 flex w-80 flex-col gap-3">
-      <h1 className="text-xl font-semibold">Log in</h1>
-      <input
-        aria-label="email"
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="border p-2"
-      />
-      <input
-        aria-label="password"
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className="border p-2"
-      />
-      {error && (
-        <p role="alert" className="text-sm text-red-600">
-          {error}
-        </p>
-      )}
-      <button type="submit" className="bg-black p-2 text-white">
-        Log in
-      </button>
-      <a href="/register" className="text-sm underline">
-        Need an account? Sign up
-      </a>
-    </form>
+    <Card className="mx-auto mt-24 max-w-sm p-6">
+      <form onSubmit={onSubmit} className="flex flex-col gap-3">
+        <span className="text-sm font-semibold text-primary">◆ Quorum</span>
+        <h1 className="text-xl font-semibold text-foreground">Log in</h1>
+        <Input
+          aria-label="email"
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <Input
+          aria-label="password"
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        {error && (
+          <p role="alert" className="text-sm text-[var(--state-changes)]">
+            {error}
+          </p>
+        )}
+        <Button type="submit">Log in</Button>
+        <Link href="/register" className="text-sm text-muted hover:text-foreground">
+          Need an account? Sign up
+        </Link>
+      </form>
+    </Card>
   );
 }
