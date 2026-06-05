@@ -114,7 +114,9 @@ model DocumentVersion {
   createdById   String
   createdBy     User     @relation(fields: [createdById], references: [id])
   createdAt     DateTime @default(now())
-  currentFor    Document? @relation("CurrentVersion")
+  currentFor         Document?    @relation("CurrentVersion")
+  annotationsCreated Annotation[] @relation("AnnotationVersion")
+  reviewsOn          Review[]     @relation("ReviewVersion")
 
   @@unique([documentId, versionNumber])
   @@index([documentId])
@@ -125,6 +127,7 @@ model Annotation {
   documentId         String
   document           Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
   createdOnVersionId String
+  createdOnVersion   DocumentVersion @relation("AnnotationVersion", fields: [createdOnVersionId], references: [id], onDelete: Restrict)
   kind               String   @default("COMMENT")
   anchorExact        String?
   anchorPrefix       String?
@@ -139,6 +142,7 @@ model Annotation {
   comments           Comment[]
 
   @@index([documentId])
+  @@index([createdOnVersionId])
 }
 
 model Comment {
@@ -161,8 +165,10 @@ model Review {
   reviewer    User     @relation(fields: [reviewerId], references: [id])
   verdict     String
   onVersionId String
+  onVersion   DocumentVersion @relation("ReviewVersion", fields: [onVersionId], references: [id], onDelete: Restrict)
   dismissed   Boolean  @default(false)
   createdAt   DateTime @default(now())
 
   @@index([documentId])
+  @@index([onVersionId])
 }
