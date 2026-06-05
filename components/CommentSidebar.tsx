@@ -8,12 +8,14 @@ function authorLabel(author?: { name?: string | null; email?: string | null } | 
 
 function ThreadCard({
   annotation,
+  status,
   focused,
   onSelect,
   onAddComment,
   onToggleThread,
 }: {
   annotation: ClientAnnotation;
+  status?: string;
   focused: boolean;
   onSelect: (id: string) => void;
   onAddComment: (annotationId: string, body: string) => Promise<void>;
@@ -36,7 +38,8 @@ function ThreadCard({
     >
       {annotation.anchorExact && (
         <p className="border-l-2 border-yellow-400 pl-2 text-xs italic text-gray-600">
-          “{annotation.anchorExact.slice(0, 80)}”
+          &ldquo;{annotation.anchorExact.slice(0, 80)}&rdquo;
+          {status === "MOVED" && <span className="text-xs text-orange-600"> moved</span>}
         </p>
       )}
       <ul className="flex flex-col gap-1">
@@ -75,32 +78,49 @@ function ThreadCard({
 export default function CommentSidebar({
   annotations,
   focusedId,
+  statusById,
   onSelectThread,
   onAddComment,
   onToggleThread,
 }: {
   annotations: ClientAnnotation[];
   focusedId: string | null;
+  statusById: Record<string, string>;
   onSelectThread: (id: string) => void;
   onAddComment: (annotationId: string, body: string) => Promise<void>;
   onToggleThread: (annotationId: string, nextStatus: string) => Promise<void>;
 }) {
+  const orphaned = annotations.filter((a) => statusById[a.id] === "ORPHANED");
+  const live = annotations.filter((a) => statusById[a.id] !== "ORPHANED");
+
   return (
     <div className="flex flex-col gap-3">
       <h2 className="text-sm font-semibold text-gray-500">Comments</h2>
-      {annotations.length === 0 ? (
+      {live.length === 0 && orphaned.length === 0 ? (
         <p className="text-sm text-gray-400">Select text in the document to add a comment.</p>
       ) : (
-        annotations.map((a) => (
-          <ThreadCard
-            key={a.id}
-            annotation={a}
-            focused={focusedId === a.id}
-            onSelect={onSelectThread}
-            onAddComment={onAddComment}
-            onToggleThread={onToggleThread}
-          />
-        ))
+        <>
+          {live.map((a) => (
+            <ThreadCard
+              key={a.id}
+              annotation={a}
+              status={statusById[a.id]}
+              focused={focusedId === a.id}
+              onSelect={onSelectThread}
+              onAddComment={onAddComment}
+              onToggleThread={onToggleThread}
+            />
+          ))}
+          {orphaned.length > 0 && (
+            <div data-testid="orphaned-section" className="flex flex-col gap-2">
+              <h3 className="text-xs font-semibold uppercase text-gray-400">Orphaned comments</h3>
+              {orphaned.map((a) => (
+                <ThreadCard key={a.id} annotation={a} status="ORPHANED" focused={focusedId === a.id}
+                  onSelect={onSelectThread} onAddComment={onAddComment} onToggleThread={onToggleThread} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
