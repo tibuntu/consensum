@@ -7,7 +7,7 @@ _Snapshot for pausing/resuming. Quorum AI = "PR review for the **plan**, before 
 | Milestone | Plan | State |
 |-----------|------|-------|
 | **Foundation** | `plans/2026-06-04-quorum-ai-foundation.md` | ✅ Done — **merged to `main`** |
-| **CI & Docker** | `plans/2026-06-04-quorum-ai-ci-and-docker.md` | ✅ Built — on branch **`ci-and-docker`** (UNMERGED); image build + CI run not yet validated on a real runner |
+| **CI & Docker** | `plans/2026-06-04-quorum-ai-ci-and-docker.md` | ✅ Built; **Docker validated locally** (image builds, migrate-on-start creates `app.db` on the volume, serves `/login` 200) — on branch **`ci-and-docker`** (UNMERGED). GitHub Actions CI still validated on first push. |
 | **Review core (pt 1)** | `plans/2026-06-04-quorum-ai-review-core.md` | ⏳ Planned — tasks RC1–RC7 pending (not started) |
 | Review core (pt 2) | _not yet written_ | editing + versioning + cross-version re-anchoring + live SSE |
 | Integration & packaging | _not yet written_ | machine API + `/push-plan`·`/pull-feedback` skills + notifications |
@@ -29,7 +29,7 @@ pnpm dev                      # http://localhost:3000
 Container (after merging `ci-and-docker`): `BETTER_AUTH_SECRET=$(openssl rand -base64 32) docker compose up`.
 
 ## Open actions (next session)
-1. **Validate CI & Docker:** merge `ci-and-docker` and push to GitHub → the `CI` workflow runs lint/unit/build + e2e (Linux) + `docker build`. This is where the Docker image build and the `migrate-on-start` path get validated (couldn't run locally — Docker daemon was down).
+1. **Validate CI:** merge `ci-and-docker` and push to GitHub → the `CI` workflow runs lint/unit/build + e2e (Linux) + `docker build`. (Docker is already validated locally — build + migrate-on-start + serve; CI just confirms it on a clean Linux runner.)
 2. **Execute Review core (pt 1):** resume with subagent-driven-development or:
    `/superpowers-extended-cc:executing-plans docs/superpowers/plans/2026-06-04-quorum-ai-review-core.md`
    Order: RC1 anchoring → RC2 review-state → RC3 documents API → RC4 annotations/comments → RC5 reviews → RC6 list/create UI → RC7 review view + e2e.
