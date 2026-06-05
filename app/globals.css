@@ -64,3 +64,43 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
+
+/* --- Markdown (prose) refinements --- */
+
+/* Inline code: drop the plugin's literal backtick pseudo-elements and give it a
+   token-driven chip instead. `:not(pre *)` leaves fenced code blocks untouched. */
+.prose :where(code):not(:where(pre code)) {
+  background: var(--state-neutral-bg);
+  color: var(--foreground);
+  padding: 0.15em 0.4em;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  font-size: 0.85em;
+}
+.prose :where(code):not(:where(pre code))::before,
+.prose :where(code):not(:where(pre code))::after {
+  content: none;
+}
+
+/* Fenced code blocks: themed surface. */
+.prose :where(pre) {
+  background: var(--state-neutral-bg);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+
+/* GFM task lists: drop the leftover bullet and align the checkbox. mdast-util-to-hast
+   tags the list `contains-task-list` and each item `task-list-item`; the checkbox is a
+   direct child of the <li> in tight lists but wrapped in a <p> in loose lists, so the
+   checkbox rule is a descendant selector to cover both. */
+.prose :where(ul.contains-task-list) {
+  padding-left: 0;
+}
+.prose :where(li.task-list-item) {
+  list-style: none;
+  padding-left: 0;
+}
+.prose :where(li.task-list-item) input[type="checkbox"] {
+  margin-right: 0.5em;
+  accent-color: var(--primary);
+}
