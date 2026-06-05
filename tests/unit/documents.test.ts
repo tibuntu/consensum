@@ -20,4 +20,13 @@ describe("documents service", () => {
     expect(all.find((d) => d.id === id)).toBeTruthy();
     await prisma.document.delete({ where: { id } });
   });
+
+  it("records source and agentContext", async () => {
+    const user = await makeUser();
+    const id = await createDocument(user.id, "Plan", "body", { source: "CLAUDE_CODE", agentContext: "ctx" });
+    const detail = await getDocumentDetail(id);
+    expect(detail?.source).toBe("CLAUDE_CODE");
+    expect(detail?.agentContext).toBe("ctx");
+    await prisma.document.delete({ where: { id } });
+  });
 });
