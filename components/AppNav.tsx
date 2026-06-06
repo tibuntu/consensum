@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SignOutButton } from "@/components/SignOutButton";
+import { ThemeToggle } from "./ThemeToggle";
 
 const LINKS = [
   { href: "/app", label: "Documents", testid: undefined as string | undefined },
@@ -37,6 +38,7 @@ export function AppNav({ email, unread }: { email: string; unread: number }) {
         </div>
         <div className="flex items-center gap-4 text-sm">
           <span data-testid="current-user" className="max-w-[45vw] truncate text-muted sm:max-w-[220px] md:max-w-none">{email}</span>
+          <ThemeToggle />
           <SignOutButton />
         </div>
       </div>
