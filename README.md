@@ -22,18 +22,77 @@ This product re-inserts the team at the highest-leverage moment: **before the ag
 
 ## Status
 
-🚧 Early development. Building **M1 (MVP)** — the end-to-end hero loop in a single Docker container. See [`docs/superpowers/specs/2026-06-04-quorum-ai-design.md`](docs/superpowers/specs/2026-06-04-quorum-ai-design.md) for the full design.
+**M1 (MVP) — shipped.** The full hero loop works end-to-end in a single Docker container:
 
-## Self-hosting (target)
+- **Push** a plan via the Bearer-token machine API (`/push-plan`).
+- **Review** it in a production-themed UI: rendered markdown, select-to-comment annotations, comment threads, resolve, and an Approve / Request-changes verdict.
+- **Edit** plans into new versions, with annotations **re-anchored** across edits.
+- **Live updates** via Server-Sent Events, plus in-app notifications.
+- **Pull** consolidated feedback back into the agent (`/pull-feedback`).
 
-Quorum AI is designed to run as **one Docker container** with an embedded SQLite database — no external services required.
+Next up is **M2 — Access Control & Collaboration Polish** (authorization, email notifications, version-diff view, dark-mode toggle). See [`docs/superpowers/STATUS.md`](docs/superpowers/STATUS.md) for live build status and [`docs/superpowers/specs/2026-06-04-quorum-ai-design.md`](docs/superpowers/specs/2026-06-04-quorum-ai-design.md) for the full design.
+
+## Quickstart
+
+### Run with Docker (recommended)
+
+Quorum AI runs as **one container** with an embedded SQLite database (WAL) — no external services. Data persists in a named volume.
 
 ```bash
-docker compose up   # → http://localhost:3000   (data persisted in a named volume)
+BETTER_AUTH_SECRET=$(openssl rand -base64 32) docker compose up
+# → http://localhost:3000
 ```
 
-_(Quickstart will be fleshed out as M1 lands.)_
+Register a user, then create an API token under **Settings → API tokens** for the agent integration below.
+
+### Run locally (development)
+
+```bash
+cp .env.example .env      # then set BETTER_AUTH_SECRET to a 32+ char random string
+CI=true pnpm install      # CI=true required: this repo uses pnpm v11
+pnpm db:migrate           # apply migrations to ./data/app.db
+pnpm dev                  # → http://localhost:3000
+```
+
+## Connecting your agent
+
+The hero loop is driven by two Claude Code slash commands shipped in [`.claude/commands/`](.claude/commands/): [`/push-plan`](.claude/commands/push-plan.md) and [`/pull-feedback`](.claude/commands/pull-feedback.md). They talk to your instance via the machine API. Set:
+
+```bash
+export QUORUM_BASE_URL="http://localhost:3000"
+export QUORUM_API_TOKEN="<token from Settings → API tokens>"
+```
+
+Then from any agent session: `/push-plan` posts the current plan and returns a review URL; once the team weighs in, `/pull-feedback <id>` pulls the consolidated verdict, threads, and digest back so the agent can revise.
 
 ## Stack
 
-Next.js 16 · Prisma + SQLite (WAL) · better-auth · CodeMirror 6 · react-markdown · Server-Sent Events. Packaged as a single standalone container.
+Next.js 16 (App Router, React 19) · Prisma 7 + SQLite (WAL, better-sqlite3 adapter) · better-auth · CodeMirror 6 · react-markdown + remark-gfm · Tailwind CSS 4 · Server-Sent Events. Packaged as a single standalone container.
+
+## Project layout
+
+```
+app/            Next.js App Router — pages (app/app/*) + API routes (app/api/*)
+components/     React UI (editor, document view, comment sidebar, inbox) + ui/ primitives
+lib/            Pure libs → services → helpers: documents, annotations, anchoring,
+                reviews, feedback, notifications, tokens, auth, db, SSE events
+prisma/         Schema (User, Document, DocumentVersion, Annotation, Comment,
+                Review, Notification, ApiToken, …) + migrations
+tests/          Vitest unit tests + Playwright e2e (auth, review, versioning, nav)
+docs/           Design specs, phase plans, security audit, build status
+.claude/        Agent slash commands (/push-plan, /pull-feedback)
+```
+
+Architecture convention: **pure libs → services → thin routes → client**, with shared value-sets in `lib/enums.ts`.
+
+## Testing
+
+```bash
+pnpm test:unit            # Vitest unit tests
+pnpm test:e2e             # Playwright e2e (free port 3000 first; webServer rebuilds)
+pnpm lint                 # ESLint
+```
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE). Copyright 2026 Timo Hankamer.
