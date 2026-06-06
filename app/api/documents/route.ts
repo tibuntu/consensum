@@ -16,5 +16,5 @@ export async function POST(req: Request) {
 export async function GET() {
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  return NextResponse.json({ documents: await listDocuments() });
+  return NextResponse.json({ documents: await listDocuments(user.id) });
 }

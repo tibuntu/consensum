@@ -25,8 +25,9 @@ export async function createDocument(
   return doc.id;
 }
 
-export async function listDocuments() {
+export async function listDocuments(userId: string) {
   return prisma.document.findMany({
+    where: { participants: { some: { userId } } },
     orderBy: { updatedAt: "desc" },
     include: { owner: { select: { name: true, email: true } } },
   });

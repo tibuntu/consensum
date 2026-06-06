@@ -16,8 +16,17 @@ describe("documents service", () => {
     const detail = await getDocumentDetail(id);
     expect(detail?.state).toBe("OPEN");
     expect(detail?.currentVersion?.markdown).toContain("cloud setup");
-    const all = await listDocuments();
+    const all = await listDocuments(user.id);
     expect(all.find((d) => d.id === id)).toBeTruthy();
+    await prisma.document.delete({ where: { id } });
+  });
+
+  it("does not list another user's documents", async () => {
+    const owner = await makeUser();
+    const other = await makeUser();
+    const id = await createDocument(owner.id, "Owned", "body");
+    const mine = await listDocuments(other.id);
+    expect(mine.find((d) => d.id === id)).toBeUndefined();
     await prisma.document.delete({ where: { id } });
   });
 
