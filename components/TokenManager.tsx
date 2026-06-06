@@ -18,6 +18,12 @@ export default function TokenManager({
   const [created, setCreated] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [expiresInDays, setExpiresInDays] = useState<number | "">("");
+  const [scopes, setScopes] = useState<string[]>(["plans:write", "feedback:read"]);
+
+  function toggleScope(scope: string) {
+    setScopes((prev) => (prev.includes(scope) ? prev.filter((s) => s !== scope) : [...prev, scope]));
+  }
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -27,7 +33,11 @@ export default function TokenManager({
       const res = await fetch("/api/tokens", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ label }),
+        body: JSON.stringify({
+          label,
+          expiresInDays: expiresInDays === "" ? undefined : expiresInDays,
+          scopes,
+        }),
       });
       if (res.status !== 201) {
         const data = await res.json().catch(() => null);
@@ -53,7 +63,7 @@ export default function TokenManager({
       <h1 className="text-2xl font-semibold text-foreground">API tokens</h1>
 
       <Card className="p-4">
-        <form onSubmit={onCreate} className="flex items-end gap-3">
+        <form onSubmit={onCreate} className="flex flex-wrap items-end gap-3">
           <label className="flex flex-1 flex-col gap-1 text-sm text-foreground">
             Label
             <Input
@@ -63,6 +73,34 @@ export default function TokenManager({
               onChange={(e) => setLabel(e.target.value)}
             />
           </label>
+          <label className="flex flex-col gap-1 text-sm text-foreground">
+            Expires
+            <select
+              aria-label="token expiry"
+              className="rounded-[var(--radius-app)] border border-border bg-transparent px-2 py-2 text-sm"
+              value={expiresInDays}
+              onChange={(e) => setExpiresInDays(e.target.value === "" ? "" : Number(e.target.value))}
+            >
+              <option value="">Never</option>
+              <option value="30">30 days</option>
+              <option value="90">90 days</option>
+              <option value="365">365 days</option>
+            </select>
+          </label>
+          <fieldset className="flex flex-col gap-1 text-sm text-foreground">
+            <legend className="text-xs text-muted">Scopes</legend>
+            {(["plans:write", "feedback:read"] as const).map((scope) => (
+              <label key={scope} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  aria-label={scope}
+                  checked={scopes.includes(scope)}
+                  onChange={() => toggleScope(scope)}
+                />
+                {scope}
+              </label>
+            ))}
+          </fieldset>
           <Button type="submit" disabled={submitting}>
             Create token
           </Button>
