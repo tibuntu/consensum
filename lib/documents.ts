@@ -21,6 +21,7 @@ export async function createDocument(
     },
   });
   await prisma.document.update({ where: { id: doc.id }, data: { currentVersionId: version.id } });
+  await prisma.documentParticipant.create({ data: { documentId: doc.id, userId } });
   return doc.id;
 }
 

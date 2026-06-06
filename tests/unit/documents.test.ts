@@ -29,4 +29,14 @@ describe("documents service", () => {
     expect(detail?.agentContext).toBe("ctx");
     await prisma.document.delete({ where: { id } });
   });
+
+  it("seeds an owner participant row on create", async () => {
+    const user = await makeUser();
+    const id = await createDocument(user.id, "Plan", "body");
+    const row = await prisma.documentParticipant.findUnique({
+      where: { documentId_userId: { documentId: id, userId: user.id } },
+    });
+    expect(row).toBeTruthy();
+    await prisma.document.delete({ where: { id } });
+  });
 });
