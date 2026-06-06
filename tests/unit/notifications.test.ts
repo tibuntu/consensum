@@ -1,10 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import { createDocument } from "@/lib/documents";
 import { createAnnotation } from "@/lib/annotations";
 import { submitReview } from "@/lib/reviews";
 import { buildQuote } from "@/lib/anchoring";
 import { notifyParticipants, listNotifications, unreadCount, markAllRead } from "@/lib/notifications";
+
+vi.mock("@/lib/email-digest", () => ({ enqueueEmailEvent: vi.fn() }));
 
 async function makeUser() {
   const now = new Date();
@@ -32,6 +34,44 @@ describe("notifications", () => {
 
     await markAllRead(owner.id);
     expect(await unreadCount(owner.id)).toBe(0);
+    await prisma.document.delete({ where: { id: docId } });
+  });
+
+  it("enqueues email for opted-in non-actor participants only", async () => {
+    const { enqueueEmailEvent } = await import("@/lib/email-digest");
+    vi.mocked(enqueueEmailEvent).mockClear();
+
+    const actor = await makeUser(); // A, opted in
+    const optedIn = await makeUser(); // B, opted in (default)
+    const optedOut = await makeUser(); // C, opted out
+    await prisma.user.update({ where: { id: optedOut.id }, data: { emailNotifications: false } });
+
+    const docId = await createDocument(actor.id, "Plan", "Some body text."); // actor auto-added as participant
+    await prisma.documentParticipant.create({ data: { documentId: docId, userId: optedIn.id } });
+    await prisma.documentParticipant.create({ data: { documentId: docId, userId: optedOut.id } });
+
+    await notifyParticipants(docId, actor.id, "comment");
+
+    const calls = vi.mocked(enqueueEmailEvent).mock.calls.map((c) => c[0]);
+    expect(calls).toContain(optedIn.id);
+    expect(calls).not.toContain(optedOut.id); // opted out
+    expect(calls).not.toContain(actor.id); // actor excluded
+
+    await prisma.document.delete({ where: { id: docId } });
+  });
+
+  it("does not enqueue email for resolve events", async () => {
+    const { enqueueEmailEvent } = await import("@/lib/email-digest");
+    vi.mocked(enqueueEmailEvent).mockClear();
+
+    const actor = await makeUser();
+    const other = await makeUser();
+    const docId = await createDocument(actor.id, "Plan", "Some body text.");
+    await prisma.documentParticipant.create({ data: { documentId: docId, userId: other.id } });
+
+    await notifyParticipants(docId, actor.id, "resolve");
+    expect(enqueueEmailEvent).not.toHaveBeenCalled();
+
     await prisma.document.delete({ where: { id: docId } });
   });
 });
