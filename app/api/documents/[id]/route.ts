@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api";
 import { getDocumentDetail } from "@/lib/documents";
 import { createVersion, ConcurrencyError } from "@/lib/versions";
-import { ensureParticipant } from "@/lib/authz";
+import { ensureParticipant, isOwner } from "@/lib/authz";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -18,6 +18,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { id } = await params;
+  if (!(await isOwner(user.id, id))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => null);
   if (!body || typeof body.markdown !== "string" || typeof body.baseVersionNumber !== "number") {
     return NextResponse.json({ error: "markdown and baseVersionNumber required" }, { status: 400 });
