@@ -1,14 +1,31 @@
 import { prisma } from "@/lib/db";
+import { enqueueEmailEvent } from "@/lib/email-digest";
+
+const EMAILABLE = new Set(["comment", "review", "version"]);
 
 export async function notifyParticipants(documentId: string, actorId: string, type: string) {
   const participants = await prisma.documentParticipant.findMany({
     where: { documentId },
-    select: { userId: true },
+    select: { userId: true, user: { select: { emailNotifications: true } } },
   });
-  const ids = new Set<string>(participants.map((p) => p.userId));
-  ids.delete(actorId);
-  if (ids.size === 0) return;
-  await prisma.notification.createMany({ data: [...ids].map((userId) => ({ userId, documentId, actorId, type })) });
+  const recipients = participants.filter((p) => p.userId !== actorId);
+  if (recipients.length === 0) return;
+
+  // In-app notifications (unchanged behavior).
+  await prisma.notification.createMany({
+    data: recipients.map((p) => ({ userId: p.userId, documentId, actorId, type })),
+  });
+
+  // Email sink (best-effort, opted-in recipients only, emailable types only).
+  if (EMAILABLE.has(type)) {
+    const actor = await prisma.user.findUnique({ where: { id: actorId }, select: { name: true } });
+    const actorName = actor?.name ?? "Someone";
+    for (const p of recipients) {
+      if (p.user?.emailNotifications) {
+        enqueueEmailEvent(p.userId, documentId, type as "comment" | "review" | "version", actorName);
+      }
+    }
+  }
 }
 
 export async function listNotifications(userId: string) {
