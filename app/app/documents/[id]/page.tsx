@@ -1,9 +1,14 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getDocumentDetail } from "@/lib/documents";
+import { getSession } from "@/lib/session";
+import { ensureParticipant } from "@/lib/authz";
 import DocumentView, { type ClientDocument } from "@/components/DocumentView";
 
 export default async function DocumentPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session) redirect("/login");
   const { id } = await params;
+  if (!(await ensureParticipant(session.user.id, id))) notFound();
   const doc = await getDocumentDetail(id);
   if (!doc) notFound();
 
