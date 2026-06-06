@@ -9,6 +9,11 @@
   "semanticCommitType": "fix",
   "packageRules": [
     {
+      "description": "Hold every update for 2 days after release so it clears pnpm's minimumReleaseAge supply-chain gate (24h cutoff in CI). Avoids ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION on freshly published versions.",
+      "matchPackageNames": ["*"],
+      "minimumReleaseAge": "2 days"
+    },
+    {
       "description": "Group all devDependency updates into a single PR to minimise tooling churn.",
       "matchDepTypes": ["devDependencies"],
       "groupName": "dev dependencies"
