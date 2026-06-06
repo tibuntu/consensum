@@ -83,6 +83,9 @@ test("machine: owner-strict + scope + expiry", async ({ browser }) => {
   });
   expect(post.status()).toBe(201);
   const { id } = await post.json();
+  // Guard against a vacuous proof: downstream 404/401 must target a real plan id.
+  expect(typeof id).toBe("string");
+  expect(id.length).toBeGreaterThan(0);
 
   // A's token reads its own feedback.
   const fbA = await pageA.request.get(`/api/plans/${id}/feedback`, { headers: { Authorization: `Bearer ${tokenA}` } });
@@ -100,10 +103,34 @@ test("machine: owner-strict + scope + expiry", async ({ browser }) => {
   const fbB = await pageB.request.get(`/api/plans/${id}/feedback`, { headers: { Authorization: `Bearer ${tokenB}` } });
   expect(fbB.status()).toBe(404);
 
-  // Unauthenticated → 401.
-  const unauth = await pageA.request.get(`/api/plans/${id}/feedback`);
+  // Unauthenticated → 401. Use a fresh context with no session/token so the
+  // 401 proves missing credentials, not merely a missing Authorization header.
+  const ctxAnon = await browser.newContext();
+  const pageAnon = await ctxAnon.newPage();
+  const unauth = await pageAnon.request.get(`/api/plans/${id}/feedback`);
   expect(unauth.status()).toBe(401);
 
+  await ctxAnon.close();
   await ctxA.close();
   await ctxB.close();
+});
+
+test("machine: a token lacking plans:write cannot create plans (403)", async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await register(page);
+  await page.goto("/app/settings/tokens");
+  await page.getByLabel("token label").fill("readonly");
+  // Drop the plans:write scope, leaving only feedback:read.
+  await page.getByLabel("plans:write").uncheck();
+  await page.getByRole("button", { name: "Create token" }).click();
+  const token = await page.getByTestId("new-token").inputValue();
+
+  const post = await page.request.post("/api/plans", {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { title: "Nope", markdown: "should be rejected" },
+  });
+  expect(post.status()).toBe(403);
+
+  await ctx.close();
 });
