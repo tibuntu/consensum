@@ -16,7 +16,8 @@ describe("tokens service", () => {
     expect(token.startsWith("qai_")).toBe(true);
 
     const verified = await verifyToken(`Bearer ${token}`);
-    expect(verified?.id).toBe(user.id);
+    expect(verified?.user.id).toBe(user.id);
+    expect(verified?.scopes).toContain("plans:write");
 
     expect(await verifyToken("Bearer nonsense")).toBeNull();
     expect(await verifyToken(null)).toBeNull();
@@ -28,5 +29,15 @@ describe("tokens service", () => {
 
     await revokeToken(user.id, id);
     expect(await verifyToken(`Bearer ${token}`)).toBeNull();
+  });
+
+  it("rejects expired tokens and honours scopes", async () => {
+    const user = await makeUser();
+    const expired = await generateToken(user.id, "old", { expiresAt: new Date(Date.now() - 1000), scopes: "plans:write,feedback:read" });
+    expect(await verifyToken(`Bearer ${expired.token}`)).toBeNull();
+
+    const readOnly = await generateToken(user.id, "ro", { scopes: "feedback:read" });
+    const v = await verifyToken(`Bearer ${readOnly.token}`);
+    expect(v?.scopes).toEqual(["feedback:read"]);
   });
 });
