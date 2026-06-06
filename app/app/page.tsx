@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/session";
 import { listDocuments } from "@/lib/documents";
 import NewDocumentForm from "@/components/NewDocumentForm";
 import { Card } from "@/components/ui/Card";
@@ -14,7 +16,9 @@ const STATE_LABELS: Record<string, string> = {
 };
 
 export default async function Home() {
-  const documents = await listDocuments();
+  const session = await getSession();
+  if (!session) redirect("/login");
+  const documents = await listDocuments(session.user.id);
 
   return (
     <div className="flex flex-col gap-8">
