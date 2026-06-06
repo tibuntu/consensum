@@ -18,9 +18,12 @@ export async function POST(req: Request) {
   const allowedScopes = ["plans:write", "feedback:read"];
   const expiresInDays = typeof body.expiresInDays === "number" && body.expiresInDays > 0 ? body.expiresInDays : null;
   const expiresAt = expiresInDays ? new Date(Date.now() + expiresInDays * 86_400_000) : null;
-  const scopes = Array.isArray(body.scopes) && body.scopes.length
-    ? body.scopes.filter((s: unknown): s is string => typeof s === "string" && allowedScopes.includes(s)).join(",")
-    : "plans:write,feedback:read";
+  // Omitted scopes → default to both. An explicit array (even empty) is honored
+  // as-is after allow-list filtering, so callers can mint a locked-down token;
+  // a bogus/empty array never silently grants full scope.
+  const scopes = !Array.isArray(body.scopes)
+    ? "plans:write,feedback:read"
+    : body.scopes.filter((s: unknown): s is string => typeof s === "string" && allowedScopes.includes(s)).join(",");
   const { id, token } = await generateToken(user.id, body.label.trim(), { expiresAt, scopes });
   return NextResponse.json({ id, token }, { status: 201 });
 }
