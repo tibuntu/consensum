@@ -4,41 +4,53 @@ _Snapshot for pausing/resuming. Quorum AI = "PR review for the **plan**, before 
 
 ## Milestones
 
-| Milestone | Plan | State |
-|-----------|------|-------|
-| **Foundation** | `plans/2026-06-04-quorum-ai-foundation.md` | ✅ Done — **merged to `main`** |
-| **CI & Docker** | `plans/2026-06-04-quorum-ai-ci-and-docker.md` | ✅ Built; **Docker validated locally** (image builds, migrate-on-start creates `app.db` on the volume, serves `/login` 200) — on branch **`ci-and-docker`** (UNMERGED). GitHub Actions CI still validated on first push. |
-| **Review core (pt 1)** | `plans/2026-06-04-quorum-ai-review-core.md` | ⏳ Planned — tasks RC1–RC7 pending (not started) |
-| Review core (pt 2) | _not yet written_ | editing + versioning + cross-version re-anchoring + live SSE |
-| Integration & packaging | _not yet written_ | machine API + `/push-plan`·`/pull-feedback` skills + notifications |
+### M1 — Review Core + Packaging + UI  ✅ shipped (all merged to `main`)
+
+| Phase | Plan | PR |
+|-------|------|----|
+| Foundation | `plans/2026-06-04-quorum-ai-foundation.md` | merged |
+| CI & Docker | `plans/2026-06-04-quorum-ai-ci-and-docker.md` | merged |
+| Review Core pt 1 (documents/annotations/threads/verdicts) | `plans/2026-06-04-quorum-ai-review-core.md` | #16 |
+| Review Core pt 2 (versioning/re-anchoring/live SSE) | `plans/2026-06-05-quorum-ai-review-core-part-2.md` | #17 |
+| Review Core pt 3 (machine API/feedback/notifications/packaging) | `plans/2026-06-05-quorum-ai-review-core-part-3.md` | #18 |
+| UI Polish ("Violet consensus") | `plans/2026-06-05-quorum-ai-ui-polish.md` | #19 |
+
+The full hero loop works: `/push-plan` → team review (annotate, thread, resolve, verdict) → `/pull-feedback`, with editing→versions + re-anchoring, live SSE, in-app notifications, Bearer-token machine API, and a production-grade themed UI. ~30 unit tests + e2e (auth, review, versioning, integration, navigation) green; Docker/compose packaged.
+
+### M2 — Access Control & Collaboration Polish  📋 roadmap defined, not started
+
+Roadmap: `specs/2026-06-05-quorum-ai-m2-roadmap.md`. Phases (P1 first; P2–P4 parallelizable after):
+- **P1 · Authorization** — per-document/plan access (owner + participants) on web + machine API. _Security-critical; closes the Part-3 open-access gap._
+- **P2 · Email notifications** — transactional, env-gated SMTP, per-user on/off.
+- **P3 · Version history + diff view** — browse versions + diff in the document view.
+- **P4 · Dark-mode toggle** — user-selectable persisted theme.
+
+Deferred → M3+: teams/org & multi-tenancy · Slack/Teams webhooks · OIDC/SSO · presence/live · git export · version checkpointing · Postgres · suggestions-as-edits · email digests.
 
 ## Git state
-- `main`: Foundation (8 commits) + the three plan docs + `renovate.json`. (User is managing pushes to `origin`.)
-- `ci-and-docker` (branched from `main`): `aa80277` Dockerfile/compose + standalone re-add, `99da676` dotenv-in-runner fix, `bb91dbb` GitHub Actions CI. **Not merged.**
-
-## What works today (Foundation, on `main`)
-Register → authenticated `/app` shell → sign-out, guarded by `proxy.ts` + server session check. Next.js 16 + Prisma 7/SQLite (WAL) + better-auth (email+password, DB sessions, `role`). Full M1 schema present. 4 unit tests + 1 Playwright e2e green; `next build` clean.
+- `main`: all M1 work merged (PRs #16–#19) + this roadmap.
+- No active feature branches locally. Merged feature branches may still exist on `origin` (cleanup optional). User manages pushes.
 
 ## Run locally
 ```
 cp .env.example .env          # set BETTER_AUTH_SECRET to 32+ random chars
-pnpm install
+CI=true pnpm install
 pnpm db:migrate               # apply migrations to ./data/app.db
 pnpm dev                      # http://localhost:3000
 ```
-Container (after merging `ci-and-docker`): `BETTER_AUTH_SECRET=$(openssl rand -base64 32) docker compose up`.
+Container: `BETTER_AUTH_SECRET=$(openssl rand -base64 32) docker compose up`.
 
-## Open actions (next session)
-1. **Validate CI:** merge `ci-and-docker` and push to GitHub → the `CI` workflow runs lint/unit/build + e2e (Linux) + `docker build`. (Docker is already validated locally — build + migrate-on-start + serve; CI just confirms it on a clean Linux runner.)
-2. **Execute Review core (pt 1):** resume with subagent-driven-development or:
-   `/superpowers-extended-cc:executing-plans docs/superpowers/plans/2026-06-04-quorum-ai-review-core.md`
-   Order: RC1 anchoring → RC2 review-state → RC3 documents API → RC4 annotations/comments → RC5 reviews → RC6 list/create UI → RC7 review view + e2e.
+## Next action
+Start **M2 / P1 (Authorization)** — fresh session on a fresh branch off `main`: `brainstorming` → `writing-plans` → execute (see the roadmap's "Per-phase workflow").
 
-## Tracked deferrals / known risks
-- **Docker runtime unvalidated locally** (daemon off): the runner stage's prisma-CLI path + `better-sqlite3` native trace are validated by the CI `docker` job — watch its first run.
-- Convert `Annotation.createdOnVersionId` / `Review.onVersionId` to real FKs when independent version ops arrive (Review-core pt 2).
+## Env/workflow notes (carried from M1)
+- This repo's **pnpm is v11** → prefix script runs with `CI=true` (avoids the no-TTY `node_modules` purge abort).
+- **Free port 3000** before `pnpm test:e2e` (`lsof -ti tcp:3000 | xargs -r kill -9`) so the webServer rebuilds.
+- **Preserve test selectors** (`data-testid`/`aria-label`/button names) when touching UI.
+- Create an isolated worktree at execution time; **rebase onto `main`** (don't merge main in).
+- Pure libs → services → thin routes → client; value-sets in `lib/enums.ts`.
+
+## Known follow-ups / deferrals
 - Add indexes on author/reviewer FK columns (`Annotation.authorId`, `Comment.authorId`, `Review.reviewerId`, `DocumentVersion.createdById`).
-- Auth UI: add submit-button disable (double-submit) + `router.refresh()` after sign-out (MVP polish).
-- Vitest has no React/JSX transform yet — add `@vitejs/plugin-react` + `jsdom` when component unit tests are wanted.
-- `pnpm.overrides` pin `better-call`/`kysely` for better-auth 1.6.14; `better-auth` is pinned exact. Re-check on any auth upgrade.
-- Update README quickstart to the real `docker compose up` flow once CI&Docker is merged.
+- README quickstart still references pre-M1 state — update to the real `docker compose up` + agent-loop flow.
+- A `gsd-ui-review` visual audit of the shipped UI is in progress (separate session).
