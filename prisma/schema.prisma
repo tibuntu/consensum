@@ -25,6 +25,7 @@ model User {
   comments         Comment[]
   reviews          Review[]
   notifications    Notification[]
+  documentParticipations DocumentParticipant[]
 }
 
 model Session {
@@ -80,6 +81,8 @@ model ApiToken {
   label      String
   lastUsedAt DateTime?
   createdAt  DateTime  @default(now())
+  expiresAt  DateTime?
+  scopes     String    @default("plans:write,feedback:read")
 
   @@index([userId])
 }
@@ -101,6 +104,7 @@ model Document {
   annotations       Annotation[]
   reviews           Review[]
   notifications     Notification[]
+  participants      DocumentParticipant[]
 
   @@index([ownerId])
   @@index([state])
@@ -188,4 +192,16 @@ model Notification {
 
   @@index([userId, read])
   @@index([documentId])
+}
+
+model DocumentParticipant {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([documentId, userId])
+  @@index([userId])
 }
