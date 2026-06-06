@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { it, expect } from "vitest";
 import { resolveDark, THEME_SCRIPT, STORAGE_KEY } from "../../lib/theme";
 
 it("resolveDark explicit choices", () => {
