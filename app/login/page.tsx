@@ -21,6 +21,16 @@ export default function LoginPage() {
     router.push("/app");
   }
 
+  const oidcEnabled = process.env.NEXT_PUBLIC_OIDC_ENABLED === "true";
+
+  async function onSso() {
+    await signIn.oauth2({
+      providerId: "oidc",
+      callbackURL: "/app",
+      errorCallbackURL: "/login?error=sso",
+    });
+  }
+
   return (
     <Card className="mx-auto mt-24 max-w-sm p-6">
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
@@ -52,6 +62,11 @@ export default function LoginPage() {
           </p>
         )}
         <Button type="submit">Log in</Button>
+        {oidcEnabled && (
+          <Button type="button" variant="secondary" onClick={onSso}>
+            Sign in with SSO
+          </Button>
+        )}
         <Link href="/register" className="text-sm text-muted hover:underline">
           Need an account? <span className="font-medium text-primary">Sign up</span>
         </Link>
