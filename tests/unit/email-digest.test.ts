@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const enqueueMock = vi.fn(async () => "job-1");
+const enqueueMock = vi.fn<(type: string, payload: unknown, opts?: { delayMs?: number }) => Promise<string>>(async () => "job-1");
 vi.mock("../../lib/outbox", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/outbox")>();
   return { ...actual, enqueue: enqueueMock };
