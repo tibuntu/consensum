@@ -1,8 +1,9 @@
 // Default-state (no-OIDC) regression coverage. The Playwright webServer builds
 // once with the ambient env, which has no OIDC_* / NEXT_PUBLIC_OIDC_ENABLED set,
 // so these tests assert the password-only default. The OIDC-ENABLED path (visible
-// SSO button + full sign-in via a mock IdP) is deferred — see the plan's Task 5
-// coverage note. Config/gating/signup-disable are covered by the unit suite.
+// SSO button + full sign-in) requires a running mock IdP and a second build with
+// the env set; it is tracked as future work. Config/gating/signup-disable are
+// covered by the unit suite (tests/unit/oidc.test.ts, tests/unit/auth-oidc.test.ts).
 import { test, expect } from "@playwright/test";
 
 test("login page has no SSO button by default; password form present", async ({ page }) => {
