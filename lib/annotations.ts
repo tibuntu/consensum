@@ -1,13 +1,13 @@
 import { prisma } from "@/lib/db";
 import type { Quote } from "@/lib/anchoring";
-import type { AnnotationKind, ThreadStatus } from "@/lib/enums";
+import type { AnnotationKind, Severity, ThreadStatus } from "@/lib/enums";
 import { publish } from "@/lib/events";
 import { notifyParticipants } from "@/lib/notifications";
 
 export async function createAnnotation(
   userId: string,
   documentId: string,
-  anchor: { quote: Quote; startOffset: number; endOffset: number; kind?: AnnotationKind },
+  anchor: { quote: Quote; startOffset: number; endOffset: number; kind?: AnnotationKind; severity?: Severity | null; category?: string | null },
   body: string
 ) {
   const doc = await prisma.document.findUnique({ where: { id: documentId }, select: { currentVersionId: true } });
@@ -22,6 +22,8 @@ export async function createAnnotation(
       anchorSuffix: anchor.quote.suffix,
       startOffset: anchor.startOffset,
       endOffset: anchor.endOffset,
+      severity: anchor.severity ?? null,
+      category: anchor.category ?? null,
       authorId: userId,
       comments: { create: { authorId: userId, body } },
     },

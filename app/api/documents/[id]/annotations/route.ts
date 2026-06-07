@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api";
 import { createAnnotation } from "@/lib/annotations";
-import { ANNOTATION_KINDS, type AnnotationKind } from "@/lib/enums";
+import { ANNOTATION_KINDS, type AnnotationKind, SEVERITIES, type Severity } from "@/lib/enums";
 import { isParticipant } from "@/lib/authz";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -26,10 +26,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     typeof body.kind === "string" && ANNOTATION_KINDS.includes(body.kind as AnnotationKind)
       ? (body.kind as AnnotationKind)
       : undefined;
+  let severity: Severity | undefined;
+  if (body.severity != null) {
+    if (typeof body.severity !== "string" || !SEVERITIES.includes(body.severity as Severity)) {
+      return NextResponse.json({ error: `severity must be one of ${SEVERITIES.join(", ")}` }, { status: 400 });
+    }
+    severity = body.severity as Severity;
+  }
+  const category: string | undefined = typeof body.category === "string" && body.category.trim() !== "" ? body.category.trim() : undefined;
   const annotation = await createAnnotation(
     user.id,
     id,
-    { quote: body.quote, startOffset: body.startOffset, endOffset: body.endOffset, kind },
+    { quote: body.quote, startOffset: body.startOffset, endOffset: body.endOffset, kind, severity, category },
     body.body
   );
   return NextResponse.json({ annotation }, { status: 201 });
