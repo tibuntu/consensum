@@ -8,6 +8,12 @@ async function freshAuth() {
   return (await import("@/lib/auth")).auth;
 }
 
+// Fix A: top-level env-stub isolation — clears any stubs before every test in
+// every describe block so OIDC stubs from one test cannot leak into another.
+beforeEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe("auth account-linking policy (env-independent)", () => {
   it("links by IdP-verified email, not local-verified email", async () => {
     const auth = await freshAuth();
@@ -25,10 +31,6 @@ describe("auth account-linking policy (env-independent)", () => {
 });
 
 describe("OIDC gating", () => {
-  beforeEach(() => {
-    vi.unstubAllEnvs();
-  });
-
   it("registers no OIDC provider and keeps signup open by default", async () => {
     vi.stubEnv("OIDC_ISSUER", "");
     vi.stubEnv("OIDC_CLIENT_ID", "");
@@ -47,15 +49,24 @@ describe("OIDC gating", () => {
     expect(auth.options.emailAndPassword?.disableSignUp).toBe(true);
   });
 
+  // Fix B: assert on the real disabled-signup rejection shape better-auth throws.
+  // better-auth raises an APIError with status "BAD_REQUEST" and message
+  // "Email and password sign up is not enabled" — verify that precisely.
   it("rejects self-service signup when OIDC is configured (D5a, server-side)", async () => {
     vi.stubEnv("OIDC_ISSUER", "https://idp.example.com");
     vi.stubEnv("OIDC_CLIENT_ID", "quorum");
     vi.stubEnv("OIDC_CLIENT_SECRET", "shhh");
     const auth = await freshAuth();
-    await expect(
-      auth.api.signUpEmail({
-        body: { email: `gate-${Date.now()}@example.com`, password: "correct-horse-battery", name: "Gate" },
-      }),
-    ).rejects.toBeTruthy();
+    const err = await auth.api
+      .signUpEmail({ body: { email: `gate-${Date.now()}@example.com`, password: "correct-horse-battery", name: "Gate" } })
+      .then(() => null)
+      .catch((e: unknown) => e);
+    expect(err).toBeTruthy();
+    // better-auth surfaces a disabled-signup as status "BAD_REQUEST" with a
+    // message that explicitly mentions sign-up being disabled — not a generic
+    // infra error (which would lack a status or carry a 5xx code).
+    const status = (err as { status?: string }).status;
+    const message = String((err as { message?: string }).message ?? err);
+    expect(status === "BAD_REQUEST" || /sign.?up|disabled/i.test(message)).toBe(true);
   });
 });
