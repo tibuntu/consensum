@@ -134,3 +134,39 @@ test("machine: a token lacking plans:write cannot create plans (403)", async ({ 
 
   await ctx.close();
 });
+
+test("machine: feedback/wait blocks until a reviewer approves", async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await register(page);
+  await page.goto("/app/settings/tokens");
+  await page.getByLabel("token label").fill("ci");
+  await page.getByRole("button", { name: "Create token" }).click();
+  const token = await page.getByTestId("new-token").inputValue();
+
+  const post = await page.request.post("/api/plans", {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { title: "Wait Plan", markdown: "The cloud setup needs review." },
+  });
+  expect(post.status()).toBe(201);
+  const { id } = await post.json();
+  expect(typeof id).toBe("string");
+  expect(id.length).toBeGreaterThan(0);
+
+  // Open the long-poll while the plan is still pending (do NOT await yet).
+  const waitReq = page.request.get(`/api/plans/${id}/feedback/wait?timeoutMs=15000`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  // Approve via the reviews API (session-authed); this publishes review.updated and flips state.
+  const approve = await page.request.post(`/api/documents/${id}/reviews`, { data: { verdict: "APPROVE" } });
+  expect(approve.status()).toBeLessThan(300);
+
+  const waitRes = await waitReq;
+  expect(waitRes.status()).toBe(200);
+  const body = await waitRes.json();
+  expect(body.decision).toBe("approved");
+  expect(body.timedOut).toBe(false);
+
+  await ctx.close();
+});
