@@ -20,6 +20,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   apiTokens        ApiToken[]
+  webhooks         Webhook[]
   ownedDocuments   Document[]        @relation("DocumentOwner")
   authoredVersions DocumentVersion[]
   annotations      Annotation[]
@@ -211,6 +212,24 @@ model DocumentParticipant {
 
   @@unique([documentId, userId])
   @@index([userId])
+}
+
+model Webhook {
+  id              String   @id @default(cuid())
+  ownerId         String
+  owner           User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  documentId      String?                       // null = all owner's documents
+  url             String
+  secretEnc       String                        // reveal-once; "v1:<iv>:<tag>:<ct>" (AES-256-GCM) or "v0:<plain>"
+  events          String                        // CSV filter: version.created,review.updated,…
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  lastStatus      String?                       // e.g. "200" | "DEAD"
+  lastError       String?
+  lastDeliveredAt DateTime?
+
+  @@index([ownerId])
+  @@index([documentId])
 }
 
 model OutboxJob {
