@@ -84,11 +84,11 @@ export function consolidateFeedback(detail: FeedbackDetail) {
     id: a.id ?? "",
     quote: a.anchorExact,
     kind: a.kind ?? "COMMENT",
-    status: a.status,
+    status: a.status, // backward-compat alias; Annotation.status IS the anchor state (ACTIVE/MOVED/ORPHANED)
     threadStatus: a.threadStatus,
     severity: a.severity ?? null,
     category: a.category ?? null,
-    anchorState: a.status,
+    anchorState: a.status, // canonical spec name for the same value as `status`
     raisedOnVersion: a.createdOnVersion?.versionNumber ?? null,
     comments: a.comments.map((c) => ({ author: authorName(c.author ?? null), body: c.body })),
   }));
@@ -124,7 +124,7 @@ export function consolidateFeedback(detail: FeedbackDetail) {
   if (ordered.length === 0) lines.push("_No inline comments._", "");
   for (const t of ordered) {
     const sev = t.severity ? `[${t.severity}] ` : "";
-    const tags = `${t.status === "ORPHANED" ? " (orphaned)" : t.status === "MOVED" ? " (moved)" : ""}${t.threadStatus === "RESOLVED" ? " [resolved]" : ""}`;
+    const tags = `${t.anchorState === "ORPHANED" ? " (orphaned)" : t.anchorState === "MOVED" ? " (moved)" : ""}${t.threadStatus === "RESOLVED" ? " [resolved]" : ""}`;
     lines.push(`## ${sev}On "${t.quote ?? "(unanchored)"}"${tags}`);
     for (const c of t.comments) lines.push(`- **${c.author}:** ${c.body}`);
     lines.push("");
