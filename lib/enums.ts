@@ -15,3 +15,6 @@ export type ThreadStatus = (typeof THREAD_STATUSES)[number];
 
 export const REVIEW_VERDICTS = ["APPROVE", "REQUEST_CHANGES", "COMMENT"] as const;
 export type ReviewVerdict = (typeof REVIEW_VERDICTS)[number];
+
+export const SEVERITIES = ["BLOCKER", "MAJOR", "MINOR", "NIT"] as const;
+export type Severity = (typeof SEVERITIES)[number];
