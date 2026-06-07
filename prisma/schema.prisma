@@ -127,6 +127,7 @@ model DocumentVersion {
 
   @@unique([documentId, versionNumber])
   @@index([documentId])
+  @@index([createdById])
 }
 
 model Annotation {
@@ -143,6 +144,8 @@ model Annotation {
   endOffset          Int?
   status             String   @default("ACTIVE")
   threadStatus       String   @default("OPEN")
+  severity           String?  // BLOCKER | MAJOR | MINOR | NIT (nullable; see lib/enums.ts SEVERITIES)
+  category           String?  // free-form short tag, e.g. "security", "scope", "naming"
   authorId           String
   author             User     @relation(fields: [authorId], references: [id])
   createdAt          DateTime @default(now())
@@ -150,6 +153,7 @@ model Annotation {
 
   @@index([documentId])
   @@index([createdOnVersionId])
+  @@index([authorId])
 }
 
 model Comment {
@@ -162,6 +166,7 @@ model Comment {
   createdAt    DateTime   @default(now())
 
   @@index([annotationId])
+  @@index([authorId])
 }
 
 model Review {
@@ -178,6 +183,7 @@ model Review {
 
   @@index([documentId])
   @@index([onVersionId])
+  @@index([reviewerId])
 }
 
 model Notification {
@@ -205,4 +211,19 @@ model DocumentParticipant {
 
   @@unique([documentId, userId])
   @@index([userId])
+}
+
+model OutboxJob {
+  id            String   @id @default(cuid())
+  type          String                       // "email.digest" | "webhook.deliver"
+  payload       String                       // JSON string (SQLite has no native JSON)
+  status        String   @default("PENDING") // PENDING | DELIVERING | DONE | DEAD
+  attempts      Int      @default(0)
+  maxAttempts   Int      @default(6)
+  nextAttemptAt DateTime @default(now())
+  lastError     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status, nextAttemptAt])
 }
