@@ -18,3 +18,6 @@ export type ReviewVerdict = (typeof REVIEW_VERDICTS)[number];
 
 export const SEVERITIES = ["BLOCKER", "MAJOR", "MINOR", "NIT"] as const;
 export type Severity = (typeof SEVERITIES)[number];
+
+export const WEBHOOK_EVENTS = ["version.created", "review.updated", "decision.changed", "comment.created"] as const;
+export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
