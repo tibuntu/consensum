@@ -83,6 +83,7 @@ export async function dispatch(documentId: string, event: WebhookEvent, body: Re
   if (!doc) return;
   const candidates = await prisma.webhook.findMany({
     where: { ownerId: doc.ownerId, active: true, OR: [{ documentId: null }, { documentId }] },
+    select: { id: true, events: true },
   });
   const matches = candidates.filter((w) => w.events.split(",").map((s) => s.trim()).includes(event));
   if (matches.length === 0) return;
@@ -94,6 +95,6 @@ export async function dispatch(documentId: string, event: WebhookEvent, body: Re
   }
   const occurredAt = new Date().toISOString();
   for (const w of matches) {
-    await enqueue("webhook.deliver", { webhookId: w.id, event, planId: documentId, occurredAt, actor, ...body });
+    await enqueue("webhook.deliver", { ...body, webhookId: w.id, event, planId: documentId, occurredAt, actor });
   }
 }
