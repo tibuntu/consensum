@@ -53,7 +53,7 @@ SQLite is the explicit operating assumption.
 |---|----------|--------|
 | D1 | Queue substrate | **DB-backed `OutboxJob` table in SQLite.** No new infra; survives restart; one writer fits the single-instance model. |
 | D2 | Worker model | **One in-process polling worker** started once at server bootstrap (module singleton guard, like `lib/events.ts`'s `globalThis` pattern). Polls `nextAttemptAt <= now`, leases a row to `DELIVERING`, runs the handler, marks `DONE`/re-schedules/`DEAD`. |
-| D2a | **Worker boot location** (resolved) | **`instrumentation.ts`** (`register()` hook — stable in Next 16). Fires once at server start, never during `next build`. Guarded `process.env.NEXT_RUNTIME === "nodejs"` (never edge) and **auto-start is env-gated off under test** — `startOutboxWorker()` no-ops unless `OUTBOX_WORKER_AUTOSTART` is truthy and `NODE_ENV !== "test"`, so vitest drives the worker deterministically via an exported `tick()`. |
+| D2a | **Worker boot location** (resolved) | **`instrumentation.ts`** (`register()` hook — stable in Next 16). Fires once at server start, never during `next build`. Guarded `process.env.NEXT_RUNTIME === "nodejs"` (never edge). **Auto-start default: on in dev/prod, off under test.** `startOutboxWorker()` starts unless `NODE_ENV === "test"`; `OUTBOX_WORKER_AUTOSTART` is an explicit override in *both* directions (`"false"` to disable in dev, `"true"` to force-enable in test/CI). So vitest drives the worker deterministically via the exported `tick()` while prod needs no extra opt-in env. |
 | D5a | **Backoff schedule** (resolved) | **Explicit delay table** `1m, 5m, 30m, 2h, 6h` via a pure `computeBackoffMs(attempts)`; `maxAttempts=6` (5 retries → DEAD, ~8h40m reach). **No jitter** (single serial worker). Both table (`OUTBOX_BACKOFF_MS`, comma-separated) and `OUTBOX_MAX_ATTEMPTS` are env-tunable. |
 | D3 | Email's relationship to the outbox | **Email digest becomes an `OutboxJob` of type `email.digest`.** Debounce stays in a thin in-memory coalescer that, on window close, enqueues one durable job — so a crash mid-window at worst loses ≤45 s of *coalescing*, never an already-scheduled send. |
 | D4 | Handler registry | **Typed handler map** keyed by `OutboxJob.type` (`email.digest`, later `webhook.deliver`). Unknown type → `DEAD` (no silent drop). |
@@ -107,7 +107,7 @@ Pure additive — new table, new nullable columns, new indexes. No backfill need
 enqueue(type: string, payload: unknown, opts?: { delayMs?: number }): Promise<string>
 registerHandler(type: string, fn: (payload: unknown) => Promise<void>): void
 startOutboxWorker(): void   // idempotent; guarded via globalThis like lib/events.ts.
-                            // No-ops unless OUTBOX_WORKER_AUTOSTART is truthy and NODE_ENV !== "test".
+                            // Auto-starts unless NODE_ENV==="test"; OUTBOX_WORKER_AUTOSTART overrides both ways.
 tick(): Promise<void>       // process all currently-due jobs once; exported for deterministic tests
 computeBackoffMs(attempts: number): number  // pure; reads OUTBOX_BACKOFF_MS table, clamps to last entry
 ```
@@ -117,10 +117,13 @@ computeBackoffMs(attempts: number): number  // pure; reads OUTBOX_BACKOFF_MS tab
 `enqueue("email.digest", { userId, documentId, events })` instead of sending inline.
 The `email.digest` handler renders + sends via the existing `lib/email.ts`.
 
-Worker bootstrap: a root `instrumentation.ts` whose `register()` calls
-`startOutboxWorker()` once, guarded `process.env.NEXT_RUNTIME === "nodejs"`. Auto-start
-is itself env-gated (`OUTBOX_WORKER_AUTOSTART`, off under `NODE_ENV==="test"`) so unit
-tests import `lib/outbox` and drive `tick()` directly without a live timer.
+Worker bootstrap: a root `instrumentation.ts` whose `register()` registers the
+handlers and calls `startOutboxWorker()` once, guarded `process.env.NEXT_RUNTIME ===
+"nodejs"`. Auto-start defaults on in dev/prod and off under `NODE_ENV==="test"`
+(overridable via `OUTBOX_WORKER_AUTOSTART`), so unit tests import `lib/outbox` and
+drive `tick()` directly without a live timer. On start the worker first calls
+`recoverStuckJobs()` (flips any `DELIVERING` rows orphaned by a crash back to
+`PENDING` — safe under the single-worker assumption).
 
 ### Backoff (resolved)
 
