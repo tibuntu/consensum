@@ -1,4 +1,8 @@
+import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/db";
+import { encryptSecret } from "@/lib/crypto";
+import { enqueue } from "@/lib/outbox";
+import type { WebhookEvent } from "@/lib/enums";
 
 /** True for loopback / link-local / private-range literal IPs (v4 + minimal v6). */
 export function isPrivateIp(host: string): boolean {
@@ -31,4 +35,65 @@ export function validateWebhookUrl(url: string): void {
     throw new Error("webhook URL host not allowed");
   }
   if (isPrivateIp(host)) throw new Error("webhook URL host not allowed");
+}
+
+export interface CreateWebhookInput { url: string; events: WebhookEvent[]; documentId?: string | null; }
+
+export async function createWebhook(ownerId: string, input: CreateWebhookInput) {
+  validateWebhookUrl(input.url);
+  const secret = `whsec_${randomBytes(24).toString("base64url")}`;
+  const row = await prisma.webhook.create({
+    data: {
+      ownerId,
+      url: input.url,
+      documentId: input.documentId ?? null,
+      events: input.events.join(","),
+      secretEnc: encryptSecret(secret),
+    },
+  });
+  return { id: row.id, secret }; // secret revealed once
+}
+
+export async function listWebhooks(ownerId: string) {
+  return prisma.webhook.findMany({
+    where: { ownerId },
+    select: { id: true, url: true, documentId: true, events: true, active: true, createdAt: true, lastStatus: true, lastError: true, lastDeliveredAt: true },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function updateWebhook(ownerId: string, id: string, patch: { active?: boolean; events?: WebhookEvent[] }) {
+  const data: { active?: boolean; events?: string } = {};
+  if (patch.active !== undefined) data.active = patch.active;
+  if (patch.events !== undefined) data.events = patch.events.join(",");
+  await prisma.webhook.updateMany({ where: { id, ownerId }, data });
+}
+
+export async function deleteWebhook(ownerId: string, id: string) {
+  await prisma.webhook.deleteMany({ where: { id, ownerId } });
+}
+
+/**
+ * Fan a domain event out to every active webhook that matches (owner of the document +
+ * optional single-doc narrowing + event in the CSV filter). One durable outbox job per
+ * match; the worker signs + POSTs (next task). Best-effort: callers wrap in `.catch(()=>{})`.
+ */
+export async function dispatch(documentId: string, event: WebhookEvent, body: Record<string, unknown>, actorId?: string): Promise<void> {
+  const doc = await prisma.document.findUnique({ where: { id: documentId }, select: { ownerId: true } });
+  if (!doc) return;
+  const candidates = await prisma.webhook.findMany({
+    where: { ownerId: doc.ownerId, active: true, OR: [{ documentId: null }, { documentId }] },
+  });
+  const matches = candidates.filter((w) => w.events.split(",").map((s) => s.trim()).includes(event));
+  if (matches.length === 0) return;
+
+  let actor = "Someone";
+  if (actorId) {
+    const u = await prisma.user.findUnique({ where: { id: actorId }, select: { name: true } });
+    actor = u?.name ?? actor;
+  }
+  const occurredAt = new Date().toISOString();
+  for (const w of matches) {
+    await enqueue("webhook.deliver", { webhookId: w.id, event, planId: documentId, occurredAt, actor, ...body });
+  }
 }
