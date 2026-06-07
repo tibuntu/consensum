@@ -1,7 +1,7 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHmac } from "node:crypto";
 import { prisma } from "@/lib/db";
-import { encryptSecret } from "@/lib/crypto";
-import { enqueue } from "@/lib/outbox";
+import { encryptSecret, decryptSecret } from "@/lib/crypto";
+import { enqueue, registerHandler } from "@/lib/outbox";
 import type { WebhookEvent } from "@/lib/enums";
 
 /** True for loopback / link-local / private-range literal IPs (v4 + minimal v6). */
@@ -97,4 +97,63 @@ export async function dispatch(documentId: string, event: WebhookEvent, body: Re
   for (const w of matches) {
     await enqueue("webhook.deliver", { ...body, webhookId: w.id, event, planId: documentId, occurredAt, actor });
   }
+}
+
+export function signBody(secret: string, body: string): string {
+  return `sha256=${createHmac("sha256", secret).update(body).digest("hex")}`;
+}
+
+interface DeliverPayload { webhookId: string; event: string; [k: string]: unknown; }
+
+function isDeliverPayload(v: unknown): v is DeliverPayload {
+  return typeof v === "object" && v !== null && typeof (v as DeliverPayload).webhookId === "string" && typeof (v as DeliverPayload).event === "string";
+}
+
+/** The durable side: sign + POST one webhook event. Runs inside the outbox worker. */
+export async function deliverWebhook(payload: unknown): Promise<void> {
+  if (!isDeliverPayload(payload)) throw new Error("webhook.deliver: malformed payload");
+  const wh = await prisma.webhook.findUnique({ where: { id: payload.webhookId } });
+  if (!wh) return; // webhook deleted between enqueue and delivery — nothing to do
+  validateWebhookUrl(wh.url); // re-check at delivery (DNS-rebinding guard)
+
+  const body = JSON.stringify(payload);
+  const secret = decryptSecret(wh.secretEnc);
+  const timestamp = new Date().toISOString();
+  try {
+    const res = await fetch(wh.url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "X-Quorum-Event": payload.event,
+        "X-Quorum-Timestamp": timestamp,
+        "X-Quorum-Signature": signBody(secret, body),
+      },
+      body,
+    });
+    if (res.status < 200 || res.status >= 300) {
+      await prisma.webhook.update({ where: { id: wh.id }, data: { lastStatus: String(res.status), lastError: `non-2xx: ${res.status}` } });
+      throw new Error(`webhook delivery failed: ${res.status}`); // → outbox retries
+    }
+    await prisma.webhook.update({ where: { id: wh.id }, data: { lastStatus: String(res.status), lastDeliveredAt: new Date(), lastError: null } });
+  } catch (err) {
+    if (err instanceof Error && /webhook delivery failed/.test(err.message)) throw err; // already recorded
+    const msg = err instanceof Error ? err.message : String(err);
+    await prisma.webhook.update({ where: { id: wh.id }, data: { lastStatus: "ERR", lastError: msg } });
+    throw err; // network error → outbox retries
+  }
+}
+
+function hasWebhookId(v: unknown): v is { webhookId: string } {
+  return typeof v === "object" && v !== null && typeof (v as { webhookId: string }).webhookId === "string";
+}
+
+/** Terminal failure: surface DEAD on the webhook row so the owner sees a dead endpoint. */
+export async function onDeadWebhook(payload: unknown, lastError: string): Promise<void> {
+  if (!hasWebhookId(payload)) return;
+  await prisma.webhook.updateMany({ where: { id: payload.webhookId }, data: { lastStatus: "DEAD", lastError } });
+}
+
+/** Register the webhook.deliver handler (+ onDead) with the outbox. Called at bootstrap. */
+export function registerWebhookHandler(): void {
+  registerHandler("webhook.deliver", deliverWebhook, onDeadWebhook);
 }
