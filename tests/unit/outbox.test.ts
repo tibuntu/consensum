@@ -74,4 +74,12 @@ describe("outbox engine", () => {
   it("startOutboxWorker does not auto-start under NODE_ENV=test", () => {
     expect(() => startOutboxWorker()).not.toThrow();
   });
+
+  it("enqueue honors OUTBOX_MAX_ATTEMPTS env override", async () => {
+    process.env.OUTBOX_MAX_ATTEMPTS = "3";
+    const id = await enqueue("test.noop", {});
+    const row = await prisma.outboxJob.findUnique({ where: { id } });
+    expect(row?.maxAttempts).toBe(3);
+    delete process.env.OUTBOX_MAX_ATTEMPTS;
+  });
 });

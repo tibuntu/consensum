@@ -43,6 +43,7 @@ export async function enqueue(
     data: {
       type,
       payload: JSON.stringify(payload ?? null),
+      maxAttempts: Number(process.env.OUTBOX_MAX_ATTEMPTS ?? 6),
       nextAttemptAt: new Date(Date.now() + (opts?.delayMs ?? 0)),
     },
   });
