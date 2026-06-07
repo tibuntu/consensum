@@ -12,6 +12,6 @@ export default defineConfig({
     url: BASE_URL,
     timeout: 120_000,
     reuseExistingServer: !process.env.CI,
-    env: { DISABLE_RATE_LIMIT: "true" },
+    env: { DISABLE_RATE_LIMIT: "true", WEBHOOK_ALLOW_INSECURE: "true", OUTBOX_POLL_MS: "500" },
   },
 });
