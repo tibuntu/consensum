@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { consolidateFeedback, filterThreads } from "@/lib/feedback";
+import { consolidateFeedback, filterThreads, getPlanFeedback } from "@/lib/feedback";
+import { prisma } from "@/lib/db";
+import { createDocument } from "@/lib/documents";
+import { createAnnotation, setThreadStatus } from "@/lib/annotations";
+import { buildQuote } from "@/lib/anchoring";
 
 describe("consolidateFeedback", () => {
   it("is pending with no comments", () => {
@@ -108,4 +112,27 @@ it("markdown leads with blocker then unresolved", () => {
     reviews: [],
   });
   expect(r.markdown.indexOf("secret in code")).toBeLessThan(r.markdown.indexOf("typo"));
+});
+
+it("getPlanFeedback: rollups stay unfiltered while threads are filtered", async () => {
+  const now = new Date();
+  const user = await prisma.user.create({ data: { id: `u-${Date.now()}-fb`, name: "Alex", email: `u-${Date.now()}-fb@ex.com`, emailVerified: false, createdAt: now, updatedAt: now } });
+  const md = "Store the secret in code? Also a tiny typo here.";
+  const docId = await createDocument(user.id, "Plan", md);
+  const s1 = md.indexOf("secret in code");
+  await createAnnotation(user.id, docId, { quote: buildQuote(md, s1, s1 + 14), startOffset: s1, endOffset: s1 + 14, severity: "BLOCKER", category: "security" }, "no secrets in code");
+  const s2 = md.indexOf("typo");
+  const nit = await createAnnotation(user.id, docId, { quote: buildQuote(md, s2, s2 + 4), startOffset: s2, endOffset: s2 + 4, severity: "NIT", category: "naming" }, "typo");
+  await setThreadStatus(user.id, nit.id, "RESOLVED");
+  await prisma.document.update({ where: { id: docId }, data: { state: "CHANGES_REQUESTED" } });
+
+  const all = await getPlanFeedback(docId);
+  expect(all?.rollup.blocking).toBe(1);
+  expect(all?.rollup.total).toBe(2);
+
+  const filtered = await getPlanFeedback(docId, { include: ["blocking"] });
+  expect(filtered?.threads).toHaveLength(1);
+  expect(filtered?.threads[0].severity).toBe("BLOCKER");
+  expect(filtered?.rollup.total).toBe(2); // unfiltered totals preserved
+  await prisma.document.delete({ where: { id: docId } });
 });
