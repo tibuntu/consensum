@@ -98,7 +98,7 @@ export function consolidateFeedback(detail: FeedbackDetail) {
   const byCategory: Record<string, number> = {};
   const byVersion: Record<string, number> = {};
   for (const t of threads) {
-    const cat = t.category ?? "uncategorized";
+    const cat = t.category && t.category.trim() !== "" ? t.category : "uncategorized";
     byCategory[cat] = (byCategory[cat] ?? 0) + 1;
     if (t.raisedOnVersion != null) {
       const v = String(t.raisedOnVersion);
