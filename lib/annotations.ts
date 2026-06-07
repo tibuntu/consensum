@@ -90,13 +90,17 @@ export async function applySuggestion(userId: string, annotationId: string, base
     prefix: annotation.anchorPrefix ?? "",
     suffix: annotation.anchorSuffix ?? "",
   });
-  if (reloc.status === "ORPHANED" || !reloc.range) throw new OrphanedAnchorError();
+  if (!reloc.range) throw new OrphanedAnchorError(); // range is null IFF status === "ORPHANED"
 
   const { start, end } = reloc.range;
   const newMarkdown = current.markdown.slice(0, start) + annotation.suggestedText + current.markdown.slice(end);
 
   const result = await createVersion(userId, annotation.documentId, baseVersionNumber, newMarkdown);
 
+  // When the splice yields identical content (e.g. suggestedText === the existing
+  // span), createVersion returns unchanged:true without re-checking baseVersionNumber.
+  // Content-equality means the result is correct regardless of which version the
+  // caller based on, so no extra stale-base guard is needed for this branch.
   const appliedVersionId = result.unchanged ? current.id : result.version.id;
   const appliedVersionNumber = result.unchanged ? current.versionNumber : result.version.versionNumber;
 

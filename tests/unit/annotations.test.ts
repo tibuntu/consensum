@@ -71,6 +71,7 @@ describe("applySuggestion", () => {
 
   function suggestAnchor(md: string, phrase: string, suggestedText: string) {
     const start = md.indexOf(phrase);
+    if (start === -1) throw new Error(`phrase not found in markdown: ${phrase}`);
     return {
       quote: buildQuote(md, start, start + phrase.length),
       startOffset: start,
@@ -125,6 +126,21 @@ describe("applySuggestion", () => {
     await createVersion(userId, docId, 1, "The cloud setup needs review. (touched)");
 
     await expect(applySuggestion(userId, ann.id, 1)).rejects.toBeInstanceOf(ConcurrencyError);
+  });
+
+  it("applies a no-op suggestion (text equals span) without creating a new version", async () => {
+    const md = "The cloud setup needs review.";
+    const { userId, docId } = await setup(md);
+    const ann = await createAnnotation(userId, docId, suggestAnchor(md, "cloud setup", "cloud setup"), "no change");
+
+    const result = await applySuggestion(userId, ann.id, 1);
+
+    expect(result.version.versionNumber).toBe(1);
+    const versions = await prisma.documentVersion.count({ where: { documentId: docId } });
+    expect(versions).toBe(1);
+    const reloaded = await prisma.annotation.findUnique({ where: { id: ann.id } });
+    expect(reloaded?.threadStatus).toBe("RESOLVED");
+    expect(reloaded?.appliedInVersionId).not.toBeNull();
   });
 
   it("rejects non-suggestion and already-applied annotations", async () => {
