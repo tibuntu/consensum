@@ -1,17 +1,19 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "@/lib/auth-client";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(searchParams.get("error") === "sso" ? "SSO sign-in failed. Please try again or use your password." : "");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -24,11 +26,16 @@ export default function LoginPage() {
   const oidcEnabled = process.env.NEXT_PUBLIC_OIDC_ENABLED === "true";
 
   async function onSso() {
-    await signIn.oauth2({
-      providerId: "oidc",
-      callbackURL: "/app",
-      errorCallbackURL: "/login?error=sso",
-    });
+    setError("");
+    try {
+      await signIn.oauth2({
+        providerId: "oidc",
+        callbackURL: "/app",
+        errorCallbackURL: "/login?error=sso",
+      });
+    } catch {
+      setError("SSO sign-in is unavailable right now. Please try again.");
+    }
   }
 
   return (
@@ -72,5 +79,13 @@ export default function LoginPage() {
         </Link>
       </form>
     </Card>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
