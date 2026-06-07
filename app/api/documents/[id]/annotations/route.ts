@@ -34,10 +34,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     severity = body.severity as Severity;
   }
   const category: string | undefined = typeof body.category === "string" && body.category.trim() !== "" ? body.category.trim() : undefined;
+  const suggestedText: string | undefined =
+    typeof body.suggestedText === "string" ? body.suggestedText : undefined;
   const annotation = await createAnnotation(
     user.id,
     id,
-    { quote: body.quote, startOffset: body.startOffset, endOffset: body.endOffset, kind, severity, category },
+    { quote: body.quote, startOffset: body.startOffset, endOffset: body.endOffset, kind, severity, category, suggestedText },
     body.body
   );
   return NextResponse.json({ annotation }, { status: 201 });
