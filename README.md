@@ -54,6 +54,27 @@ pnpm db:migrate           # apply migrations to ./data/app.db
 pnpm dev                  # → http://localhost:3000
 ```
 
+## Single sign-on (optional OIDC)
+
+Quorum supports one generic OIDC provider (Keycloak, Authentik, Azure AD, Auth0,
+…) alongside email+password. It is off by default. To enable it, set:
+
+| Variable | Purpose |
+|----------|---------|
+| `OIDC_ISSUER` | Issuer URL; discovery is fetched from `<issuer>/.well-known/openid-configuration` |
+| `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | OAuth client credentials from your IdP |
+| `NEXT_PUBLIC_OIDC_ENABLED` | Set to `true` to render the "Sign in with SSO" button |
+
+Configure your IdP's redirect URI to `<BETTER_AUTH_URL>/api/auth/oauth2/callback/oidc`.
+
+**Account linking.** An SSO sign-in whose email the IdP marks *verified* is linked
+to an existing user with that email; otherwise a new `member` user is created.
+
+**Signup under SSO.** When OIDC is configured, self-service password registration is
+disabled (identity provisioning belongs to the IdP); existing password **login**
+still works. See `docs/adr/ADR-Security-000-generic-oidc-sso-alongside-password.md`
+for the rationale.
+
 ## Connecting your agent
 
 The hero loop is driven by two Claude Code slash commands shipped in [`.claude/commands/`](.claude/commands/): [`/push-plan`](.claude/commands/push-plan.md) and [`/pull-feedback`](.claude/commands/pull-feedback.md). They talk to your instance via the machine API. Set:
