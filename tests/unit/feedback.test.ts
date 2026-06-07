@@ -82,6 +82,21 @@ it("filterThreads honors include/exclude; exclude wins", () => {
   expect(filterThreads(r.threads, {}).map((t) => t.id)).toEqual(["b", "n", "o"]);
 });
 
+it("buckets empty/whitespace category as uncategorized", () => {
+  const t = (id: string, category: string | null) => ({
+    id, anchorExact: "q", kind: "COMMENT", status: "ACTIVE", threadStatus: "OPEN",
+    severity: null, category, createdOnVersion: { versionNumber: 1 },
+    comments: [{ body: "c", author: { name: "S" } }],
+  });
+  const r = consolidateFeedback({
+    state: "OPEN", currentVersion: { versionNumber: 1 },
+    versions: [{ versionNumber: 1, createdAt: new Date(0), createdBy: { name: "A" } }],
+    annotations: [t("a", null), t("b", ""), t("c", "   "), t("d", "security")],
+    reviews: [],
+  });
+  expect(r.rollup.byCategory).toEqual({ uncategorized: 3, security: 1 });
+});
+
 it("markdown leads with blocker then unresolved", () => {
   const r = consolidateFeedback({
     state: "CHANGES_REQUESTED", currentVersion: { versionNumber: 1 },
