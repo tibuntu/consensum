@@ -42,6 +42,16 @@ describe("email digest → outbox", () => {
     expect(enqueueMock).not.toHaveBeenCalled();
   });
 
+  it("handler throws on a malformed payload (so the outbox can dead-letter it)", async () => {
+    vi.useRealTimers();
+    const { registerEmailDigestHandler } = await import("../../lib/email-digest");
+    const { __resetHandlers } = await import("../../lib/outbox");
+    __resetHandlers();
+    registerEmailDigestHandler();
+    const handlers = (globalThis as unknown as { outboxHandlers: Map<string, (p: unknown) => Promise<void>> }).outboxHandlers;
+    await expect(handlers.get("email.digest")!({ userId: 123 })).rejects.toThrow(/malformed/i);
+  });
+
   it("handler renders and sends one mail for the coalesced job", async () => {
     vi.useRealTimers();
     const email = await import("../../lib/email");

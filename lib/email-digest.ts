@@ -37,9 +37,21 @@ async function flush(key: Key): Promise<void> {
   } catch { /* best-effort: a failed enqueue at most loses this coalescing window */ }
 }
 
+function isDigestPayload(v: unknown): v is DigestPayload {
+  return (
+    typeof v === "object" && v !== null &&
+    typeof (v as DigestPayload).userId === "string" &&
+    typeof (v as DigestPayload).documentId === "string" &&
+    Array.isArray((v as DigestPayload).events)
+  );
+}
+
 /** The durable side: render + send one coalesced digest. Runs inside the outbox worker. */
 async function deliverDigest(payload: unknown): Promise<void> {
-  const { userId, documentId, events } = payload as DigestPayload;
+  if (!isDigestPayload(payload)) {
+    throw new Error("email.digest: malformed payload");
+  }
+  const { userId, documentId, events } = payload;
   const [user, doc] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } }),
     prisma.document.findUnique({ where: { id: documentId }, select: { title: true } }),
