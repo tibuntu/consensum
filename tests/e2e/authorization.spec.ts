@@ -158,8 +158,14 @@ test("machine: feedback/wait blocks until a reviewer approves", async ({ browser
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  // Approve via the reviews API (session-authed); this publishes review.updated and flips state.
-  const approve = await page.request.post(`/api/documents/${id}/reviews`, { data: { verdict: "APPROVE" } });
+  // Owners can't review their own plan (M4-P1), so a separate reviewer B joins
+  // (link-grant via GET) and approves; this publishes review.updated, flips state.
+  const ctxB = await browser.newContext();
+  const pageB = await ctxB.newPage();
+  await register(pageB);
+  const joinB = await pageB.request.get(`/api/documents/${id}`);
+  expect(joinB.status()).toBe(200);
+  const approve = await pageB.request.post(`/api/documents/${id}/reviews`, { data: { verdict: "APPROVE" } });
   expect(approve.status()).toBeLessThan(300);
 
   const waitRes = await waitReq;
@@ -169,4 +175,5 @@ test("machine: feedback/wait blocks until a reviewer approves", async ({ browser
   expect(body.timedOut).toBe(false);
 
   await ctx.close();
+  await ctxB.close();
 });
