@@ -1,7 +1,7 @@
-import { it, expect, beforeEach } from "vitest";
+import { it, expect, beforeEach, vi } from "vitest";
 import { renderActivityEmail, type ActivityEvent } from "../../lib/email-templates";
 
-beforeEach(() => { process.env.BETTER_AUTH_URL = "https://q.example"; });
+beforeEach(() => { vi.stubEnv("BASE_URL", "https://q.example"); });
 
 const ev = (type: ActivityEvent["type"], actorName: string): ActivityEvent => ({ type, actorName });
 
