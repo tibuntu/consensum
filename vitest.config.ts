@@ -6,5 +6,7 @@ export default defineConfig({
   // Tests share one SQLite file; run files sequentially so parallel workers
   // don't contend on the single write lock (intermittent "Operation has timed
   // out" on concurrent writes/upserts).
-  test: { environment: "node", include: ["tests/unit/**/*.test.ts"], fileParallelism: false },
+  // unstubEnvs: auto-restore vi.stubEnv() between tests so OIDC_* (and other) env
+  // stubs don't leak across the sequential run and flip env-dependent assertions.
+  test: { environment: "node", include: ["tests/unit/**/*.test.ts"], fileParallelism: false, unstubEnvs: true },
 });
