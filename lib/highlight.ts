@@ -1,8 +1,44 @@
+import { relocate } from "@/lib/anchoring";
+
 export interface HighlightRange {
   id: string;
   start: number;
   end: number;
   status?: string; // "ACTIVE" | "MOVED"
+}
+
+export interface AnnotationAnchor {
+  id: string;
+  anchorExact: string | null;
+  anchorPrefix: string | null;
+  anchorSuffix: string | null;
+  threadStatus: string;
+}
+
+/**
+ * Relocate each annotation against `containerText` and produce the highlight ranges.
+ * RESOLVED threads are excluded from `ranges` (their in-text marker should disappear —
+ * the comment stays visible in the sidebar), but every annotation's relocate `status`
+ * is still reported so callers can surface MOVED/ORPHANED indicators regardless.
+ */
+export function buildHighlightRanges(
+  containerText: string,
+  annotations: AnnotationAnchor[],
+): { ranges: HighlightRange[]; statuses: Record<string, string> } {
+  const ranges: HighlightRange[] = [];
+  const statuses: Record<string, string> = {};
+  for (const a of annotations) {
+    const r = relocate(containerText, {
+      exact: a.anchorExact ?? "",
+      prefix: a.anchorPrefix ?? "",
+      suffix: a.anchorSuffix ?? "",
+    });
+    statuses[a.id] = r.status;
+    if (r.range && a.threadStatus !== "RESOLVED") {
+      ranges.push({ id: a.id, start: r.range.start, end: r.range.end, status: r.status });
+    }
+  }
+  return { ranges, statuses };
 }
 
 /**

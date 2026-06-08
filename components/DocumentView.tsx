@@ -3,8 +3,8 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { buildQuote, relocate, type Quote } from "@/lib/anchoring";
-import { applyHighlights, type HighlightRange } from "@/lib/highlight";
+import { buildQuote, type Quote } from "@/lib/anchoring";
+import { applyHighlights, buildHighlightRanges } from "@/lib/highlight";
 import CommentSidebar from "@/components/CommentSidebar";
 import DocumentEditor from "@/components/DocumentEditor";
 import { Button } from "@/components/ui/Button";
@@ -107,14 +107,7 @@ export default function DocumentView({ doc, isOwner }: { doc: ClientDocument; is
     if (mode !== "review") return;
     const container = containerRef.current;
     if (!container) return;
-    const containerText = container.textContent ?? "";
-    const ranges: HighlightRange[] = [];
-    const statuses: Record<string, string> = {};
-    for (const a of annotations) {
-      const r = relocate(containerText, { exact: a.anchorExact ?? "", prefix: a.anchorPrefix ?? "", suffix: a.anchorSuffix ?? "" });
-      statuses[a.id] = r.status;
-      if (r.range) ranges.push({ id: a.id, start: r.range.start, end: r.range.end, status: r.status });
-    }
+    const { ranges, statuses } = buildHighlightRanges(container.textContent ?? "", annotations);
     applyHighlights(container, ranges);
     setStatusById(statuses);
   }, [annotations, markdown, mode]);
