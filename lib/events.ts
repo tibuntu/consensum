@@ -1,11 +1,24 @@
 import { EventEmitter } from "node:events";
 
+export interface ClientNotification {
+  id: string;
+  type: string; // "comment" | "review" | "version" | "resolve" (see notifications.ts)
+  documentId: string;
+  documentTitle: string;
+  actorId: string | null;
+  read: boolean;
+  createdAt: string; // ISO
+}
+
 export type DocEvent =
   | { type: "annotation.created"; annotation: unknown }
   | { type: "comment.created"; annotationId: string; comment: unknown }
   | { type: "annotation.updated"; annotationId: string; status?: string; threadStatus?: string }
   | { type: "review.updated"; state: string }
-  | { type: "version.created"; versionNumber: number; summary: unknown };
+  | { type: "version.created"; versionNumber: number; summary: unknown }
+  | { type: "notification.created"; notification: ClientNotification }
+  | { type: "notification.read"; id: string }
+  | { type: "notification.read.all" };
 
 const globalForEvents = globalThis as unknown as { docEvents?: EventEmitter };
 const emitter = globalForEvents.docEvents ?? new EventEmitter();
