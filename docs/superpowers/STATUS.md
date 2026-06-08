@@ -35,7 +35,16 @@ Roadmap: `specs/2026-06-06-quorum-ai-m3-roadmap.md`; per-phase design specs `spe
 - **P5 · Suggestions-as-edits** ✅ — `Annotation.suggestedText` + `appliedInVersion`; owner-only apply route → new version via `createVersion()`; orphan/resolved guards; suggest-edit + diff-card UI; provenance surfaced in feedback.
 - **P6 · Generic OIDC login** ✅ — env-gated generic OIDC provider alongside password, link-by-verified-email, self-service register guarded under SSO; no schema change (reuses `Account`). _ADR candidate — confirm an ADR was drafted._
 
-Deferred → M4+: Postgres & multi-instance · teams/org & multi-tenancy · presence/live "review together" · git export · dedicated Slack/Teams formatters (beyond generic webhooks) · enforced-SSO / multiple-provider / SCIM · version checkpointing/compaction · multi-hunk suggestion patches.
+Deferred → M5+: Postgres & multi-instance · teams/org & multi-tenancy · presence/live "review together" · git export · dedicated Slack/Teams formatters (beyond generic webhooks) · enforced-SSO / multiple-provider / SCIM · version checkpointing/compaction · multi-hunk suggestion patches.
+
+### M4 — Governance, Lifecycle & Notification Polish  📋 roadmap approved (not started)
+
+Roadmap: `specs/2026-06-08-quorum-ai-m4-roadmap.md`. Three independent phases scoped from user-reported gaps:
+- **P1 · Ownership governance** — block all owner verdicts on own doc (no owner check today in `submitReview()`); owner-only hard delete (no delete exists today; handle the `DocumentVersion` `Restrict` FKs).
+- **P2 · UI polish & gating** — `EDIT_UI_ENABLED` env flag (UI-only, default on); fix resolved-comment yellow marker that still renders (`lib/highlight.ts` / `DocumentView.tsx` ignore `threadStatus`).
+- **P3 · Live notifications** — global per-user SSE stream + tab-title unread count + Web Notifications API (fire only when tab hidden).
+
+Suggested order: P2 marker bug (quick win) → P1 → P2 flag → P3.
 
 ## Git state
 - `main`: M1 + M2 + M3 all landed. M3's six phases merged into `main` (per-phase branches `m3-p1`…`m3-p6`).
@@ -51,7 +60,7 @@ pnpm dev                      # http://localhost:3000
 Container: `BETTER_AUTH_SECRET=$(openssl rand -base64 32) docker compose up`.
 
 ## Next action
-M3 is complete — all three milestones (M1–M3) shipped. No phase work outstanding. Next is a milestone-level decision: scope **M4** from the deferred list (Postgres & multi-instance, teams/org multi-tenancy, presence/live, git export, Slack/Teams formatters, enforced-SSO/SCIM) via a new roadmap, or harden/document the current surface. Start with `brainstorming` on the M4 theme when ready.
+M4 roadmap is approved (`specs/2026-06-08-quorum-ai-m4-roadmap.md`). Next: pick a phase and run its `brainstorming → writing-plans → execute` cycle in a fresh worktree off `main`. Recommended first: the **resolved-marker bug fix** (P2) as a quick win, then **P1 · Ownership governance**.
 
 ## Env/workflow notes (carried from M1)
 - This repo's **pnpm is v11** → prefix script runs with `CI=true` (avoids the no-TTY `node_modules` purge abort).
