@@ -3,3 +3,8 @@
 export function isEditUiEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   return env.EDIT_UI_ENABLED?.toLowerCase() !== "false";
 }
+
+/** The app's public origin, e.g. https://quorum.example. Falls back to localhost in dev. */
+export function baseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  return env.BASE_URL ?? "http://localhost:3000";
+}
