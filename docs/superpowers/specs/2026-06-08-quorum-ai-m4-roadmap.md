@@ -46,13 +46,29 @@ All three phases are independent and may run in any order or in parallel session
 - **Out of scope:** push to devices when no tab is open (that's M3's webhooks territory for CI); per-notification rich actions; notification preferences UI beyond the existing email on/off (a global enable/disable for OS notifications is fine; granular per-type is deferred).
 - **Depends on:** nothing structurally (reuses the existing event bus).
 
+> **Added mid-milestone (2026-06-08), after P1–P3 implemented** — two operational items surfaced during implementation.
+
+### P4 · Health & readiness probes
+- **Problem:** No health endpoint exists; containers/k8s can't tell if the process is alive or able to serve (DB reachable). Dockerfile/compose have no healthcheck. No middleware, so probe routes are reachable unauthenticated.
+- **Scope:** `GET /healthz` (liveness — dependency-free 200) and `GET /readyz` (readiness — cheap `SELECT 1`, 200/503) at app root; k8s startup probe reuses `/readyz`. Add `HEALTHCHECK` to Dockerfile + `healthcheck` to compose (Node `fetch` one-liner; slim image has no curl). Document probe paths + a k8s probe snippet in README.
+- **Out of scope:** worker/queue health, metrics endpoint, maintained k8s manifests/Helm.
+- **Depends on:** nothing.
+
+### P5 · Generic env vars (hard rename)
+- **Problem:** `BETTER_AUTH_URL` / `BETTER_AUTH_SECRET` leak better-auth's library naming into operator-facing deployment config.
+- **Scope:** Hard rename → `BASE_URL` / `AUTH_SECRET`. Wire them into `betterAuth()` explicitly (`secret`/`baseURL` — the library auto-reads the old names today, so the rename requires explicit wiring). DRY the four ad-hoc base-URL reads behind a `baseUrl()` helper in `lib/config.ts`. Update `.env.example`, `docker-compose.yml`, `.github/workflows/ci.yml`, README.
+- **Out of scope:** a full zod-validated env module; backward-compat aliases (it's a hard rename); renaming unrelated vars.
+- **Depends on:** nothing.
+
 ## Sequence
 
 ```
 P2 resolved-marker bug fix   (quick win — can land first / standalone)
 P1 Ownership governance      ┐
 P2 Edit-UI feature flag      ├── all independent; any order / parallel
-P3 Live notifications        ┘
+P3 Live notifications        │
+P4 Health & readiness probes │
+P5 Generic env vars          ┘
 ```
 
 ## Explicitly deferred → M5+
