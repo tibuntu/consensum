@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { enqueueEmailEvent } from "@/lib/email-digest";
+import { publish, type ClientNotification } from "@/lib/events";
 
 const EMAILABLE = new Set(["comment", "review", "version"]);
 
@@ -11,10 +12,25 @@ export async function notifyParticipants(documentId: string, actorId: string, ty
   const recipients = participants.filter((p) => p.userId !== actorId);
   if (recipients.length === 0) return;
 
-  // In-app notifications (unchanged behavior).
-  await prisma.notification.createMany({
-    data: recipients.map((p) => ({ userId: p.userId, documentId, actorId, type })),
-  });
+  const doc = await prisma.document.findUnique({ where: { id: documentId }, select: { title: true } });
+  const documentTitle = doc?.title ?? "";
+
+  // In-app notifications: create per-recipient so we have ids/createdAt to broadcast live.
+  for (const p of recipients) {
+    const row = await prisma.notification.create({
+      data: { userId: p.userId, documentId, actorId, type },
+    });
+    const payload: ClientNotification = {
+      id: row.id,
+      type: row.type,
+      documentId,
+      documentTitle,
+      actorId: row.actorId,
+      read: row.read,
+      createdAt: row.createdAt.toISOString(),
+    };
+    publish(`user-${p.userId}`, { type: "notification.created", notification: payload });
+  }
 
   // Email sink (best-effort, opted-in recipients only, emailable types only).
   if (EMAILABLE.has(type)) {
@@ -43,8 +59,10 @@ export async function unreadCount(userId: string) {
 
 export async function markRead(userId: string, id: string) {
   await prisma.notification.updateMany({ where: { id, userId }, data: { read: true } });
+  publish(`user-${userId}`, { type: "notification.read", id });
 }
 
 export async function markAllRead(userId: string) {
   await prisma.notification.updateMany({ where: { userId, read: false }, data: { read: true } });
+  publish(`user-${userId}`, { type: "notification.read.all" });
 }
