@@ -1,3 +1,5 @@
+import { baseUrl } from "@/lib/config";
+
 export interface ActivityEvent { type: "comment" | "review" | "version"; actorName: string; }
 export interface RenderInput { recipientName: string; docTitle: string; docId: string; events: ActivityEvent[]; }
 
@@ -6,8 +8,6 @@ const NOUN: Record<ActivityEvent["type"], [string, string]> = {
   review: ["review", "reviews"],
   version: ["new version", "new versions"],
 };
-
-function baseUrl(): string { return (process.env.BETTER_AUTH_URL ?? "").replace(/\/$/, ""); }
 
 function actorsPhrase(events: ActivityEvent[]): string {
   const names = [...new Set(events.map((e) => e.actorName))];
@@ -25,7 +25,7 @@ function countsPhrase(events: ActivityEvent[]): string {
 }
 
 export function renderActivityEmail(input: RenderInput): { subject: string; html: string; text: string } {
-  const url = `${baseUrl()}/app/documents/${input.docId}`;
+  const url = `${baseUrl().replace(/\/$/, "")}/app/documents/${input.docId}`;
   const counts = countsPhrase(input.events);
   const who = actorsPhrase(input.events);
   const total = input.events.length;

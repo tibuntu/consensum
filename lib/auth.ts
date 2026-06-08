@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { isOidcConfigured, oidcPlugins } from "@/lib/oidc";
 
 const trustedOrigins = [
-  process.env.BETTER_AUTH_URL,
+  process.env.BASE_URL,
   ...(process.env.TRUSTED_ORIGINS?.split(",").map((o) => o.trim()) ?? []),
 ].filter((o): o is string => Boolean(o));
 
@@ -13,6 +13,8 @@ const oidcConfigured = isOidcConfigured();
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "sqlite" }),
+  secret: process.env.AUTH_SECRET,
+  baseURL: process.env.BASE_URL,
   trustedOrigins,
   // Rate limiting is enabled in production by default. Allow the automated
   // test environment (which runs a production build) to opt out so the e2e
