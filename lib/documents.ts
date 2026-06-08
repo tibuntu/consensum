@@ -25,6 +25,18 @@ export async function createDocument(
   return doc.id;
 }
 
+/** Hard-delete a document and all dependents. Ordered to satisfy the
+ *  onDelete: Restrict FKs on DocumentVersion (Annotation.created/appliedInVersion,
+ *  Review.onVersion): remove reviews + annotations (comments cascade) first, then
+ *  the document (versions, participants, notifications cascade). Single transaction. */
+export async function deleteDocument(id: string): Promise<void> {
+  await prisma.$transaction([
+    prisma.review.deleteMany({ where: { documentId: id } }),
+    prisma.annotation.deleteMany({ where: { documentId: id } }),
+    prisma.document.delete({ where: { id } }),
+  ]);
+}
+
 export async function listDocuments(userId: string) {
   return prisma.document.findMany({
     where: { participants: { some: { userId } } },
