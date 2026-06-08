@@ -20,21 +20,22 @@ async function createDoc(page: Page, title: string, markdown: string): Promise<s
 }
 
 test("suggestion: propose → owner accept → new version, resolved, approval dismissed, provenance; non-owner apply 403", async ({ browser }) => {
-  // Owner A creates and approves a doc.
+  // Owner A creates a doc.
   const ctxA = await browser.newContext();
   const pageA = await ctxA.newPage();
   await register(pageA);
   const urlA = await createDoc(pageA, "Cloud Plan", "The cloud setup needs review.");
   const idA = urlA.split("/app/documents/")[1];
-  await pageA.getByRole("button", { name: "Approve" }).click();
-  await expect(pageA.getByTestId("doc-state")).toHaveText("Approved");
 
-  // Reviewer B opens A's doc by URL (link-grant auto-join).
+  // Reviewer B opens A's doc by URL (link-grant auto-join). Owners can't review
+  // their own document (M4-P1), so B (a non-owner participant) approves it.
   const ctxB = await browser.newContext();
   const pageB = await ctxB.newPage();
   await register(pageB);
   await pageB.goto(urlA);
   await expect(pageB.getByTestId("doc-body")).toContainText("cloud setup");
+  await pageB.getByRole("button", { name: "Approve" }).click();
+  await expect(pageA.getByTestId("doc-state")).toHaveText("Approved", { timeout: 10_000 });
 
   // B selects "cloud setup", proposes a suggestion of "k8s cluster".
   // selectText fires the selectionchange listener (attached on hydration) that

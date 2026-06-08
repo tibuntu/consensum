@@ -29,9 +29,13 @@ function startSink(): Promise<{ server: Server; port: number; received: Received
   });
 }
 
-test("signed webhook delivery on approval", async ({ page }) => {
+test("signed webhook delivery on approval", async ({ browser }) => {
   const { server, port, received } = await startSink();
   try {
+    // Owner A owns the webhook and the document; a non-owner participant B
+    // supplies the approval (owners can't review their own document, M4-P1).
+    const ctxA = await browser.newContext();
+    const page = await ctxA.newPage();
     await register(page);
 
     // Register the webhook via the settings UI.
@@ -42,15 +46,21 @@ test("signed webhook delivery on approval", async ({ page }) => {
     const secret = await page.getByTestId("new-webhook-secret").inputValue();
     expect(secret.startsWith("whsec_")).toBe(true);
 
-    // Create a plan and approve it → triggers decision.changed.
+    // Create a plan → reviewer B approves it → triggers decision.changed.
     await page.goto("/app");
     await page.getByLabel("title").fill("Webhook Plan");
     await page.getByLabel("markdown").fill("Content to approve.");
     await page.getByRole("button", { name: "Create document" }).click();
     await expect(page).toHaveURL(/\/app\/documents\//);
+    const url = page.url();
 
-    // Approve the document (self-approval is allowed).
-    await page.getByRole("button", { name: "Approve" }).click();
+    // Reviewer B joins via link-grant and approves.
+    const ctxB = await browser.newContext();
+    const pageB = await ctxB.newPage();
+    await register(pageB);
+    await pageB.goto(url);
+    await expect(pageB.getByTestId("doc-body")).toContainText("Content to approve");
+    await pageB.getByRole("button", { name: "Approve" }).click();
 
     // Wait for the outbox worker to deliver the webhook (OUTBOX_POLL_MS=500ms).
     await expect.poll(() => received.length, { timeout: 15_000 }).toBeGreaterThan(0);

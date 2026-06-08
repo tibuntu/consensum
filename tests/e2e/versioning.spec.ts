@@ -19,20 +19,33 @@ async function setEditorText(page: Page, text: string) {
   await editor.type(text);
 }
 
-test("edit re-anchors (moved) and resets approval", async ({ page }) => {
+test("edit re-anchors (moved) and resets approval", async ({ browser }) => {
+  // Owner A creates and comments. Owners can't review their own document
+  // (M4-P1), so a non-owner participant B supplies the approval.
+  const ctxA = await browser.newContext();
+  const page = await ctxA.newPage();
   await register(page);
   await page.getByLabel("title").fill("Versioned Doc");
   await page.getByLabel("markdown").fill("The quick brown fox jumps over the lazy dog.");
   await page.getByRole("button", { name: "Create document" }).click();
   await expect(page).toHaveURL(/\/app\/documents\//);
+  const url = page.url();
 
   await page.getByTestId("doc-body").getByText("brown fox").first().selectText();
   await page.getByLabel("comment").fill("which fox?");
   await page.getByRole("button", { name: "Comment" }).click();
   await expect(page.locator('mark[data-annotation-id]')).toHaveCount(1);
 
-  await page.getByRole("button", { name: "Approve" }).click();
-  await expect(page.getByTestId("doc-state")).toHaveText("Approved");
+  // Reviewer B joins via link-grant and approves.
+  const ctxB = await browser.newContext();
+  const pageB = await ctxB.newPage();
+  await register(pageB);
+  await pageB.goto(url);
+  await expect(pageB.getByTestId("doc-body")).toContainText("brown fox");
+  await pageB.getByRole("button", { name: "Approve" }).click();
+
+  // A sees the approval propagate via SSE.
+  await expect(page.getByTestId("doc-state")).toHaveText("Approved", { timeout: 10_000 });
 
   await page.getByRole("button", { name: "Edit" }).click();
   await setEditorText(page, "The quick brown wolf jumps over the lazy dog.");
@@ -40,6 +53,9 @@ test("edit re-anchors (moved) and resets approval", async ({ page }) => {
 
   await expect(page.getByTestId("doc-state")).toHaveText("Open");
   await expect(page.locator('mark[data-status="MOVED"]')).toHaveCount(1);
+
+  await ctxA.close();
+  await ctxB.close();
 });
 
 test("comments propagate live between two clients", async ({ browser }) => {
