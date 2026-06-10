@@ -3,6 +3,10 @@ import { requireUser } from "@/lib/api";
 import { isParticipant } from "@/lib/authz";
 import { heartbeat, leave, type PresenceSelection } from "@/lib/presence";
 
+// Far beyond any realistic document length / version count, but keeps absurd
+// integers out of the registry and the SSE fan-out.
+const MAX_OFFSET = 10_000_000;
+
 /** null = no selection; "invalid" = malformed payload (reject with 400). */
 function parseSelection(raw: unknown): PresenceSelection | null | "invalid" {
   if (raw === undefined || raw === null) return null;
@@ -10,6 +14,7 @@ function parseSelection(raw: unknown): PresenceSelection | null | "invalid" {
   const { start, end, versionNumber } = raw as Record<string, unknown>;
   if (!Number.isInteger(start) || !Number.isInteger(end) || !Number.isInteger(versionNumber)) return "invalid";
   if ((start as number) < 0 || (start as number) >= (end as number) || (versionNumber as number) < 1) return "invalid";
+  if ((end as number) > MAX_OFFSET || (versionNumber as number) > MAX_OFFSET) return "invalid";
   return { start, end, versionNumber } as PresenceSelection;
 }
 
