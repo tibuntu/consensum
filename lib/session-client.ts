@@ -1,6 +1,6 @@
 import type { DocEvent, ReviewSession } from "@/lib/events";
 
-/** Pure reduction of a session event into the next session state, keyed by document. */
+/** Pure reduction of a session event into the next session state for the current document. */
 export function applySessionEvent(session: ReviewSession | null, event: DocEvent): ReviewSession | null {
   switch (event.type) {
     case "session.started":
