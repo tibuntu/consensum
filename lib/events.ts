@@ -16,11 +16,17 @@ export interface PresenceSelection {
   versionNumber: number; // document version the offsets were measured against
 }
 
+export interface PresenceCursor {
+  x: number; // 0..1 fraction of the doc-body box width
+  y: number; // 0..1 fraction of the doc-body box height
+}
+
 export interface PresenceEntry {
   userId: string;
   name: string;
   lastSeen: number; // epoch ms
   selection?: PresenceSelection; // absent when nothing selected
+  cursor?: PresenceCursor; // absent when the pointer is outside the doc body
 }
 
 export type DocEvent =
