@@ -159,8 +159,8 @@ uses.
   matching ones with name/color inputs intact.
 - `selectionColorFor`: deterministic, aligned with `colorFor` hash.
 
-**E2E (Playwright, two logged-in contexts on one document, extends the
-`presence.spec.ts` pattern):**
+**E2E (Playwright, two logged-in contexts on one document, new
+`tests/e2e/selections.spec.ts` mirroring the `presence.spec.ts` setup):**
 - B selects text → A sees `mark[data-presence-user-id]` whose `data-user-name`
   contains "Grace" and whose `title` is the name; selected text content matches.
 - B collapses the selection → the mark disappears from A's view.
@@ -181,4 +181,4 @@ uses.
 | Extend | `lib/presence-roster.ts` (`SELECTION_COLORS`, `selectionColorFor`) |
 | Extend | `lib/highlight.ts` (mark-factory `wrapRange`, `applyPresenceSelections`, `clearPresenceSelections`) |
 | Extend | `components/DocumentView.tsx` (selection ref + throttled send; presence-selection effect) |
-| Tests | `tests/unit/` additions; `tests/e2e/presence.spec.ts` (or sibling spec) |
+| Tests | `tests/unit/` additions; `tests/e2e/selections.spec.ts` *(new)* |
