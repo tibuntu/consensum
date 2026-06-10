@@ -39,7 +39,7 @@ describe("POST /api/documents/[id]/presence", () => {
     vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
     const res = await POST(req(), ctx);
     expect(res.status).toBe(204);
-    expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "Ada" });
+    expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "Ada" }, null);
     expect(presence.leave).not.toHaveBeenCalled();
   });
 
@@ -56,6 +56,41 @@ describe("POST /api/documents/[id]/presence", () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "", email: "a@b.co" } as never);
     vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
     await POST(req(), ctx);
-    expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "a@b.co" });
+    expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "a@b.co" }, null);
+  });
+
+  it("passes a valid selection through to heartbeat", async () => {
+    vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
+    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    const res = await POST(req({ selection: { start: 2, end: 7, versionNumber: 3 } }), ctx);
+    expect(res.status).toBe(204);
+    expect(presence.heartbeat).toHaveBeenCalledWith(
+      "doc1",
+      { userId: "u1", name: "Ada" },
+      { start: 2, end: 7, versionNumber: 3 },
+    );
+  });
+
+  it("treats selection:null as clearing", async () => {
+    vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
+    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    const res = await POST(req({ selection: null }), ctx);
+    expect(res.status).toBe(204);
+    expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "Ada" }, null);
+  });
+
+  it.each([
+    { start: 5, end: 5, versionNumber: 1 }, // empty range
+    { start: -1, end: 4, versionNumber: 1 }, // negative start
+    { start: 0, end: 4, versionNumber: 0 }, // version < 1
+    { start: 0.5, end: 4, versionNumber: 1 }, // non-integer
+    { start: 0, end: 4 }, // missing versionNumber
+    "nonsense", // wrong type
+  ])("rejects malformed selection %j with 400", async (selection) => {
+    vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
+    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    const res = await POST(req({ selection }), ctx);
+    expect(res.status).toBe(400);
+    expect(presence.heartbeat).not.toHaveBeenCalled();
   });
 });
