@@ -68,6 +68,13 @@ describe("review-session registry", () => {
     stop();
   });
 
+  it("ending an already-gone session is an idempotent no-op success", () => {
+    const { events, stop } = capture("s-doc-5b");
+    expect(endSession("s-doc-5b", "anyone")).toBe(true); // no session exists
+    expect(events).toHaveLength(0); // nothing re-published
+    stop();
+  });
+
   it("evictStaleSessions ends sessions whose leader left the roster", () => {
     startSession("s-doc-6", leader);
     vi.spyOn(presence, "roster").mockReturnValue([]); // nobody present

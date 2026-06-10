@@ -53,10 +53,11 @@ export function leaveSession(documentId: string, userId: string): void {
   if (session.participants.length !== before) publish(documentId, { type: "session.updated", session });
 }
 
-/** End the session. Only the leader may end it; returns false otherwise. */
+/** End the session. Only the leader may end it. Ending an already-gone session is an
+ *  idempotent success (handles the leader-drop-then-click race); a non-leader gets false. */
 export function endSession(documentId: string, userId: string): boolean {
   const session = registry.get(documentId);
-  if (!session) return false;
+  if (!session) return true; // already ended (e.g. auto-ended by the sweep) — idempotent
   if (userId !== session.leaderId) return false;
   registry.delete(documentId);
   publish(documentId, { type: "session.ended" });
