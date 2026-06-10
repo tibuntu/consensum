@@ -2,7 +2,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type ExtraProps } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { buildQuote, type Quote } from "@/lib/anchoring";
 import { startsWithH1 } from "@/lib/markdown-heading";
@@ -70,7 +70,9 @@ const RenderedMarkdown = memo(function RenderedMarkdown({ markdown }: { markdown
   let h1Seen = 0;
   const components = demoteLeadingH1
     ? {
-        h1({ children, ...props }: React.ComponentPropsWithoutRef<"h1">) {
+        // Destructure `node` out so react-markdown's hast node isn't spread onto the DOM.
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        h1({ children, node: _node, ...props }: React.ComponentPropsWithoutRef<"h1"> & ExtraProps) {
           h1Seen += 1;
           if (h1Seen === 1) {
             return (

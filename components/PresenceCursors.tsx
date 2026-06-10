@@ -33,7 +33,7 @@ export default function PresenceCursors({ cursors }: { cursors: RemoteCursor[] }
           </span>
         ))}
       </div>
-      {/* Color→person legend so 3+ participants are identifiable at a glance
+      {/* Color→person legend so 2+ remote cursors are identifiable at a glance
           without hovering each cursor/avatar. */}
       {cursors.length >= 2 && (
         <div
