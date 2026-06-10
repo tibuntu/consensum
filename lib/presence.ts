@@ -1,6 +1,6 @@
-import { publish, type PresenceEntry, type PresenceSelection } from "@/lib/events";
+import { publish, type PresenceEntry, type PresenceCursor, type PresenceSelection } from "@/lib/events";
 
-export type { PresenceEntry, PresenceSelection };
+export type { PresenceEntry, PresenceCursor, PresenceSelection };
 
 type Registry = Map<string, Map<string, PresenceEntry>>;
 
@@ -13,12 +13,13 @@ const registry: Registry = globalForPresence.presenceRegistry ?? new Map();
 if (process.env.NODE_ENV !== "production") globalForPresence.presenceRegistry = registry;
 
 /** Upsert the user's presence in a document, bump lastSeen, and broadcast.
- *  Every heartbeat states the full selection truth: an object sets it,
- *  null/undefined clears it (the client owns its selection state). */
+ *  Every heartbeat states the full selection and cursor truth: an object sets it,
+ *  null/undefined clears it (the client owns its selection and cursor state). */
 export function heartbeat(
   documentId: string,
   user: { userId: string; name: string },
   selection?: PresenceSelection | null,
+  cursor?: PresenceCursor | null,
 ): void {
   let docMap = registry.get(documentId);
   if (!docMap) {
@@ -27,6 +28,7 @@ export function heartbeat(
   }
   const entry: PresenceEntry = { userId: user.userId, name: user.name, lastSeen: Date.now() };
   if (selection) entry.selection = selection;
+  if (cursor) entry.cursor = cursor;
   docMap.set(user.userId, entry);
   publish(documentId, { type: "presence.updated", entry });
 }

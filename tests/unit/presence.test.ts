@@ -78,4 +78,35 @@ describe("presence registry", () => {
     heartbeat("p-doc-7", { userId: "u1", name: "Ada" }, null);
     expect(roster("p-doc-7")[0].selection).toBeUndefined();
   });
+
+  it("heartbeat stores the cursor on the entry and publishes it", () => {
+    const { events, stop } = capture("p-doc-8");
+    heartbeat("p-doc-8", { userId: "u1", name: "Ada" }, null, { x: 0.25, y: 0.5 });
+    expect(roster("p-doc-8")[0].cursor).toEqual({ x: 0.25, y: 0.5 });
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "presence.updated",
+        entry: expect.objectContaining({ cursor: { x: 0.25, y: 0.5 } }),
+      })
+    );
+    stop();
+  });
+
+  it("heartbeat without a cursor clears a previously stored one", () => {
+    heartbeat("p-doc-9", { userId: "u1", name: "Ada" }, null, { x: 0.1, y: 0.2 });
+    heartbeat("p-doc-9", { userId: "u1", name: "Ada" }, null, null);
+    expect(roster("p-doc-9")[0].cursor).toBeUndefined();
+  });
+
+  it("a cursor and a selection coexist on one entry", () => {
+    heartbeat(
+      "p-doc-10",
+      { userId: "u1", name: "Ada" },
+      { start: 1, end: 5, versionNumber: 1 },
+      { x: 0.3, y: 0.7 },
+    );
+    const entry = roster("p-doc-10")[0];
+    expect(entry.selection).toEqual({ start: 1, end: 5, versionNumber: 1 });
+    expect(entry.cursor).toEqual({ x: 0.3, y: 0.7 });
+  });
 });
