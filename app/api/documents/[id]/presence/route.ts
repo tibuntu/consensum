@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api";
 import { isParticipant } from "@/lib/authz";
-import { heartbeat, leave, type PresenceSelection } from "@/lib/presence";
+import { heartbeat, leave, type PresenceSelection, type PresenceCursor } from "@/lib/presence";
 
 // Far beyond any realistic document length / version count, but keeps absurd
 // integers out of the registry and the SSE fan-out.
@@ -18,6 +18,17 @@ function parseSelection(raw: unknown): PresenceSelection | null | "invalid" {
   return { start, end, versionNumber } as PresenceSelection;
 }
 
+/** null = no cursor; "invalid" = malformed payload (reject with 400). */
+function parseCursor(raw: unknown): PresenceCursor | null | "invalid" {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) return "invalid";
+  const { x, y } = raw as Record<string, unknown>;
+  if (typeof x !== "number" || typeof y !== "number") return "invalid";
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return "invalid";
+  if (x < 0 || x > 1 || y < 0 || y > 1) return "invalid";
+  return { x, y } as PresenceCursor;
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -31,7 +42,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
   const selection = parseSelection(body?.selection);
   if (selection === "invalid") return NextResponse.json({ error: "invalid selection" }, { status: 400 });
+  const cursor = parseCursor(body?.cursor);
+  if (cursor === "invalid") return NextResponse.json({ error: "invalid cursor" }, { status: 400 });
   const name = (user.name && user.name.trim()) || user.email || "Someone";
-  heartbeat(id, { userId: user.id, name }, selection);
+  heartbeat(id, { userId: user.id, name }, selection, cursor);
   return new Response(null, { status: 204 });
 }

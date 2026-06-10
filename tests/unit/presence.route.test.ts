@@ -39,7 +39,7 @@ describe("POST /api/documents/[id]/presence", () => {
     vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
     const res = await POST(req(), ctx);
     expect(res.status).toBe(204);
-    expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "Ada" }, null);
+    expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "Ada" }, null, null);
     expect(presence.leave).not.toHaveBeenCalled();
   });
 
@@ -56,7 +56,7 @@ describe("POST /api/documents/[id]/presence", () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "", email: "a@b.co" } as never);
     vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
     await POST(req(), ctx);
-    expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "a@b.co" }, null);
+    expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "a@b.co" }, null, null);
   });
 
   it("passes a valid selection through to heartbeat", async () => {
@@ -68,6 +68,7 @@ describe("POST /api/documents/[id]/presence", () => {
       "doc1",
       { userId: "u1", name: "Ada" },
       { start: 2, end: 7, versionNumber: 3 },
+      null,
     );
   });
 
@@ -76,7 +77,7 @@ describe("POST /api/documents/[id]/presence", () => {
     vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
     const res = await POST(req({ selection: null }), ctx);
     expect(res.status).toBe(204);
-    expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "Ada" }, null);
+    expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "Ada" }, null, null);
   });
 
   it.each([
@@ -106,13 +107,68 @@ describe("POST /api/documents/[id]/presence", () => {
       ctx,
     );
     expect(res.status).toBe(204);
-    expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "Ada" }, null);
+    expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "Ada" }, null, null);
   });
 
   it("rejects selections beyond the sanity cap with 400", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
     vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
     const res = await POST(req({ selection: { start: 0, end: 10_000_001, versionNumber: 1 } }), ctx);
+    expect(res.status).toBe(400);
+    expect(presence.heartbeat).not.toHaveBeenCalled();
+  });
+
+  it("passes a valid cursor through to heartbeat", async () => {
+    vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
+    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    const res = await POST(req({ cursor: { x: 0.25, y: 0.75 } }), ctx);
+    expect(res.status).toBe(204);
+    expect(presence.heartbeat).toHaveBeenCalledWith(
+      "doc1",
+      { userId: "u1", name: "Ada" },
+      null,
+      { x: 0.25, y: 0.75 },
+    );
+  });
+
+  it("passes selection and cursor together", async () => {
+    vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
+    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    const res = await POST(
+      req({ selection: { start: 2, end: 7, versionNumber: 3 }, cursor: { x: 0, y: 1 } }),
+      ctx,
+    );
+    expect(res.status).toBe(204);
+    expect(presence.heartbeat).toHaveBeenCalledWith(
+      "doc1",
+      { userId: "u1", name: "Ada" },
+      { start: 2, end: 7, versionNumber: 3 },
+      { x: 0, y: 1 },
+    );
+  });
+
+  it("treats cursor:null as clearing", async () => {
+    vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
+    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    const res = await POST(req({ cursor: null }), ctx);
+    expect(res.status).toBe(204);
+    expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "Ada" }, null, null);
+  });
+
+  it.each([
+    { x: -0.01, y: 0.5 },
+    { x: 1.01, y: 0.5 },
+    { x: 0.5, y: -1 },
+    { x: 0.5, y: 2 },
+    { x: "0.5", y: 0.5 },
+    { x: 0.5 },
+    { x: Number.NaN, y: 0.5 },
+    { x: Number.POSITIVE_INFINITY, y: 0.5 },
+    "nonsense",
+  ])("rejects malformed cursor %j with 400", async (cursor) => {
+    vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
+    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    const res = await POST(req({ cursor }), ctx);
     expect(res.status).toBe(400);
     expect(presence.heartbeat).not.toHaveBeenCalled();
   });
