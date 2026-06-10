@@ -6,9 +6,10 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { buildQuote, type Quote } from "@/lib/anchoring";
 import { applyHighlights, applyPresenceSelections, buildHighlightRanges, clearPresenceSelections } from "@/lib/highlight";
-import { applyPresenceEvent, remoteSelections } from "@/lib/presence-client";
+import { applyPresenceEvent, remoteCursors, remoteSelections } from "@/lib/presence-client";
 import PresenceRoster from "@/components/PresenceRoster";
-import type { PresenceEntry, PresenceSelection } from "@/lib/events";
+import PresenceCursors from "@/components/PresenceCursors";
+import type { PresenceEntry, PresenceCursor, PresenceSelection } from "@/lib/events";
 import CommentSidebar from "@/components/CommentSidebar";
 import DocumentEditor from "@/components/DocumentEditor";
 import { Button } from "@/components/ui/Button";
@@ -90,18 +91,19 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
   ]);
 
   const selectionRef = useRef<PresenceSelection | null>(null);
+  const cursorRef = useRef<PresenceCursor | null>(null);
   const versionRef = useRef(versionNumber);
   useEffect(() => {
     versionRef.current = versionNumber;
   }, [versionNumber]);
 
-  // One presence channel for heartbeats AND selection updates: every POST
-  // states the full selection truth (object sets, null clears).
+  // One presence channel for heartbeats AND selection/cursor updates: every POST
+  // states the full selection+cursor truth (object sets, null clears).
   const sendPresence = useCallback(() => {
     fetch(`/api/documents/${doc.id}/presence`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ selection: selectionRef.current }),
+      body: JSON.stringify({ selection: selectionRef.current, cursor: cursorRef.current }),
       keepalive: true,
     }).catch(() => {});
   }, [doc.id]);
@@ -111,6 +113,25 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
   const queueSelectionSend = useCallback(() => {
     const throttleMs = Number(process.env.NEXT_PUBLIC_PRESENCE_SELECTION_THROTTLE_MS ?? 250);
     const t = throttleRef.current;
+    const elapsed = Date.now() - t.last;
+    if (elapsed >= throttleMs) {
+      t.last = Date.now();
+      sendPresence();
+    } else if (!t.timer) {
+      t.timer = setTimeout(() => {
+        t.timer = null;
+        t.last = Date.now();
+        sendPresence();
+      }, throttleMs - elapsed);
+    }
+  }, [sendPresence]);
+
+  // Cursor moves are continuous and higher-rate than selections, so they ride
+  // their own throttle (default ~10Hz) and never delay a selection send.
+  const cursorThrottleRef = useRef<{ last: number; timer: ReturnType<typeof setTimeout> | null }>({ last: 0, timer: null });
+  const queueCursorSend = useCallback(() => {
+    const throttleMs = Number(process.env.NEXT_PUBLIC_PRESENCE_CURSOR_THROTTLE_MS ?? 100);
+    const t = cursorThrottleRef.current;
     const elapsed = Date.now() - t.last;
     if (elapsed >= throttleMs) {
       t.last = Date.now();
@@ -190,6 +211,47 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
     // markdown is a dep so this re-runs after a version save re-renders the
     // markdown subtree (fresh DOM), not because the value is read here.
   }, [roster, versionNumber, markdown, mode, currentUserId]);
+
+  // Track the local pointer over the doc body and broadcast it (review mode
+  // only). Listeners live on the container so we never broadcast pointer
+  // positions over the sidebar/chrome. Coordinates are normalized to the
+  // container box; the receiver renders them as left/top percent.
+  useEffect(() => {
+    if (mode !== "review") return;
+    const container = containerRef.current;
+    if (!container) return;
+    const throttle = cursorThrottleRef.current;
+    const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
+    const onMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      cursorRef.current = {
+        x: clamp01((e.clientX - rect.left) / rect.width),
+        y: clamp01((e.clientY - rect.top) / rect.height),
+      };
+      queueCursorSend();
+    };
+    const onLeave = () => {
+      if (cursorRef.current !== null) {
+        cursorRef.current = null;
+        sendPresence(); // bypass the throttle — a cursor-clear is latency-sensitive
+      }
+    };
+    container.addEventListener("mousemove", onMove);
+    container.addEventListener("mouseleave", onLeave);
+    return () => {
+      container.removeEventListener("mousemove", onMove);
+      container.removeEventListener("mouseleave", onLeave);
+      if (throttle.timer) {
+        clearTimeout(throttle.timer);
+        throttle.timer = null;
+      }
+      if (cursorRef.current !== null) {
+        cursorRef.current = null;
+        sendPresence();
+      }
+    };
+  }, [mode, queueCursorSend, sendPresence]);
 
   const onContainerClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -474,9 +536,10 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
             ref={containerRef}
             data-testid="doc-body"
             onClick={onContainerClick}
-            className="prose prose-violet max-w-none rounded-[var(--radius-app)] border border-border bg-surface p-6"
+            className="prose prose-violet max-w-none rounded-[var(--radius-app)] border border-border bg-surface p-6 relative"
           >
             <RenderedMarkdown key={versionNumber} markdown={markdown} />
+            <PresenceCursors cursors={remoteCursors(roster, currentUserId)} />
           </div>
         )}
       </div>
