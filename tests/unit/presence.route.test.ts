@@ -93,4 +93,27 @@ describe("POST /api/documents/[id]/presence", () => {
     expect(res.status).toBe(400);
     expect(presence.heartbeat).not.toHaveBeenCalled();
   });
+
+  it("returns 204 and heartbeats with null when the body is not parseable JSON", async () => {
+    vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
+    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    const res = await POST(
+      new Request("http://test/api/documents/doc1/presence", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "not json",
+      }),
+      ctx,
+    );
+    expect(res.status).toBe(204);
+    expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "Ada" }, null);
+  });
+
+  it("rejects selections beyond the sanity cap with 400", async () => {
+    vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
+    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    const res = await POST(req({ selection: { start: 0, end: 10_000_001, versionNumber: 1 } }), ctx);
+    expect(res.status).toBe(400);
+    expect(presence.heartbeat).not.toHaveBeenCalled();
+  });
 });
