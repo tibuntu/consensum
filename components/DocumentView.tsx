@@ -7,9 +7,12 @@ import remarkGfm from "remark-gfm";
 import { buildQuote, type Quote } from "@/lib/anchoring";
 import { applyHighlights, applyPresenceSelections, buildHighlightRanges, clearPresenceSelections } from "@/lib/highlight";
 import { applyPresenceEvent, remoteCursors, remoteSelections } from "@/lib/presence-client";
+import { applySessionEvent } from "@/lib/session-client";
 import PresenceRoster from "@/components/PresenceRoster";
 import PresenceCursors from "@/components/PresenceCursors";
-import type { PresenceEntry, PresenceCursor, PresenceSelection } from "@/lib/events";
+import SessionBanner from "@/components/SessionBanner";
+import type { SessionAction } from "@/lib/enums";
+import type { PresenceEntry, PresenceCursor, PresenceSelection, ReviewSession } from "@/lib/events";
 import CommentSidebar from "@/components/CommentSidebar";
 import DocumentEditor from "@/components/DocumentEditor";
 import { Button } from "@/components/ui/Button";
@@ -89,6 +92,22 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
   const [roster, setRoster] = useState<PresenceEntry[]>(() => [
     { userId: currentUserId, name: currentUserName, lastSeen: Date.now() },
   ]);
+  const [session, setSession] = useState<ReviewSession | null>(null);
+  const [sessionPending, setSessionPending] = useState(false);
+
+  const postSessionAction = useCallback(
+    (action: SessionAction) => {
+      setSessionPending(true);
+      fetch(`/api/documents/${doc.id}/session`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action }),
+      })
+        .catch(() => {})
+        .finally(() => setSessionPending(false));
+    },
+    [doc.id],
+  );
 
   const selectionRef = useRef<PresenceSelection | null>(null);
   const cursorRef = useRef<PresenceCursor | null>(null);
@@ -401,6 +420,8 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
           refetchDetail();
         } else if (e.type === "presence.sync" || e.type === "presence.updated" || e.type === "presence.left") {
           setRoster((prev) => applyPresenceEvent(prev, e, { userId: currentUserId, name: currentUserName }));
+        } else if (e.type === "session.started" || e.type === "session.updated" || e.type === "session.ended") {
+          setSession((prev) => applySessionEvent(prev, e));
         }
       };
       es.onerror = () => {
@@ -519,6 +540,12 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
         <div className="mb-4 flex items-center gap-3">
           <h1 className="text-2xl font-semibold text-foreground">{doc.title}</h1>
           <PresenceRoster roster={roster} currentUserId={currentUserId} />
+          <SessionBanner
+            session={session}
+            currentUserId={currentUserId}
+            onAction={postSessionAction}
+            pending={sessionPending}
+          />
           {mode === "review" && editEnabled && (
             <Button variant="secondary" size="sm" onClick={() => { setDraft(markdown); setMode("edit"); }}>Edit</Button>
           )}
