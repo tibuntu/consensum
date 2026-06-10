@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/api";
 import { subscribe, type DocEvent } from "@/lib/events";
 import { isParticipant } from "@/lib/authz";
 import { roster } from "@/lib/presence";
+import { getSession } from "@/lib/review-session";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -21,6 +22,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       controller.enqueue(
         encoder.encode(`data: ${JSON.stringify({ type: "presence.sync", roster: roster(id) })}\n\n`)
       );
+      const activeSession = getSession(id);
+      if (activeSession) {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ type: "session.started", session: activeSession })}\n\n`)
+        );
+      }
       heartbeat = setInterval(() => controller.enqueue(encoder.encode(`: heartbeat\n\n`)), 25_000);
     },
     cancel() {
