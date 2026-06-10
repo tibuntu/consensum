@@ -132,3 +132,17 @@ body {
   margin-right: 0.5em;
   accent-color: var(--primary);
 }
+/* On the dark surface the native unchecked box is near-invisible (only the
+   checked state shows the accent). Give the unchecked box a token-driven
+   border + surface so it reads against the dark prose panel. Scoped to dark and
+   to :not(:checked) so the checked accent-color above is untouched. */
+:root.dark .prose :where(li.task-list-item) input[type="checkbox"]:not(:checked) {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1em;
+  height: 1em;
+  border: 1px solid var(--muted);
+  border-radius: 0.25em;
+  background: var(--surface);
+  vertical-align: -0.15em;
+}

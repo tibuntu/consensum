@@ -61,7 +61,7 @@ export default function DocumentEditor({
           <CodeMirror
             value={value}
             height="60vh"
-            extensions={[markdown({ base: markdownLanguage, codeLanguages: languages })]}
+            extensions={[markdown({ base: markdownLanguage, codeLanguages: languages }), EditorView.lineWrapping]}
             theme={isDark ? darkEditorTheme : undefined}
             onChange={onChange}
             aria-label="editor"

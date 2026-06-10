@@ -77,6 +77,7 @@ export default function WebhookManager({ initialWebhooks }: { initialWebhooks: W
                 <input
                   type="checkbox"
                   aria-label={e}
+                  className="accent-[var(--primary)]"
                   checked={events.includes(e)}
                   onChange={() => toggle(e)}
                 />
