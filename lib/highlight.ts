@@ -93,13 +93,15 @@ export function clearPresenceSelections(container: HTMLElement): void {
 
 function unwrapMarks(container: HTMLElement, selector: string): void {
   const marks = container.querySelectorAll(selector);
+  const parents = new Set<Node>();
   marks.forEach((mark) => {
     const parent = mark.parentNode;
     if (!parent) return;
     while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
     parent.removeChild(mark);
-    parent.normalize();
+    parents.add(parent);
   });
+  parents.forEach((parent) => parent.normalize());
 }
 
 function wrapRange(
@@ -119,6 +121,8 @@ function wrapRange(
       const domRange = document.createRange();
       domRange.setStart(node, localStart);
       domRange.setEnd(node, localEnd);
+      // makeMark() runs before surroundContents; if that throws, the created
+      // element is discarded — keep mark factories free of side effects.
       try {
         domRange.surroundContents(makeMark());
       } catch {
