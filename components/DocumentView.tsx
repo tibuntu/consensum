@@ -7,12 +7,13 @@ import remarkGfm from "remark-gfm";
 import { buildQuote, type Quote } from "@/lib/anchoring";
 import { applyHighlights, applyPresenceSelections, buildHighlightRanges, clearPresenceSelections } from "@/lib/highlight";
 import { applyPresenceEvent, remoteCursors, remoteSelections } from "@/lib/presence-client";
-import { applySessionEvent } from "@/lib/session-client";
+import { applySessionEvent, isLeader, isInSession } from "@/lib/session-client";
+import { leaderScroll, scrollTargetTop } from "@/lib/follow-client";
 import PresenceRoster from "@/components/PresenceRoster";
 import PresenceCursors from "@/components/PresenceCursors";
 import SessionBanner from "@/components/SessionBanner";
 import type { SessionAction } from "@/lib/enums";
-import type { PresenceEntry, PresenceCursor, PresenceSelection, ReviewSession } from "@/lib/events";
+import type { PresenceEntry, PresenceCursor, PresenceSelection, PresenceScroll, ReviewSession } from "@/lib/events";
 import CommentSidebar from "@/components/CommentSidebar";
 import DocumentEditor from "@/components/DocumentEditor";
 import { Button } from "@/components/ui/Button";
@@ -111,6 +112,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
 
   const selectionRef = useRef<PresenceSelection | null>(null);
   const cursorRef = useRef<PresenceCursor | null>(null);
+  const scrollRef = useRef<PresenceScroll | null>(null);
   const versionRef = useRef(versionNumber);
   useEffect(() => {
     versionRef.current = versionNumber;
@@ -122,7 +124,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
     fetch(`/api/documents/${doc.id}/presence`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ selection: selectionRef.current, cursor: cursorRef.current }),
+      body: JSON.stringify({ selection: selectionRef.current, cursor: cursorRef.current, scroll: scrollRef.current }),
       keepalive: true,
     }).catch(() => {});
   }, [doc.id]);
@@ -151,6 +153,27 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
   const queueCursorSend = useCallback(() => {
     const throttleMs = Number(process.env.NEXT_PUBLIC_PRESENCE_CURSOR_THROTTLE_MS ?? 100);
     const t = cursorThrottleRef.current;
+    const elapsed = Date.now() - t.last;
+    if (elapsed >= throttleMs) {
+      t.last = Date.now();
+      sendPresence();
+    } else if (!t.timer) {
+      t.timer = setTimeout(() => {
+        t.timer = null;
+        t.last = Date.now();
+        sendPresence();
+      }, throttleMs - elapsed);
+    }
+  }, [sendPresence]);
+
+  // P5 follow-the-leader: leader broadcasts scroll; followers auto-scroll.
+  const programmaticScrollRef = useRef(false);
+  const [attached, setAttached] = useState(true);
+
+  const scrollThrottleRef = useRef<{ last: number; timer: ReturnType<typeof setTimeout> | null }>({ last: 0, timer: null });
+  const queueScrollSend = useCallback(() => {
+    const throttleMs = Number(process.env.NEXT_PUBLIC_PRESENCE_SCROLL_THROTTLE_MS ?? 100);
+    const t = scrollThrottleRef.current;
     const elapsed = Date.now() - t.last;
     if (elapsed >= throttleMs) {
       t.last = Date.now();
@@ -271,6 +294,77 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
       }
     };
   }, [mode, queueCursorSend, sendPresence]);
+
+  const leading = isLeader(session, currentUserId);
+  const joinedSession = isInSession(session, currentUserId);
+  const targetScroll = leaderScroll(roster, session, currentUserId);
+
+  // Leader: broadcast viewport-top as a fraction of the doc-body box (P5).
+  useEffect(() => {
+    if (mode !== "review" || !leading) {
+      if (scrollRef.current !== null) {
+        scrollRef.current = null;
+        sendPresence(); // one-shot clear so a former leader's scroll doesn't linger
+      }
+      return;
+    }
+    const container = containerRef.current;
+    if (!container) return;
+    const throttle = scrollThrottleRef.current;
+    const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
+    const onScroll = () => {
+      const rect = container.getBoundingClientRect();
+      if (rect.height === 0) return;
+      scrollRef.current = { y: clamp01(-rect.top / rect.height) };
+      queueScrollSend();
+    };
+    onScroll(); // send initial position on becoming leader
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (throttle.timer) {
+        clearTimeout(throttle.timer);
+        throttle.timer = null;
+      }
+    };
+  }, [mode, leading, queueScrollSend, sendPresence]);
+
+  // Reset attach state to true on each fresh join.
+  const wasJoinedRef = useRef(false);
+  useEffect(() => {
+    if (joinedSession && !wasJoinedRef.current) setAttached(true);
+    wasJoinedRef.current = joinedSession;
+  }, [joinedSession]);
+
+  // Follower: auto-scroll toward the leader's position while attached.
+  useEffect(() => {
+    if (!attached || targetScroll === null) return;
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    if (rect.height === 0) return;
+    programmaticScrollRef.current = true;
+    window.scrollTo({ top: scrollTargetTop(window.scrollY, rect.top, rect.height, targetScroll), behavior: "smooth" });
+    const clear = () => { programmaticScrollRef.current = false; };
+    window.addEventListener("scrollend", clear, { once: true });
+    const fallback = setTimeout(clear, 1000);
+    return () => {
+      window.removeEventListener("scrollend", clear);
+      clearTimeout(fallback);
+    };
+  }, [attached, targetScroll]);
+
+  // A manual (non-programmatic) scroll detaches the follower.
+  useEffect(() => {
+    const onScroll = () => {
+      if (programmaticScrollRef.current) return;
+      setAttached(false);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const resumeFollow = useCallback(() => setAttached(true), []);
 
   const onContainerClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -545,6 +639,8 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
             currentUserId={currentUserId}
             onAction={postSessionAction}
             pending={sessionPending}
+            followAttached={attached}
+            onResumeFollow={resumeFollow}
           />
           {mode === "review" && editEnabled && (
             <Button variant="secondary" size="sm" onClick={() => { setDraft(markdown); setMode("edit"); }}>Edit</Button>

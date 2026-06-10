@@ -9,11 +9,15 @@ export default function SessionBanner({
   currentUserId,
   onAction,
   pending,
+  followAttached,
+  onResumeFollow,
 }: {
   session: ReviewSession | null;
   currentUserId: string;
   onAction: (action: SessionAction) => void;
   pending: boolean;
+  followAttached: boolean;
+  onResumeFollow: () => void;
 }) {
   if (canStart(session)) {
     return (
@@ -50,6 +54,22 @@ export default function SessionBanner({
           <span data-testid="session-participant-count">{count}</span> in session
         </span>
       )}
+      {joined && !leader &&
+        (followAttached ? (
+          <span data-testid="following-indicator" className="text-muted">
+            Following {s.leaderName}
+          </span>
+        ) : (
+          <Button
+            variant="secondary"
+            size="sm"
+            data-testid="resume-following"
+            disabled={pending}
+            onClick={onResumeFollow}
+          >
+            Jump back to {s.leaderName} · Resume
+          </Button>
+        ))}
       {leader ? (
         <Button variant="danger" size="sm" data-testid="end-session" disabled={pending} onClick={() => onAction("end")}>
           End session
