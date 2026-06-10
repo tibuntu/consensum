@@ -58,17 +58,17 @@ Roadmap: `specs/2026-06-09-quorum-ai-m5-roadmap.md`; per-phase design specs `spe
 - **P4 · Session lifecycle** ✅ — explicit start/end review session with a `sessionId` + leader; `session.started/ended` events on the registry.
 - **P5 · Follow-the-leader scroll** ✅ — leader broadcasts throttled scroll position; followers smooth-scroll; detach/resume.
 
-### M6 — Review Depth & Polish  🔜 scoped (roadmap approved)
+### M6 — Review Depth & Polish  🔄 in progress (P1 shipped)
 
 Roadmap: `specs/2026-06-10-quorum-ai-m6-roadmap.md`. Deliberately small + infra-free. Three phases:
-- **P1 · General UI polish** — finish the long-deferred polish phase from a *fresh* audit (the 2026-06-06 UI-review is stale; dark-mode prose + danger contrast already fixed). Likely: responsive doc page/nav, auth affordances. No Settings nav button.
-- **P2 · Granular per-type notification prefs** — per-type (comment/review/version/resolve) control over in-app + email + desktop, replacing the two global booleans.
-- **P3 · Quorum / N-approver thresholds** — expose `Document.requiredApprovals` (engine already honors it) on create/edit + machine API + progress display.
+- **P1 · General UI polish** ✅ shipped (on `main`) — ran a fresh whole-app **6-pillar re-audit** (the 2026-06-06 review was stale; all 7 of its findings already fixed). Fresh audit (`2026-06-10-quorum-ai-ui-review.md`) scored 19/24, then fixed all objective + approved-subjective findings → **23/24** (+6 vs the 17/24 baseline). Changes: dark-themed CodeMirror editor (reactive, token-driven via `lib/use-resolved-dark.ts`; theme store hoisted into `lib/theme.ts`), editor line-wrapping, violet `accent-color` on form controls, dark unchecked task-list checkbox, leading-H1 demotion (`lib/markdown-heading.ts`), presence colors → theme tokens, diff per-column version headers, session helper tooltips, cursor→person legend. 287 unit + 29 e2e green, lint/tsc/build clean. Residual (low, deferred): CodeMirror dark *syntax-token* dimness. No Settings nav button added; design system preserved. Plan: `plans/2026-06-10-quorum-ai-m6-p1-ui-polish.md`; design: `specs/2026-06-10-quorum-ai-m6-p1-ui-polish-design.md`.
+- **P2 · Granular per-type notification prefs** 🔜 — per-type (comment/review/version/resolve) control over in-app + email + desktop, replacing the two global booleans.
+- **P3 · Quorum / N-approver thresholds** 🔜 — expose `Document.requiredApprovals` (engine already honors it) on create/edit + machine API + progress display.
 
 Dropped from the backlog entirely in M6: dedicated Slack/Teams formatters; git export.
 
 ## Git state
-- `main`: M1–M5 all landed locally; phases committed directly to `main`. **`main` is ahead of `origin` — not yet pushed.** M6 scoped (roadmap on `main`), no phases started.
+- `main`: M1–M5 + M6/P1 all landed locally (P1 fast-forwarded in from its worktree branch, which is now removed). **`main` is ahead of `origin` — not yet pushed.** M6/P2 + P3 not started.
 - No active feature branches locally. Merged feature branches may still exist on `origin` (cleanup optional). User manages pushes.
 
 ## Run locally
@@ -81,7 +81,7 @@ pnpm dev                      # http://localhost:3000
 Container: `AUTH_SECRET=$(openssl rand -base64 32) docker compose up`.
 
 ## Next action
-M5 is complete — all five real-time-session phases on local `main` (M1–M5 shipped). **M6 is scoped** (roadmap `specs/2026-06-10-quorum-ai-m6-roadmap.md`, approved). Next: **start M6 / P1 (General UI polish)** in a fresh worktree via the `brainstorming` skill — begin from a *fresh* UI audit (the 2026-06-06 UI-review is stale). Then P2 (granular notification prefs) → P3 (quorum thresholds). Standing reminder: M4/P5 was a **breaking** env rename — deploys must set `BASE_URL`/`AUTH_SECRET` before upgrading.
+M6/P1 (UI polish) is shipped on local `main` (23/24). Next: **M6 / P2 — Granular per-type notification prefs** in a fresh worktree via the `brainstorming` skill (touch points already scoped in the roadmap: `lib/notifications.ts` dispatch filtering, `components/NotificationSettings.tsx` → per-type matrix, `PATCH /api/settings/notifications`, a schema decision for per-(user,type,channel) prefs). Then P3 (quorum thresholds). Standing reminder: M4/P5 was a **breaking** env rename — deploys must set `BASE_URL`/`AUTH_SECRET` before upgrading.
 
 ## Env/workflow notes (carried from M1)
 - This repo's **pnpm is v11** → prefix script runs with `CI=true` (avoids the no-TTY `node_modules` purge abort).
