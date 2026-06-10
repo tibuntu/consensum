@@ -22,6 +22,23 @@ export function remoteSelections(
   return out;
 }
 
+export interface RemoteCursor {
+  userId: string;
+  name: string;
+  x: number;
+  y: number;
+}
+
+/** Other users' live cursor positions (self and cursor-less entries dropped). */
+export function remoteCursors(roster: PresenceEntry[], selfId: string): RemoteCursor[] {
+  const out: RemoteCursor[] = [];
+  for (const e of roster) {
+    if (e.userId === selfId || !e.cursor) continue;
+    out.push({ userId: e.userId, name: e.name, x: e.cursor.x, y: e.cursor.y });
+  }
+  return out;
+}
+
 /** Pure reduction of a presence event into the next roster, keyed by userId. */
 export function applyPresenceEvent(
   roster: PresenceEntry[],

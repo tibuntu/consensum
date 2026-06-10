@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyPresenceEvent, remoteSelections } from "@/lib/presence-client";
+import { applyPresenceEvent, remoteCursors, remoteSelections } from "@/lib/presence-client";
 import type { PresenceEntry } from "@/lib/events";
 
 const self = { userId: "me", name: "Ada" };
@@ -55,5 +55,23 @@ describe("remoteSelections", () => {
 
   it("returns an empty array when nobody else has a current selection", () => {
     expect(remoteSelections(roster.slice(0, 1), "self", versionNumber)).toEqual([]);
+  });
+});
+
+describe("remoteCursors", () => {
+  const roster: PresenceEntry[] = [
+    { userId: "self", name: "Me", lastSeen: 1, cursor: { x: 0.1, y: 0.1 } },
+    { userId: "u2", name: "Grace", lastSeen: 1, cursor: { x: 0.4, y: 0.6 } },
+    { userId: "u3", name: "Linus", lastSeen: 1 }, // no cursor
+  ];
+
+  it("keeps only other users' cursors", () => {
+    expect(remoteCursors(roster, "self")).toEqual([
+      { userId: "u2", name: "Grace", x: 0.4, y: 0.6 },
+    ]);
+  });
+
+  it("returns an empty array when nobody else has a cursor", () => {
+    expect(remoteCursors(roster.slice(0, 1), "self")).toEqual([]);
   });
 });
