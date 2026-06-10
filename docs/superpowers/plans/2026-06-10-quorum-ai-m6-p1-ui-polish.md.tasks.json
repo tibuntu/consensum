@@ -24,7 +24,7 @@
     {
       "id": 4,
       "subject": "Task 4: Fix objective findings — critical + high",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [3],
       "description": "**Goal:** Resolve every (objective) [critical]/[high] finding within the token system, re-verifying visually.\n\n**Files:** data-driven by review doc — only files named in findings (likely app/globals.css, components/ui/*, components/DocumentView.tsx, CommentSidebar.tsx, SessionBanner.tsx, PresenceRoster.tsx, PresenceCursors.tsx, VersionHistory.tsx, WebhookManager.tsx, TokenManager.tsx, app/page.tsx, app/login/page.tsx, app/register/page.tsx).\n\n**Acceptance Criteria:**\n- [ ] All critical/high objective findings resolved.\n- [ ] Tokens-only, no raw hex, no new scale.\n- [ ] No data-testid/aria-label/button-name changed.\n- [ ] test:unit + lint + tsc green.\n- [ ] Affected surfaces re-screenshotted both themes/widths.\n\n**Verify:** `CI=true pnpm test:unit && pnpm lint && npx tsc --noEmit`; re-shot PNGs resolved.\n\n```json:metadata\n{\"files\": [\"app/globals.css\", \"components/ui\", \"components/DocumentView.tsx\", \"components/CommentSidebar.tsx\", \"components/SessionBanner.tsx\", \"components/PresenceRoster.tsx\", \"components/PresenceCursors.tsx\", \"components/VersionHistory.tsx\", \"components/WebhookManager.tsx\", \"components/TokenManager.tsx\", \"app/page.tsx\", \"app/login/page.tsx\", \"app/register/page.tsx\"], \"verifyCommand\": \"CI=true pnpm test:unit && pnpm lint && npx tsc --noEmit\", \"acceptanceCriteria\": [\"all critical/high objective resolved\", \"tokens-only no raw hex\", \"no test-hook changes\", \"unit/lint/tsc green\", \"affected surfaces re-shot\"]}\n```"
     },

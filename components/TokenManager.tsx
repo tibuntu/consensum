@@ -77,7 +77,7 @@ export default function TokenManager({
             Expires
             <select
               aria-label="token expiry"
-              className="rounded-[var(--radius-app)] border border-border bg-transparent px-2 py-2 text-sm"
+              className="rounded-[var(--radius-app)] border border-border bg-transparent px-2 py-2 text-sm accent-[var(--primary)]"
               value={expiresInDays}
               onChange={(e) => setExpiresInDays(e.target.value === "" ? "" : Number(e.target.value))}
             >
@@ -94,6 +94,7 @@ export default function TokenManager({
                 <input
                   type="checkbox"
                   aria-label={scope}
+                  className="accent-[var(--primary)]"
                   checked={scopes.includes(scope)}
                   onChange={() => toggleScope(scope)}
                 />
