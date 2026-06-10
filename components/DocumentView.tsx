@@ -8,7 +8,7 @@ import { buildQuote, type Quote } from "@/lib/anchoring";
 import { applyHighlights, buildHighlightRanges } from "@/lib/highlight";
 import { applyPresenceEvent } from "@/lib/presence-client";
 import PresenceRoster from "@/components/PresenceRoster";
-import type { PresenceEntry } from "@/lib/events";
+import type { PresenceEntry, PresenceSelection } from "@/lib/events";
 import CommentSidebar from "@/components/CommentSidebar";
 import DocumentEditor from "@/components/DocumentEditor";
 import { Button } from "@/components/ui/Button";
@@ -89,6 +89,41 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
     { userId: currentUserId, name: currentUserName, lastSeen: Date.now() },
   ]);
 
+  const selectionRef = useRef<PresenceSelection | null>(null);
+  const versionRef = useRef(versionNumber);
+  useEffect(() => {
+    versionRef.current = versionNumber;
+  }, [versionNumber]);
+
+  // One presence channel for heartbeats AND selection updates: every POST
+  // states the full selection truth (object sets, null clears).
+  const sendPresence = useCallback(() => {
+    fetch(`/api/documents/${doc.id}/presence`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ selection: selectionRef.current }),
+      keepalive: true,
+    }).catch(() => {});
+  }, [doc.id]);
+
+  // Leading+trailing throttle so drag-selections feel live without spamming.
+  const throttleRef = useRef<{ last: number; timer: ReturnType<typeof setTimeout> | null }>({ last: 0, timer: null });
+  const queueSelectionSend = useCallback(() => {
+    const throttleMs = Number(process.env.NEXT_PUBLIC_PRESENCE_SELECTION_THROTTLE_MS ?? 250);
+    const t = throttleRef.current;
+    const elapsed = Date.now() - t.last;
+    if (elapsed >= throttleMs) {
+      t.last = Date.now();
+      sendPresence();
+    } else if (!t.timer) {
+      t.timer = setTimeout(() => {
+        t.timer = null;
+        t.last = Date.now();
+        sendPresence();
+      }, throttleMs - elapsed);
+    }
+  }, [sendPresence]);
+
   async function handleDelete() {
     setDeleting(true);
     const res = await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
@@ -103,11 +138,17 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
     function onSelectionChange() {
       const sel = document.getSelection();
       const container = containerRef.current;
-      if (!sel || sel.rangeCount === 0 || sel.isCollapsed || !container) return;
+      const clearShared = () => {
+        if (selectionRef.current !== null) {
+          selectionRef.current = null;
+          queueSelectionSend();
+        }
+      };
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed || !container) return clearShared();
       const range = sel.getRangeAt(0);
-      if (!container.contains(range.startContainer)) return;
+      if (!container.contains(range.startContainer)) return clearShared();
       const selectedText = sel.toString();
-      if (!selectedText.trim()) return;
+      if (!selectedText.trim()) return clearShared();
       const pre = document.createRange();
       pre.selectNodeContents(container);
       pre.setEnd(range.startContainer, range.startOffset);
@@ -115,10 +156,12 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
       const end = start + selectedText.length;
       const containerText = container.textContent ?? "";
       setSelection({ quote: buildQuote(containerText, start, end), startOffset: start, endOffset: end });
+      selectionRef.current = { start, end, versionNumber: versionRef.current };
+      queueSelectionSend();
     }
     document.addEventListener("selectionchange", onSelectionChange);
     return () => document.removeEventListener("selectionchange", onSelectionChange);
-  }, []);
+  }, [queueSelectionSend]);
 
   // Re-apply highlights whenever the annotation set changes.
   useEffect(() => {
@@ -293,28 +336,25 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
   // Presence heartbeat: ride a throttled POST beacon (NOT a third EventSource).
   useEffect(() => {
     const url = `/api/documents/${doc.id}/presence`;
-    const send = () => {
-      fetch(url, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: "{}",
-        keepalive: true,
-      }).catch(() => {});
-    };
+    const throttle = throttleRef.current;
     const leave = () => {
       const blob = new Blob([JSON.stringify({ leaving: true })], { type: "application/json" });
       navigator.sendBeacon?.(url, blob);
     };
-    send();
+    sendPresence();
     const intervalMs = Number(process.env.NEXT_PUBLIC_PRESENCE_HEARTBEAT_MS ?? 10_000);
-    const timer = setInterval(send, intervalMs);
+    const timer = setInterval(sendPresence, intervalMs);
     window.addEventListener("pagehide", leave);
     return () => {
       clearInterval(timer);
+      if (throttle.timer) {
+        clearTimeout(throttle.timer);
+        throttle.timer = null;
+      }
       window.removeEventListener("pagehide", leave);
       leave(); // best-effort fast departure on unmount
     };
-  }, [doc.id]);
+  }, [doc.id, sendPresence]);
 
   async function saveVersion() {
     setSaving(true);
