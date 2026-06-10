@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { buildQuote, type Quote } from "@/lib/anchoring";
-import { applyHighlights, buildHighlightRanges } from "@/lib/highlight";
-import { applyPresenceEvent } from "@/lib/presence-client";
+import { applyHighlights, applyPresenceSelections, buildHighlightRanges, clearPresenceSelections } from "@/lib/highlight";
+import { applyPresenceEvent, remoteSelections } from "@/lib/presence-client";
 import PresenceRoster from "@/components/PresenceRoster";
 import type { PresenceEntry, PresenceSelection } from "@/lib/events";
 import CommentSidebar from "@/components/CommentSidebar";
@@ -174,6 +174,20 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
     applyHighlights(container, ranges);
     setStatusById(statuses);
   }, [annotations, markdown, mode]);
+
+  // Render other users' live selections as a separate direct-DOM mark layer
+  // (kept out of the memoized RenderedMarkdown subtree, like annotation
+  // highlights). Independent of the annotation effect so selection churn
+  // never rewraps annotation marks.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    if (mode !== "review") {
+      clearPresenceSelections(container);
+      return;
+    }
+    applyPresenceSelections(container, remoteSelections(roster, currentUserId, versionNumber));
+  }, [roster, versionNumber, markdown, mode, currentUserId]);
 
   const onContainerClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
