@@ -1,5 +1,5 @@
 overrides:
-  better-call: 2.0.3
+  better-call: 2.0.4
   kysely: 0.28.17
 # pnpm 11 replaced onlyBuiltDependencies/ignoredBuiltDependencies with a single
 # allowBuilds map (true = run build scripts, false = skip). strictDepBuilds is on
