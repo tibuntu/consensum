@@ -29,6 +29,24 @@ describe("consolidateFeedback", () => {
     const r = consolidateFeedback({ state: "APPROVED", annotations: [], reviews: [{ verdict: "APPROVE", dismissed: false, reviewer: { email: "a@x.com" } }] });
     expect(r.decision).toBe("approved");
   });
+
+  it("includes requiredApprovals + approvals (count of active APPROVE)", () => {
+    const detail = {
+      state: "OPEN",
+      requiredApprovals: 2,
+      currentVersion: { versionNumber: 1 },
+      versions: [],
+      annotations: [],
+      reviews: [
+        { reviewer: { name: "A" }, verdict: "APPROVE", dismissed: false },
+        { reviewer: { name: "B" }, verdict: "APPROVE", dismissed: true },
+      ],
+    } as unknown as Parameters<typeof consolidateFeedback>[0];
+    const out = consolidateFeedback(detail);
+    expect(out.requiredApprovals).toBe(2);
+    expect(out.approvals).toBe(1);
+    expect(out.markdown).toContain("Approvals: 1 of 2");
+  });
 });
 
 const baseThread = (over: Partial<Parameters<typeof consolidateFeedback>[0]["annotations"][number]> = {}) => ({
