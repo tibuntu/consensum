@@ -1,4 +1,5 @@
 import { getDocumentDetail } from "@/lib/documents";
+import { approvalCount } from "@/lib/quorum";
 
 type Author = { name?: string | null; email?: string | null } | null;
 
@@ -19,6 +20,7 @@ interface DetailVersion { versionNumber: number; createdAt?: Date | string; crea
 
 export interface FeedbackDetail {
   state: string;
+  requiredApprovals?: number;
   currentVersion?: { versionNumber: number } | null;
   versions?: DetailVersion[];
   annotations: DetailAnnotation[];
@@ -98,6 +100,8 @@ export function consolidateFeedback(detail: FeedbackDetail) {
   }));
   const reviews = detail.reviews.map((r) => ({ reviewer: authorName(r.reviewer ?? null), verdict: r.verdict, dismissed: r.dismissed }));
   const decision = decisionFor(detail.state);
+  const approvals = approvalCount(detail.reviews);
+  const requiredApprovals = detail.requiredApprovals ?? 1;
 
   const byCategory: Record<string, number> = {};
   const byVersion: Record<string, number> = {};
@@ -125,6 +129,7 @@ export function consolidateFeedback(detail: FeedbackDetail) {
 
   const ordered = threads.map((t, i) => ({ t, i })).sort((a, b) => rank(a.t) - rank(b.t) || a.i - b.i).map((x) => x.t);
   const lines: string[] = [`# Review feedback — decision: ${decision}`, ""];
+  lines.push(`Approvals: ${approvals} of ${requiredApprovals}`, "");
   if (ordered.length === 0) lines.push("_No inline comments._", "");
   for (const t of ordered) {
     const sev = t.severity ? `[${t.severity}] ` : "";
@@ -142,6 +147,8 @@ export function consolidateFeedback(detail: FeedbackDetail) {
     schemaVersion: 1 as const,
     decision,
     state: detail.state,
+    requiredApprovals,
+    approvals,
     markdown: lines.join("\n"),
     currentVersion: detail.currentVersion?.versionNumber ?? null,
     versions,
