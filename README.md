@@ -46,7 +46,7 @@ This product re-inserts the team at the highest-leverage moment: **before the ag
 
 > **Breaking (M4):** the auth env vars were renamed — `BETTER_AUTH_SECRET` → `AUTH_SECRET`, `BETTER_AUTH_URL` → `BASE_URL`. Update your `.env` / deployment config before upgrading.
 
-See [`docs/superpowers/STATUS.md`](docs/superpowers/STATUS.md) for live build status and [`docs/superpowers/specs/2026-06-04-quorum-ai-design.md`](docs/superpowers/specs/2026-06-04-quorum-ai-design.md) for the full design.
+See the [Architecture Decision Records](docs/adr/) for the rationale behind key design and security decisions.
 
 ## Quickstart
 
@@ -180,7 +180,7 @@ prisma/         Schema (User, Session, Account, Document, DocumentVersion, Annot
                 Comment, Review, Notification, DocumentParticipant, ApiToken, Webhook,
                 OutboxJob, …) + migrations
 tests/          Vitest unit tests + Playwright e2e (auth, review, versioning, nav)
-docs/           Design specs, phase plans, security audit, ADRs, build status
+docs/adr/       Architecture Decision Records (ADRs)
 .claude/        Agent slash commands (/push-plan, /pull-feedback)
 ```
 
