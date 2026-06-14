@@ -177,7 +177,3 @@ honest posture (the IdP owns provisioning). Keeping the gate conditional on
 - **No role mapping from IdP claims.** All SSO users get `member`; elevating
   roles remains manual. Acceptable for P6; revisit if IdP-driven roles are
   needed (M4+).
-
-## Related Decisions
-
-- [M3 / P6 — Generic OIDC Login (design spec)](../superpowers/specs/2026-06-06-quorum-ai-m3-p6-oidc-design.md)
