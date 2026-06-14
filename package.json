@@ -2,7 +2,7 @@
   "name": "quorum-ai",
   "version": "0.3.0",
   "private": true,
-  "packageManager": "pnpm@11.5.3",
+  "packageManager": "pnpm@11.6.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
