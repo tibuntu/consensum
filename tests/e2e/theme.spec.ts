@@ -12,16 +12,28 @@ async function login(page: Page) {
   await expect(page).toHaveURL(/\/app/);
 }
 
+// The single theme button cycles light → dark → system → light. Click it until
+// it reports the desired choice via data-theme-choice, so tests stay independent
+// of the starting state.
+async function selectTheme(page: Page, target: "light" | "dark" | "system") {
+  const toggle = page.getByTestId("theme-toggle");
+  for (let i = 0; i < 3; i++) {
+    if ((await toggle.getAttribute("data-theme-choice")) === target) return;
+    await toggle.click();
+  }
+  await expect(toggle).toHaveAttribute("data-theme-choice", target);
+}
+
 test("theme toggle persists and applies", async ({ page }) => {
   await login(page);
 
-  await page.getByTestId("theme-dark").click();
+  await selectTheme(page, "dark");
   await expect(page.locator("html")).toHaveClass(/dark/);
 
   await page.reload();
   await expect(page.locator("html")).toHaveClass(/dark/); // persisted, no flash
 
-  await page.getByTestId("theme-light").click();
+  await selectTheme(page, "light");
   await expect(page.locator("html")).not.toHaveClass(/dark/);
 });
 
@@ -29,7 +41,7 @@ test("system mode follows emulated OS preference", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await login(page);
 
-  await page.getByTestId("theme-system").click();
+  await selectTheme(page, "system");
   await expect(page.locator("html")).toHaveClass(/dark/);
 
   await page.emulateMedia({ colorScheme: "light" });

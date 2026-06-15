@@ -15,7 +15,7 @@ const LABEL: Record<ThemeChoice, string> = { light: "☀", dark: "☾", system: 
 export function ThemeToggle() {
   // useSyncExternalStore renders the server snapshot ("system") during hydration,
   // then the client value — no setState-in-effect and no hydration mismatch.
-  const choice = useSyncExternalStore(subscribeTheme, getChoice, () => "system");
+  const choice = useSyncExternalStore<ThemeChoice>(subscribeTheme, getChoice, () => "system");
 
   // While in system, keep the class in sync with live OS preference changes.
   useEffect(() => {
@@ -36,21 +36,22 @@ export function ThemeToggle() {
     emitThemeChange();
   }
 
+  function cycle() {
+    const i = THEME_OPTIONS.indexOf(choice);
+    pick(THEME_OPTIONS[(i + 1) % THEME_OPTIONS.length]);
+  }
+
   return (
-    <div className="flex items-center gap-1" data-testid="theme-toggle" role="group" aria-label="Theme">
-      {THEME_OPTIONS.map((o) => (
-        <button
-          key={o}
-          type="button"
-          data-testid={`theme-${o}`}
-          aria-pressed={choice === o}
-          onClick={() => pick(o)}
-          title={o}
-          className={`rounded px-2 py-1 text-sm ${choice === o ? "bg-primary-subtle text-foreground" : "text-muted hover:text-foreground"}`}
-        >
-          {LABEL[o]}
-        </button>
-      ))}
-    </div>
+    <button
+      type="button"
+      data-testid="theme-toggle"
+      data-theme-choice={choice}
+      onClick={cycle}
+      title={`Theme: ${choice} (click to change)`}
+      aria-label={`Theme: ${choice} (click to change)`}
+      className="rounded px-2 py-1 text-sm text-muted hover:text-foreground"
+    >
+      {LABEL[choice]}
+    </button>
   );
 }
