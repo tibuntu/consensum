@@ -1,14 +1,14 @@
 import { describe, expect, test } from "vitest";
 import { buildHighlightRanges } from "@/lib/highlight";
 
-const TEXT = "The quorum approves the plan after careful review of every section.";
+const TEXT = "The team approves the plan after careful review of every section.";
 
 // A thread anchored to "approves the plan" — relocate finds it exactly (ACTIVE).
 function anchor(id: string, threadStatus: string) {
   return {
     id,
     anchorExact: "approves the plan",
-    anchorPrefix: "The quorum ",
+    anchorPrefix: "The team ",
     anchorSuffix: " after careful",
     threadStatus,
   };

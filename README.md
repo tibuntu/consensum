@@ -1,6 +1,6 @@
-# Quorum AI
+# Consensum
 
-> *"The quorum your agents must clear before building."*
+> *"The consensus your agents must reach before building."*
 
 A self-hostable web app that brings team collaboration back into agentic-AI development — **pull-request review, but for the _plan_, before the agent implements.**
 
@@ -16,7 +16,7 @@ This product re-inserts the team at the highest-leverage moment: **before the ag
 
 ## The hero loop
 
-1. A developer's Claude Code agent drafts a plan and runs `/push-plan` → it posts to your Quorum AI instance and hands control back (no blocking).
+1. A developer's Claude Code agent drafts a plan and runs `/push-plan` → it posts to your Consensum instance and hands control back (no blocking).
 2. The team gets a shareable link / sees it in their inbox, opens the **rendered** plan, and reviews async: select-to-comment, threads, suggestions, and an **Approve / Request-changes** verdict.
 3. The developer runs `/pull-feedback` → the agent receives the **consolidated** team feedback and revises the plan before implementing.
 
@@ -29,7 +29,7 @@ The product runs end-to-end in a single Docker container.
 - **Review** it in a production-themed UI: rendered markdown, select-to-comment annotations, comment threads, resolve, and an Approve / Request-changes verdict.
 - **Suggestions-as-edits** — reviewers propose concrete text; the owner accepts → a new version.
 - **Edit** plans into new versions, with annotations **re-anchored** across edits, plus a side-by-side version diff.
-- **Configurable approval quorums** — require N approvals before a plan is considered approved.
+- **Configurable approval thresholds** — require N approvals before a plan is considered approved.
 - **Pull** consolidated feedback back into the agent (`/pull-feedback`).
 
 **Real-time collaboration**
@@ -55,7 +55,7 @@ See the [Architecture Decision Records](docs/adr/) for the rationale behind key 
 
 ### Run with Docker (recommended)
 
-Quorum AI runs as **one container** with an embedded SQLite database (WAL) — no external services. Data persists in a named volume.
+Consensum runs as **one container** with an embedded SQLite database (WAL) — no external services. Data persists in a named volume.
 
 ```bash
 AUTH_SECRET=$(openssl rand -base64 32) docker compose up
@@ -63,6 +63,8 @@ AUTH_SECRET=$(openssl rand -base64 32) docker compose up
 ```
 
 Register a user, then create an API token under **Settings → API tokens** for the agent integration below.
+
+> **Upgrading from Quorum AI (v0.3.0)?** The product was renamed to Consensum with breaking changes (env vars, token prefix, webhook headers, data volume). See [docs/UPGRADING.md](docs/UPGRADING.md).
 
 ### Health checks
 
@@ -95,7 +97,7 @@ pnpm dev                  # → http://localhost:3000
 
 ## Single sign-on (optional OIDC)
 
-Quorum supports one generic OIDC provider (Keycloak, Authentik, Azure AD, Auth0,
+Consensum supports one generic OIDC provider (Keycloak, Authentik, Azure AD, Auth0,
 …) alongside email+password. It is off by default. To enable it, set:
 
 | Variable | Purpose |
@@ -123,8 +125,8 @@ for the rationale.
 The hero loop is driven by two Claude Code slash commands shipped in [`.claude/commands/`](.claude/commands/): [`/push-plan`](.claude/commands/push-plan.md) and [`/pull-feedback`](.claude/commands/pull-feedback.md). They talk to your instance via the machine API. Set:
 
 ```bash
-export QUORUM_BASE_URL="http://localhost:3000"
-export QUORUM_API_TOKEN="<token from Settings → API tokens>"
+export CONSENSUM_BASE_URL="http://localhost:3000"
+export CONSENSUM_API_TOKEN="<token from Settings → API tokens>"
 ```
 
 Then from any agent session: `/push-plan` posts the current plan and returns a review URL; once the team weighs in, `/pull-feedback <id>` pulls the consolidated verdict, threads, and digest back so the agent can revise.
@@ -142,7 +144,7 @@ For CI or headless agents that can't hold a connection open, register an [outbou
 
 ## Outbound webhooks
 
-Register a webhook (owner-scoped, optionally narrowed to a single plan) in **Settings** to be notified on review events — the server-context complement to `/feedback/wait`. Each delivery is a JSON `POST` signed with **HMAC-SHA256** (`X-Quorum-Signature: sha256=…` + `X-Quorum-Timestamp` + `X-Quorum-Event`) and delivered durably through the outbox worker with retry/backoff and dead-lettering; a per-webhook delivery log surfaces failures.
+Register a webhook (owner-scoped, optionally narrowed to a single plan) in **Settings** to be notified on review events — the server-context complement to `/feedback/wait`. Each delivery is a JSON `POST` signed with **HMAC-SHA256** (`X-Consensum-Signature: sha256=…` + `X-Consensum-Timestamp` + `X-Consensum-Event`) and delivered durably through the outbox worker with retry/backoff and dead-lettering; a per-webhook delivery log surfaces failures.
 
 Events: `version.created`, `review.updated`, `decision.changed`, `comment.created`.
 

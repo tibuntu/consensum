@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { isOidcConfigured, oidcDiscoveryUrl, oidcPlugins, OIDC_PROVIDER_ID } from "@/lib/oidc";
 
 const fullEnv = {
-  OIDC_ISSUER: "https://idp.example.com/realms/quorum/",
-  OIDC_CLIENT_ID: "quorum",
+  OIDC_ISSUER: "https://idp.example.com/realms/consensum/",
+  OIDC_CLIENT_ID: "consensum",
   OIDC_CLIENT_SECRET: "shhh",
 } as unknown as NodeJS.ProcessEnv;
 
@@ -18,8 +18,8 @@ describe("isOidcConfigured", () => {
 
 describe("oidcDiscoveryUrl", () => {
   it("strips trailing slashes and appends the well-known path", () => {
-    expect(oidcDiscoveryUrl("https://idp.example.com/realms/quorum/")).toBe(
-      "https://idp.example.com/realms/quorum/.well-known/openid-configuration",
+    expect(oidcDiscoveryUrl("https://idp.example.com/realms/consensum/")).toBe(
+      "https://idp.example.com/realms/consensum/.well-known/openid-configuration",
     );
     expect(oidcDiscoveryUrl("https://idp.example.com")).toBe(
       "https://idp.example.com/.well-known/openid-configuration",

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/api";
 import { baseUrl } from "@/lib/config";
 import { createDocument } from "@/lib/documents";
-import { parseRequiredApprovals } from "@/lib/quorum";
+import { parseRequiredApprovals } from "@/lib/approvals";
 
 export async function POST(req: Request) {
   const authd = await requireApiUser(req);

@@ -28,7 +28,7 @@ export default function RegisterPage() {
     return (
       <Card className="mx-auto mt-24 max-w-sm p-6">
         <div className="flex flex-col gap-3">
-          <span className="text-sm font-semibold text-primary">◆ Quorum</span>
+          <span className="text-sm font-semibold text-primary">◆ Consensum</span>
           <h1 className="text-xl font-semibold text-foreground">Sign-up is via SSO</h1>
           <p className="text-sm text-muted">
             This workspace uses single sign-on. Create your account by signing in
@@ -45,7 +45,7 @@ export default function RegisterPage() {
   return (
     <Card className="mx-auto mt-24 max-w-sm p-6">
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
-        <span className="text-sm font-semibold text-primary">◆ Quorum</span>
+        <span className="text-sm font-semibold text-primary">◆ Consensum</span>
         <h1 className="text-xl font-semibold text-foreground">Create your account</h1>
         <label className="flex flex-col gap-1 text-sm text-foreground">
           Name

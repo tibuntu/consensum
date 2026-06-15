@@ -8,7 +8,7 @@ const STEPS = [
   {
     step: "1",
     title: "Push the plan",
-    body: "Your agent runs /push-plan and the proposal lands in Quorum as a reviewable document.",
+    body: "Your agent runs /push-plan and the proposal lands in Consensum as a reviewable document.",
   },
   {
     step: "2",
@@ -29,7 +29,7 @@ export default async function Index() {
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-border bg-surface/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
-          <span className="font-semibold text-foreground">◆ Quorum AI</span>
+          <span className="font-semibold text-foreground">◆ Consensum</span>
           <div className="flex items-center gap-2">
             <Link href="/login"><Button variant="ghost" size="sm">Log in</Button></Link>
             <Link href="/register"><Button size="sm">Sign up</Button></Link>
@@ -72,7 +72,7 @@ export default async function Index() {
 
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-2 px-6 py-6 text-sm text-muted sm:flex-row">
-          <span>◆ Quorum AI — review the plan, then build.</span>
+          <span>◆ Consensum — review the plan, then build.</span>
           <div className="flex gap-4">
             <Link href="/login" className="hover:text-foreground">Log in</Link>
             <Link href="/register" className="hover:text-foreground">Sign up</Link>

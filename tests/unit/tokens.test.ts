@@ -13,7 +13,7 @@ describe("tokens service", () => {
   it("generates, verifies, lists, revokes", async () => {
     const user = await makeUser();
     const { id, token } = await generateToken(user.id, "ci");
-    expect(token.startsWith("qai_")).toBe(true);
+    expect(token.startsWith("csm_")).toBe(true);
 
     const verified = await verifyToken(`Bearer ${token}`);
     expect(verified?.user.id).toBe(user.id);

@@ -140,9 +140,9 @@ export async function deliverWebhook(payload: unknown): Promise<void> {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "X-Quorum-Event": payload.event,
-        "X-Quorum-Timestamp": timestamp,
-        "X-Quorum-Signature": signBody(secret, body),
+        "X-Consensum-Event": payload.event,
+        "X-Consensum-Timestamp": timestamp,
+        "X-Consensum-Signature": signBody(secret, body),
       },
       body,
     });

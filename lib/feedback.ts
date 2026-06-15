@@ -1,5 +1,5 @@
 import { getDocumentDetail } from "@/lib/documents";
-import { approvalCount } from "@/lib/quorum";
+import { approvalCount } from "@/lib/approvals";
 
 type Author = { name?: string | null; email?: string | null } | null;
 

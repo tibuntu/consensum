@@ -18,7 +18,7 @@ describe("email transport", () => {
   });
 
   it("captures with json transport", async () => {
-    process.env.EMAIL_TRANSPORT = "json"; process.env.EMAIL_FROM = "noreply@quorum.test";
+    process.env.EMAIL_TRANSPORT = "json"; process.env.EMAIL_FROM = "noreply@consensum.test";
     const mod = await import("../../lib/email");
     const info = await mod.sendMailRaw({ to: "a@b.c", subject: "Hi", html: "<p>Hi</p>", text: "Hi" });
     expect(info).toBeTruthy();

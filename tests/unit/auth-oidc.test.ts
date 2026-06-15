@@ -42,7 +42,7 @@ describe("OIDC gating", () => {
 
   it("registers the OIDC provider and disables signup when configured", async () => {
     vi.stubEnv("OIDC_ISSUER", "https://idp.example.com");
-    vi.stubEnv("OIDC_CLIENT_ID", "quorum");
+    vi.stubEnv("OIDC_CLIENT_ID", "consensum");
     vi.stubEnv("OIDC_CLIENT_SECRET", "shhh");
     const auth = await freshAuth();
     expect(auth.options.plugins?.some((p) => p.id === "generic-oauth")).toBe(true);
@@ -54,7 +54,7 @@ describe("OIDC gating", () => {
   // "Email and password sign up is not enabled" — verify that precisely.
   it("rejects self-service signup when OIDC is configured (D5a, server-side)", async () => {
     vi.stubEnv("OIDC_ISSUER", "https://idp.example.com");
-    vi.stubEnv("OIDC_CLIENT_ID", "quorum");
+    vi.stubEnv("OIDC_CLIENT_ID", "consensum");
     vi.stubEnv("OIDC_CLIENT_SECRET", "shhh");
     const auth = await freshAuth();
     const err = await auth.api

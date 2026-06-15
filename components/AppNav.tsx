@@ -18,7 +18,7 @@ export function AppNav({ email }: { email: string }) {
     <header className="border-b border-border bg-surface">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
         <div className="flex items-center gap-6">
-          <Link href="/app" className="font-semibold text-foreground">◆ Quorum</Link>
+          <Link href="/app" className="font-semibold text-foreground">◆ Consensum</Link>
           <nav className="flex items-center gap-1 text-sm">
             {LINKS.map((l) => {
               const active = l.href === "/app" ? pathname === "/app" : pathname.startsWith(l.href);

@@ -27,9 +27,9 @@ describe("webhook delivery", () => {
 
     const [, init] = fetchMock.mock.calls[0];
     const headers = init!.headers as Record<string, string>;
-    expect(headers["X-Quorum-Event"]).toBe("decision.changed");
-    expect(headers["X-Quorum-Signature"]).toBe(signBody(secret, init!.body as string));
-    expect(headers["X-Quorum-Timestamp"]).toBeTruthy();
+    expect(headers["X-Consensum-Event"]).toBe("decision.changed");
+    expect(headers["X-Consensum-Signature"]).toBe(signBody(secret, init!.body as string));
+    expect(headers["X-Consensum-Timestamp"]).toBeTruthy();
     const row = await prisma.webhook.findUnique({ where: { id } });
     expect(row?.lastStatus).toBe("200");
     expect(row?.lastDeliveredAt).toBeTruthy();

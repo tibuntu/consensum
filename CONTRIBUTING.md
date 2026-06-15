@@ -1,11 +1,11 @@
-# Contributing to Quorum AI
+# Contributing to Consensum
 
-Thanks for your interest in improving Quorum AI! This guide covers how to get a local
+Thanks for your interest in improving Consensum! This guide covers how to get a local
 environment running, the conventions we follow, and how to submit changes.
 
 ## Getting started
 
-Quorum AI is a Next.js app with an embedded SQLite database — no external services are
+Consensum is a Next.js app with an embedded SQLite database — no external services are
 required for local development. The repo uses **pnpm v11**.
 
 ```bash

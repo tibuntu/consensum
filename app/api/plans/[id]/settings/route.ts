@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/api";
 import { isOwner } from "@/lib/authz";
-import { parseRequiredApprovals } from "@/lib/quorum";
+import { parseRequiredApprovals } from "@/lib/approvals";
 import { setRequiredApprovals } from "@/lib/reviews";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {

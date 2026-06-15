@@ -10,7 +10,7 @@ async function register(page: Page, name: string) {
   await expect(page).toHaveURL(/\/app/);
 }
 
-test("quorum threshold gates approval", async ({ browser }) => {
+test("approval threshold gates approval", async ({ browser }) => {
   const ownerCtx = await browser.newContext();
   const reviewerCtx = await browser.newContext();
   const owner = await ownerCtx.newPage();
@@ -21,7 +21,7 @@ test("quorum threshold gates approval", async ({ browser }) => {
 
   // Owner creates a doc requiring 2 approvals.
   await owner.goto("/app");
-  await owner.getByLabel("title").fill("Quorum demo");
+  await owner.getByLabel("title").fill("Consensum demo");
   await owner.getByLabel("markdown").fill("# Plan\n\nReview this.");
   await owner.getByLabel("required approvals").fill("2");
   await owner.getByRole("button", { name: "Create document" }).click();

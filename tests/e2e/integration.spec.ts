@@ -17,7 +17,7 @@ test("machine API: token → push plan → feedback", async ({ page, request }) 
   await page.getByLabel("token label").fill("ci");
   await page.getByRole("button", { name: "Create token" }).click();
   const token = await page.getByTestId("new-token").inputValue();
-  expect(token.startsWith("qai_")).toBe(true);
+  expect(token.startsWith("csm_")).toBe(true);
 
   const post = await request.post("/api/plans", {
     headers: { Authorization: `Bearer ${token}` },

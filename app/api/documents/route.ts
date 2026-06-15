@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api";
 import { createDocument, listDocuments } from "@/lib/documents";
-import { parseRequiredApprovals } from "@/lib/quorum";
+import { parseRequiredApprovals } from "@/lib/approvals";
 
 export async function POST(req: Request) {
   const user = await requireUser();

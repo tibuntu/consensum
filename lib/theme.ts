@@ -1,5 +1,5 @@
 export type ThemeChoice = "light" | "dark" | "system";
-export const STORAGE_KEY = "quorum-theme";
+export const STORAGE_KEY = "consensum-theme";
 
 /** Pure: given a choice and the OS dark preference, should `.dark` be applied? */
 export function resolveDark(choice: ThemeChoice, prefersDark: boolean): boolean {

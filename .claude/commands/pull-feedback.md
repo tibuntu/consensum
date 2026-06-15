@@ -1,18 +1,18 @@
 ---
 allowed-tools: Bash(curl:*), Bash(jq:*)
-description: Pull consolidated team feedback for a Quorum AI plan and revise accordingly.
+description: Pull consolidated team feedback for a Consensum plan and revise accordingly.
 ---
 
 Wait for a team decision on a plan, then revise. This blocks via long-poll instead of one-shot polling, so an agent (or CI) can wait for humans to decide rather than re-running by hand.
 
-Requires env vars: `QUORUM_BASE_URL` and `QUORUM_API_TOKEN`. The plan id is `$ARGUMENTS`.
+Requires env vars: `CONSENSUM_BASE_URL` and `CONSENSUM_API_TOKEN`. The plan id is `$ARGUMENTS`.
 
 1. Wait loop — up to 10 iterations, each a ~30s long-poll. The server holds the connection open until the decision/state changes, then returns the feedback body with a `timedOut` flag (HTTP 200 even on timeout):
 
    ```
    for i in 1..10:
-     resp=$(curl -s "$QUORUM_BASE_URL/api/plans/$ARGUMENTS/feedback/wait?timeoutMs=30000" \
-       -H "Authorization: Bearer $QUORUM_API_TOKEN")
+     resp=$(curl -s "$CONSENSUM_BASE_URL/api/plans/$ARGUMENTS/feedback/wait?timeoutMs=30000" \
+       -H "Authorization: Bearer $CONSENSUM_API_TOKEN")
      decision=$(echo "$resp" | jq -r .decision)
      if [ "$decision" = "approved" ] || [ "$decision" = "changes_requested" ]; then
        break   # terminal — stop waiting
@@ -40,8 +40,8 @@ Requires env vars: `QUORUM_BASE_URL` and `QUORUM_API_TOKEN`. The plan id is `$AR
 
    b. To focus the revision on actionable items, fetch the filtered thread list:
       ```
-      curl -s "$QUORUM_BASE_URL/api/plans/$ARGUMENTS/feedback?include=blocking,unresolved" \
-        -H "Authorization: Bearer $QUORUM_API_TOKEN"
+      curl -s "$CONSENSUM_BASE_URL/api/plans/$ARGUMENTS/feedback?include=blocking,unresolved" \
+        -H "Authorization: Bearer $CONSENSUM_API_TOKEN"
       ```
       The returned `threads[]` will be narrowed to blocking / open items. The `rollup` in this response still reflects the full unfiltered totals, so the overall picture is preserved.
 
@@ -51,8 +51,8 @@ Requires env vars: `QUORUM_BASE_URL` and `QUORUM_API_TOKEN`. The plan id is `$AR
       - `category`
       - `raisedOnVersion`
 
-   d. Revise the plan to address every comment, prioritising BLOCKERs first. If the user approves the revision, post it back with `PATCH $QUORUM_BASE_URL/api/plans/$ARGUMENTS` `{ markdown, baseVersionNumber }`.
+   d. Revise the plan to address every comment, prioritising BLOCKERs first. If the user approves the revision, post it back with `PATCH $CONSENSUM_BASE_URL/api/plans/$ARGUMENTS` `{ markdown, baseVersionNumber }`.
 
    **If `schemaVersion` is absent (legacy server):**
 
-   Present the `markdown` digest, then revise the plan to address every comment. If the user approves the revision, post it back with `PATCH $QUORUM_BASE_URL/api/plans/$ARGUMENTS` `{ markdown, baseVersionNumber }`.
+   Present the `markdown` digest, then revise the plan to address every comment. If the user approves the revision, post it back with `PATCH $CONSENSUM_BASE_URL/api/plans/$ARGUMENTS` `{ markdown, baseVersionNumber }`.

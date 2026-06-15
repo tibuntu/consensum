@@ -1,5 +1,5 @@
 {
-  "name": "quorum-ai",
+  "name": "consensum",
   "version": "0.3.1",
   "private": true,
   "packageManager": "pnpm@11.6.0",

@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Quorum AI",
-    template: "%s · Quorum AI",
+    default: "Consensum",
+    template: "%s · Consensum",
   },
   description: "Pull-request review for the plan — before the agent builds.",
 };

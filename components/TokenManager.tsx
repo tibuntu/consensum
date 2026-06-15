@@ -155,8 +155,8 @@ export default function TokenManager({
       <div className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold text-foreground">CLI setup</h2>
         <pre className="overflow-x-auto rounded-[var(--radius-app)] border border-border bg-[var(--state-neutral-bg)] p-4 text-xs text-foreground">
-{`export QUORUM_BASE_URL="${baseUrl || "http://localhost:3000"}"
-export QUORUM_API_TOKEN="qai_…"   # the token shown above
+{`export CONSENSUM_BASE_URL="${baseUrl || "http://localhost:3000"}"
+export CONSENSUM_API_TOKEN="csm_…"   # the token shown above
 # /push-plan and /pull-feedback ship in this repo's .claude/commands/`}
         </pre>
       </div>

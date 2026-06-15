@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { MAX_REQUIRED_APPROVALS, parseRequiredApprovals, approvalCount } from "@/lib/quorum";
+import { MAX_REQUIRED_APPROVALS, parseRequiredApprovals, approvalCount } from "@/lib/approvals";
 
 describe("parseRequiredApprovals", () => {
   test("accepts integers 1..10", () => {

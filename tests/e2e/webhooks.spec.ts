@@ -74,13 +74,13 @@ test("signed webhook delivery on approval", async ({ browser }) => {
 
     // Verify the HMAC signature.
     const expected = `sha256=${createHmac("sha256", secret).update(hit!.body).digest("hex")}`;
-    expect(hit!.headers["x-quorum-signature"]).toBe(expected);
-    expect(hit!.headers["x-quorum-event"]).toBe("decision.changed");
-    expect(hit!.headers["x-quorum-timestamp"]).toBeTruthy();
+    expect(hit!.headers["x-consensum-signature"]).toBe(expected);
+    expect(hit!.headers["x-consensum-event"]).toBe("decision.changed");
+    expect(hit!.headers["x-consensum-timestamp"]).toBeTruthy();
 
     // A wrong secret must NOT produce the same signature.
     const forged = `sha256=${createHmac("sha256", "whsec_wrong").update(hit!.body).digest("hex")}`;
-    expect(forged).not.toBe(hit!.headers["x-quorum-signature"]);
+    expect(forged).not.toBe(hit!.headers["x-consensum-signature"]);
   } finally {
     server.close();
   }

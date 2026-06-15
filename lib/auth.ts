@@ -28,7 +28,7 @@ export const auth = betterAuth({
   emailAndPassword: { enabled: true, disableSignUp: oidcConfigured },
   account: {
     accountLinking: {
-      // Link an OIDC identity to an existing user on a matching email. Quorum
+      // Link an OIDC identity to an existing user on a matching email. Consensum
       // has no local email-verification flow, so requireLocalEmailVerified must
       // be false or linking would never fire. Safety comes from the IdP side:
       // "oidc" is intentionally NOT in trustedProviders, so better-auth still

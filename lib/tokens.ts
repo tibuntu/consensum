@@ -11,7 +11,7 @@ export async function generateToken(
   label: string,
   opts?: { expiresAt?: Date | null; scopes?: string }
 ) {
-  const token = `qai_${randomBytes(32).toString("base64url")}`;
+  const token = `csm_${randomBytes(32).toString("base64url")}`;
   const row = await prisma.apiToken.create({
     data: {
       userId,

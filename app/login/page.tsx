@@ -41,7 +41,7 @@ function LoginForm() {
   return (
     <Card className="mx-auto mt-24 max-w-sm p-6">
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
-        <span className="text-sm font-semibold text-primary">◆ Quorum</span>
+        <span className="text-sm font-semibold text-primary">◆ Consensum</span>
         <h1 className="text-xl font-semibold text-foreground">Log in</h1>
         <label className="flex flex-col gap-1 text-sm text-foreground">
           Email

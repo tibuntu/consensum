@@ -10,7 +10,7 @@ Accepted
 
 ## Context
 
-Quorum AI authenticates users with email+password only, via better-auth's
+Consensum authenticates users with email+password only, via better-auth's
 `emailAndPassword` provider (`lib/auth.ts`). Teams that run their own identity
 provider (Keycloak, Authentik, Azure AD, Auth0) cannot bring their existing
 identities, and there is no single-sign-on story. SSO was the most-requested
@@ -18,7 +18,7 @@ deferred item from the M2 roadmap and is the goal of milestone M3 / phase P6.
 
 Three constraints shape the decision:
 
-1. **One generic provider, not named social buttons.** Quorum's audience is
+1. **One generic provider, not named social buttons.** Consensum's audience is
    teams with a corporate IdP, not consumers signing in with Google/GitHub. A
    single env-configured OIDC provider covers every standards-compliant IdP.
 2. **Additive, zero-burden default.** The default deployment must remain
@@ -40,7 +40,7 @@ unless **both** of these hold:
 - `account.accountLinking.requireLocalEmailVerified` (default `true`) is
   satisfied — i.e. the **existing local** user's email is also verified.
 
-Quorum has **no email-verification flow**: password signup creates users with
+Consensum has **no email-verification flow**: password signup creates users with
 `emailVerified=false` and nothing ever flips it true. So under better-auth's
 defaults the second condition is *never* satisfied, auto-linking *never* fires,
 and a colliding-email SSO sign-in fails with a hard `"account not linked"`
@@ -90,14 +90,14 @@ secure configuration.
 The linking policy is the crux. The two literal goals from the design — "link an
 existing user by verified email" (D4) and "never link on an unverified email,
 to avoid takeover" (D5) — are in direct tension under better-auth's model *given
-Quorum's lack of local email verification*. We resolve it by separating the two
+Consensum's lack of local email verification*. We resolve it by separating the two
 verification checks better-auth conflates:
 
 - **IdP-side verification stays mandatory** (provider untrusted → IdP must mark
   the email verified). This is the real anti-takeover guarantee: the IdP is the
   authority on whether the user owns that email.
 - **Local-side verification is dropped** (`requireLocalEmailVerified:false`)
-  because Quorum never produces a verified local email, so requiring it would
+  because Consensum never produces a verified local email, so requiring it would
   permanently disable linking rather than add safety.
 
 Dropping local verification alone would be unsafe with open registration, so we

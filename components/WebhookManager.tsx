@@ -65,7 +65,7 @@ export default function WebhookManager({ initialWebhooks }: { initialWebhooks: W
             Endpoint URL
             <Input
               aria-label="webhook url"
-              placeholder="https://ci.example.com/quorum"
+              placeholder="https://ci.example.com/consensum"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
             />

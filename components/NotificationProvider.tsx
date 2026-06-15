@@ -56,7 +56,7 @@ export function NotificationProvider({
             })
           ) {
             seen.current.add(e.notification.id);
-            new Notification(e.notification.documentTitle || "Quorum AI", { body: `New ${e.notification.type}` });
+            new Notification(e.notification.documentTitle || "Consensum", { body: `New ${e.notification.type}` });
           }
         } else if (e.type === "notification.read") {
           setItems((prev) => prev.map((n) => (n.id === e.id ? { ...n, read: true } : n)));
@@ -79,7 +79,7 @@ export function NotificationProvider({
   }, [desktopPrefs]);
 
   useEffect(() => {
-    document.title = unread > 0 ? `(${unread}) Quorum AI` : "Quorum AI";
+    document.title = unread > 0 ? `(${unread}) Consensum` : "Consensum";
   }, [unread]);
 
   // Note: marking read publishes a per-user event that echoes back over this same

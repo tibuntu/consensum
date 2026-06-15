@@ -3,7 +3,7 @@ import { getDocumentDetail } from "@/lib/documents";
 import { getSession } from "@/lib/session";
 import { ensureParticipant } from "@/lib/authz";
 import { isEditUiEnabled } from "@/lib/config";
-import { approvalCount } from "@/lib/quorum";
+import { approvalCount } from "@/lib/approvals";
 import DocumentView, { type ClientDocument } from "@/components/DocumentView";
 
 export default async function DocumentPage({ params }: { params: Promise<{ id: string }> }) {

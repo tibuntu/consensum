@@ -8,7 +8,7 @@ import { randomBytes, createCipheriv, createDecipheriv, scryptSync } from "node:
 function key(): Buffer | null {
   const raw = process.env.WEBHOOK_SECRET_KEY;
   if (!raw) return null;
-  return scryptSync(raw, "quorum-webhook-secret", 32);
+  return scryptSync(raw, "consensum-webhook-secret", 32);
 }
 
 export function encryptSecret(plain: string): string {
