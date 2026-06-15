@@ -11,5 +11,5 @@ Requires env vars: `CONSENSUM_BASE_URL` (e.g. http://localhost:3000) and `CONSEN
 2. Determine a title (first heading of the plan, else "Plan").
 3. POST it:
    `curl -s -X POST "$CONSENSUM_BASE_URL/api/plans" -H "Authorization: Bearer $CONSENSUM_API_TOKEN" -H 'content-type: application/json' -d "$(jq -n --arg t "<title>" --arg m "<markdown>" '{title:$t, markdown:$m}')"`
-4. Parse the JSON `{ id, reviewUrl }` and print both to the user: "Plan posted for review: <reviewUrl> (id <id>). I'll resume when you run /pull-feedback <id>."
+4. Parse the JSON `{ id, reviewUrl }` and print both to the user: "Plan posted for review: <reviewUrl> (id <id>). I'll resume when you run /consensum-pull-feedback <id>."
 5. Return control. Do not poll.

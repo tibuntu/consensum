@@ -8,7 +8,7 @@ const STEPS = [
   {
     step: "1",
     title: "Push the plan",
-    body: "Your agent runs /push-plan and the proposal lands in Consensum as a reviewable document.",
+    body: "Your agent runs /consensum-push-plan and the proposal lands in Consensum as a reviewable document.",
   },
   {
     step: "2",
@@ -18,7 +18,7 @@ const STEPS = [
   {
     step: "3",
     title: "Pull feedback",
-    body: "The agent runs /pull-feedback, receives consolidated decisions, and revises before writing any code.",
+    body: "The agent runs /consensum-pull-feedback, receives consolidated decisions, and revises before writing any code.",
   },
 ];
 

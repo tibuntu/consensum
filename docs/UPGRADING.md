@@ -8,7 +8,7 @@ following before upgrading.
 
 ### 1. Agent environment variables (renamed)
 
-The machine-API env vars used by the `/push-plan` and `/pull-feedback` commands
+The machine-API env vars used by the `/consensum-push-plan` and `/consensum-pull-feedback` commands
 were renamed. Update your agent environment and any CI configuration:
 
 | Old | New |

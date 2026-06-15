@@ -157,7 +157,7 @@ export default function TokenManager({
         <pre className="overflow-x-auto rounded-[var(--radius-app)] border border-border bg-[var(--state-neutral-bg)] p-4 text-xs text-foreground">
 {`export CONSENSUM_BASE_URL="${baseUrl || "http://localhost:3000"}"
 export CONSENSUM_API_TOKEN="csm_…"   # the token shown above
-# /push-plan and /pull-feedback ship in this repo's .claude/commands/`}
+# /consensum-push-plan and /consensum-pull-feedback ship in this repo's .claude/commands/`}
         </pre>
       </div>
     </section>
