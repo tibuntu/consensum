@@ -52,9 +52,12 @@ export async function waitForFeedbackChange(documentId: string, timeoutMs: numbe
     if (initial === null) return null;
     if (initial.decision !== "pending") return { ...initial, timedOut: false };
 
-    // Re-clamp at the sink: defends the timer from an unbounded duration regardless
-    // of how the caller derived timeoutMs (CWE-400 resource exhaustion).
-    const safeTimeoutMs = Math.min(Math.max(0, timeoutMs), MAX_WAIT_MS);
+    // Bound the timer duration with an explicit upper-bound guard so the value
+    // reaching setTimeout can never be attacker-controlled (CWE-400). The guard
+    // form (not Math.min) is also what CodeQL recognizes as a sanitizer here.
+    let safeTimeoutMs = timeoutMs;
+    if (!Number.isFinite(safeTimeoutMs) || safeTimeoutMs < 0) safeTimeoutMs = 0;
+    if (safeTimeoutMs > MAX_WAIT_MS) safeTimeoutMs = MAX_WAIT_MS;
     const timeoutPromise = new Promise<void>((resolve) => { timer = setTimeout(resolve, safeTimeoutMs); });
     await Promise.race([eventPromise, timeoutPromise]);
 
