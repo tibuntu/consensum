@@ -7,6 +7,11 @@ on:
   pull_request:
     branches: [main]
 
+# Least-privilege default for all jobs; the docker job widens this with its own
+# block (packages: write) to push to GHCR.
+permissions:
+  contents: read
+
 jobs:
   lint-test-build:
     runs-on: ubuntu-latest
