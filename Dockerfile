@@ -50,10 +50,20 @@ RUN set -eu; \
 # its own directory at runtime, so it cannot collide with the standalone
 # node_modules.
 FROM base AS migrator
+# openssl must be present so Prisma's platform detection resolves the runtime
+# target (debian-openssl-3.0.x) at install time and bakes the MATCHING schema
+# engine. Without it, detection falls back to openssl-1.1.x; the engine then
+# mismatches the runtime and Prisma tries to download the right one on start —
+# which fails on a read-only / non-root Kubernetes filesystem.
+RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /migrator
 COPY docker/migrator/package.json ./package.json
 RUN npm install --omit=dev --no-audit --no-fund --no-package-lock \
- && rm -rf node_modules/mysql2 node_modules/postgres
+ && rm -rf node_modules/mysql2 node_modules/postgres \
+ # Stage the (single) downloaded schema engine to a fixed, arch-independent
+ # path so the runtime can pin it without hardcoding the platform suffix
+ # (debian-openssl-3.0.x on amd64, linux-arm64-openssl-3.0.x on arm64, …).
+ && cp node_modules/@prisma/engines/schema-engine-* ./schema-engine
 
 # Distroless runtime: no shell and no package manager, so the dev-dependency
 # attack surface (and the lodash CVE) is gone and there is nothing extra for a
@@ -68,6 +78,11 @@ ENV PORT=3000
 # container ID — leaving the server off loopback so the HEALTHCHECK's
 # 127.0.0.1 probe is refused. Bind to all interfaces (Next's documented config).
 ENV HOSTNAME="0.0.0.0"
+# Pin the schema engine to the binary baked at build time (staged to a fixed
+# path by the migrator stage). This stops Prisma from probing/downloading an
+# engine on start, so `migrate deploy` needs no write access to the (read-only,
+# possibly non-root) app filesystem in K8s.
+ENV PRISMA_SCHEMA_ENGINE_BINARY="/app/_prisma/schema-engine"
 
 # Vendor the patched OpenSSL 3 staged in the builder over distroless's older
 # libssl3 (both the .so files Prisma's schema engine links against and the dpkg
@@ -88,6 +103,7 @@ COPY --from=builder /app/generated ./generated
 # this directory as cwd, so prisma.config.ts resolves `prisma/config` /
 # `dotenv/config` locally and auto-discovers prisma/schema.prisma + migrations.
 COPY --from=migrator /migrator/node_modules ./_prisma/node_modules
+COPY --from=migrator /migrator/schema-engine ./_prisma/schema-engine
 COPY --from=builder /app/prisma ./_prisma/prisma
 COPY --from=builder /app/prisma.config.ts ./_prisma/prisma.config.ts
 COPY docker-entrypoint.mjs ./docker-entrypoint.mjs
