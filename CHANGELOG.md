@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1](https://github.com/tibuntu/consensum/compare/v0.4.0...v0.4.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* **docker:** bake matching Prisma engine so migrate works on read-only K8s FS ([4b3d0ec](https://github.com/tibuntu/consensum/commit/4b3d0ec7c1d73827054bd6f44faa70de136508e1))
+* **docker:** ship prod-only distroless image to drop dev-dep CVEs ([0250868](https://github.com/tibuntu/consensum/commit/025086890cba041723966aeea239ff97d041f3f8))
+
 ## [0.4.0](https://github.com/tibuntu/consensum/compare/v0.3.1...v0.4.0) (2026-06-15)
 
 
