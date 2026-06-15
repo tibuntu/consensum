@@ -16,21 +16,21 @@ This product re-inserts the team at the highest-leverage moment: **before the ag
 
 ## The hero loop
 
-1. A developer's Claude Code agent drafts a plan and runs `/push-plan` → it posts to your Consensum instance and hands control back (no blocking).
+1. A developer's Claude Code agent drafts a plan and runs `/consensum-push-plan` → it posts to your Consensum instance and hands control back (no blocking).
 2. The team gets a shareable link / sees it in their inbox, opens the **rendered** plan, and reviews async: select-to-comment, threads, suggestions, and an **Approve / Request-changes** verdict.
-3. The developer runs `/pull-feedback` → the agent receives the **consolidated** team feedback and revises the plan before implementing.
+3. The developer runs `/consensum-pull-feedback` → the agent receives the **consolidated** team feedback and revises the plan before implementing.
 
 ## Features
 
 The product runs end-to-end in a single Docker container.
 
 **The review loop**
-- **Push** a plan via the Bearer-token machine API (`/push-plan`).
+- **Push** a plan via the Bearer-token machine API (`/consensum-push-plan`).
 - **Review** it in a production-themed UI: rendered markdown, select-to-comment annotations, comment threads, resolve, and an Approve / Request-changes verdict.
 - **Suggestions-as-edits** — reviewers propose concrete text; the owner accepts → a new version.
 - **Edit** plans into new versions, with annotations **re-anchored** across edits, plus a side-by-side version diff.
 - **Configurable approval thresholds** — require N approvals before a plan is considered approved.
-- **Pull** consolidated feedback back into the agent (`/pull-feedback`).
+- **Pull** consolidated feedback back into the agent (`/consensum-pull-feedback`).
 
 **Real-time collaboration**
 - **Live presence** — see who else is viewing, with a participant roster, shared text selections, and live cursors.
@@ -122,14 +122,41 @@ for the rationale.
 
 ## Connecting your agent
 
-The hero loop is driven by two Claude Code slash commands shipped in [`.claude/commands/`](.claude/commands/): [`/push-plan`](.claude/commands/push-plan.md) and [`/pull-feedback`](.claude/commands/pull-feedback.md). They talk to your instance via the machine API. Set:
+The hero loop is driven by two Claude Code slash commands shipped in [`.claude/commands/`](.claude/commands/): [`/consensum-push-plan`](.claude/commands/consensum-push-plan.md) and [`/consensum-pull-feedback`](.claude/commands/consensum-pull-feedback.md). They talk to your instance via the machine API.
+
+**Install** them with the one-liner (no checkout needed):
+
+```bash
+# Slash commands → ~/.claude/commands (available in every repo)
+curl -fsSL https://raw.githubusercontent.com/tibuntu/consensum/main/scripts/install.sh | bash
+
+# …and the opt-in auto-proceed hook into the current project's ./.claude
+curl -fsSL https://raw.githubusercontent.com/tibuntu/consensum/main/scripts/install.sh | bash -s -- --with-hook
+```
+
+From a checkout you can run the same script locally: `./scripts/install.sh [--with-hook]`. Then set:
 
 ```bash
 export CONSENSUM_BASE_URL="http://localhost:3000"
 export CONSENSUM_API_TOKEN="<token from Settings → API tokens>"
 ```
 
-Then from any agent session: `/push-plan` posts the current plan and returns a review URL; once the team weighs in, `/pull-feedback <id>` pulls the consolidated verdict, threads, and digest back so the agent can revise.
+Then from any agent session: `/consensum-push-plan` posts the current plan and returns a review URL; once the team weighs in, `/consensum-pull-feedback <id>` pulls the consolidated verdict, threads, and digest back so the agent can revise.
+
+### Auto-proceed (hands-off loop)
+
+For a fully hands-off loop — the agent waits for the verdict and **proceeds on its own** once approved — Consensum ships a Claude Code hook on the `ExitPlanMode` tool ([`.claude/hooks/consensum-exit-plan.mjs`](.claude/hooks/consensum-exit-plan.mjs), registered in [`.claude/settings.json`](.claude/settings.json)). When the agent finishes planning, the hook **blocks inside the plan-exit call**: it pushes the plan, waits on `/feedback/wait`, and then
+
+- **Approved** → returns `allow`; the agent exits plan mode and implements automatically.
+- **Changes requested** → returns `deny` with a consolidated feedback digest; the agent revises and re-presents the plan, which re-fires the hook (PATCHing a new version) — that's the loop.
+
+State is scoped per Claude Code `session_id` (persisted in a git-ignored `.consensum/`), so a new session opens a new review while a re-presented plan revises the same one. With no `CONSENSUM_API_TOKEN` set the hook fails open (proceeds immediately), so it never blocks an unconfigured developer.
+
+For plans pushed **outside** plan mode, [`/consensum-loop <id> [intervalMinutes]`](.claude/commands/consensum-loop.md) does the same wait-then-act loop on demand.
+
+> **Permission mode is not auto-applied.** A team-chosen "implement with Accept Edits / Auto" setting is intentionally **deferred**: Claude Code does not let a hook switch the session's permission mode on approval ([claude-code#14044](https://github.com/anthropics/claude-code/issues/14044), closed as not-planned). The agent implements under whatever mode the session is already in.
+
+> **Compatibility:** the hook uses the same `ExitPlanMode` `PermissionRequest` handshake as [plannotator](https://plannotator.ai); if your Claude Code version changes it, adjust `allowDecision`/`denyDecision` in the hook script.
 
 **Machine API surface** (Bearer token, owner-scoped):
 
@@ -186,7 +213,7 @@ prisma/         Schema (User, Session, Account, Document, DocumentVersion, Annot
                 OutboxJob, …) + migrations
 tests/          Vitest unit tests + Playwright e2e (auth, review, versioning, nav)
 docs/adr/       Architecture Decision Records (ADRs)
-.claude/        Agent slash commands (/push-plan, /pull-feedback)
+.claude/        Agent slash commands (/consensum-push-plan, /consensum-pull-feedback)
 ```
 
 Architecture convention: **pure libs → services → thin routes → client**, with shared value-sets in `lib/enums.ts`.
