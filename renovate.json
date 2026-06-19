@@ -30,6 +30,11 @@
       "enabled": false
     },
     {
+      "description": "better-call is pinned via pnpm.overrides to the version better-auth 1.6.x depends on (1.3.6). better-auth imports serializeCookie/kAPIErrorHeaderSymbol from better-call's root, which the 2.x major renamed/dropped; bumping the override past 1.3.x breaks the build and tests. The override exists to force a single better-call instance (kAPIErrorHeaderSymbol is a Symbol whose identity must match). Do not update until better-auth itself moves to better-call 2.x.",
+      "matchPackageNames": ["better-call"],
+      "enabled": false
+    },
+    {
       "description": "ESLint 10 is not yet supported by eslint-config-next 16.x (its rules use a removed API, breaking `eslint .`). Hold the major until eslint-config-next supports it.",
       "matchPackageNames": ["eslint"],
       "matchUpdateTypes": ["major"],
