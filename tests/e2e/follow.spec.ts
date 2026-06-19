@@ -63,6 +63,23 @@ test("follower tracks the leader, detaches on manual scroll, and resumes", async
   await pageA.evaluate(() => window.scrollTo({ top: 1200 }));
   await expect.poll(() => scrollY(pageB), { timeout: 10_000 }).toBeGreaterThan(300);
 
+  // Wait for B's programmatic (smooth) auto-scroll to fully settle before
+  // simulating a manual scroll. The app guards against false detaches by
+  // ignoring scroll events while a programmatic scroll is in flight, clearing
+  // the guard on `scrollend` (with a 1s fallback). The poll above can resolve
+  // mid-animation, so scrolling immediately would be swallowed as programmatic
+  // and the follower would never detach. Wait until B's position is stable.
+  await pageB.waitForFunction(
+    () => {
+      const w = window as unknown as { __prevY?: number };
+      const settled = w.__prevY === window.scrollY;
+      w.__prevY = window.scrollY;
+      return settled;
+    },
+    undefined,
+    { timeout: 5_000, polling: 250 },
+  );
+
   // B scrolls manually -> detaches; A scrolling no longer moves B.
   await pageB.evaluate(() => window.scrollTo({ top: 0 }));
   await expect(pageB.getByTestId("resume-following")).toBeVisible();
