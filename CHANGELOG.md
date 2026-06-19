@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/tibuntu/consensum/compare/v0.6.0...v0.6.1) (2026-06-19)
+
+
+### Bug Fixes
+
+* **ci:** properly extract image metadate via jq ([feebf2b](https://github.com/tibuntu/consensum/commit/feebf2bed4005253dc88a92f5a3e9803be428360))
+
 ## [0.6.0](https://github.com/tibuntu/consensum/compare/v0.5.0...v0.6.0) (2026-06-19)
 
 
