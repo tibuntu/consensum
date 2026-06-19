@@ -125,6 +125,8 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
   const [statusById, setStatusById] = useState<Record<string, string>>({});
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [roster, setRoster] = useState<PresenceEntry[]>(() => [
     { userId: currentUserId, name: currentUserName, lastSeen: Date.now() },
   ]);
@@ -647,6 +649,33 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
     }
   }
 
+  const copyMarkdown = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(markdown);
+    } catch {
+      // Clipboard write can be rejected (insecure context, denied permission).
+      // Fall back to a hidden textarea + execCommand so the copy still works.
+      const ta = document.createElement("textarea");
+      ta.value = markdown;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand("copy");
+      } catch {
+        document.body.removeChild(ta);
+        return;
+      }
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    copiedTimer.current = setTimeout(() => setCopied(false), 2000);
+  }, [markdown]);
+
+  useEffect(() => () => { if (copiedTimer.current) clearTimeout(copiedTimer.current); }, []);
+
   async function changeThreshold(n: number) {
     const clamped = Math.max(1, Math.min(10, n || 1));
     setRequiredApprovals(clamped);
@@ -691,6 +720,17 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
             followAttached={attached}
             onResumeFollow={resumeFollow}
           />
+          {mode === "review" && (
+            <Button
+              variant="secondary"
+              size="sm"
+              data-testid="copy-plan"
+              aria-label="Copy plan to clipboard"
+              onClick={copyMarkdown}
+            >
+              {copied ? "Copied!" : "Copy"}
+            </Button>
+          )}
           {mode === "review" && editEnabled && (
             <Button variant="secondary" size="sm" onClick={() => { setDraft(markdown); setMode("edit"); }}>Edit</Button>
           )}
