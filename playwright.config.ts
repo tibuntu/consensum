@@ -16,6 +16,9 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     env: {
       DISABLE_RATE_LIMIT: "true",
+      // Registration is fail-closed (lib/registration.ts); the auth spec registers
+      // @example.com users, so allow that domain.
+      REGISTRATION_ALLOWLIST: "example.com",
       WEBHOOK_ALLOW_INSECURE: "true",
       OUTBOX_POLL_MS: "500",
       // Presence: context.close() never delivers the pagehide beacon, so the

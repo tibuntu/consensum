@@ -8,5 +8,14 @@ export default defineConfig({
   // out" on concurrent writes/upserts).
   // unstubEnvs: auto-restore vi.stubEnv() between tests so OIDC_* (and other) env
   // stubs don't leak across the sequential run and flip env-dependent assertions.
-  test: { environment: "node", include: ["tests/unit/**/*.test.ts"], fileParallelism: false, unstubEnvs: true },
+  // env.REGISTRATION_ALLOWLIST: registration is fail-closed (lib/registration.ts), so the
+  // auth test's @example.com signups must come from an allowed domain. Tests passing their
+  // own env to isRegistrationAllowed are unaffected.
+  test: {
+    environment: "node",
+    include: ["tests/unit/**/*.test.ts"],
+    fileParallelism: false,
+    unstubEnvs: true,
+    env: { REGISTRATION_ALLOWLIST: "example.com" },
+  },
 });
