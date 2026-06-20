@@ -71,7 +71,7 @@ export async function getDocumentDetail(id: string) {
           appliedInVersion: { select: { versionNumber: true } },
         },
       },
-      reviews: { include: { reviewer: { select: { name: true, email: true } } } },
+      reviews: { include: { reviewer: { select: { name: true, email: true } }, onVersion: { select: { versionNumber: true } } } },
     },
   });
   return doc;

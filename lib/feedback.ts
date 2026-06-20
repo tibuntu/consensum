@@ -18,7 +18,8 @@ interface DetailAnnotation {
   createdOnVersion?: { versionNumber: number } | null;
   suggestedText?: string | null;
   appliedInVersion?: { versionNumber: number } | null;
-  comments: { body: string; author?: Author }[];
+  createdAt?: Date | string;
+  comments: { id?: string; body: string; author?: Author; createdAt?: Date | string }[];
 }
 interface DetailVersion { versionNumber: number; createdAt?: Date | string; createdBy?: Author }
 
@@ -28,7 +29,7 @@ export interface FeedbackDetail {
   currentVersion?: { versionNumber: number } | null;
   versions?: DetailVersion[];
   annotations: DetailAnnotation[];
-  reviews: { verdict: string; dismissed: boolean; reviewer?: Author }[];
+  reviews: { id?: string; verdict: string; dismissed: boolean; reviewer?: Author; createdAt?: Date | string; onVersion?: { versionNumber: number } | null }[];
 }
 
 export interface FeedbackThread {
@@ -47,7 +48,8 @@ export interface FeedbackThread {
   raisedOnVersion: number | null;
   appliedInVersion: { versionNumber: number } | null;
   suggestedText: string | null;
-  comments: { author: string; body: string }[];
+  createdAt: string | null;
+  comments: { id: string; author: string; body: string; createdAt: string | null }[];
 }
 
 export type Decision = "pending" | "approved" | "changes_requested";
@@ -60,6 +62,11 @@ function decisionFor(state: string): Decision {
 
 function authorName(a: Author): string {
   return a?.name ?? a?.email ?? "someone";
+}
+
+function toIso(d?: Date | string | null): string | null {
+  if (!d) return null;
+  return d instanceof Date ? d.toISOString() : d;
 }
 
 const FILTER_TAGS = ["blocking", "unresolved", "resolved", "orphaned"] as const;
@@ -110,9 +117,17 @@ export function consolidateFeedback(detail: FeedbackDetail) {
     raisedOnVersion: a.createdOnVersion?.versionNumber ?? null,
     appliedInVersion: a.appliedInVersion ?? null,
     suggestedText: a.suggestedText ?? null,
-    comments: a.comments.map((c) => ({ author: authorName(c.author ?? null), body: c.body })),
+    createdAt: toIso(a.createdAt),
+    comments: a.comments.map((c) => ({ id: c.id ?? "", author: authorName(c.author ?? null), body: c.body, createdAt: toIso(c.createdAt) })),
   }));
-  const reviews = detail.reviews.map((r) => ({ reviewer: authorName(r.reviewer ?? null), verdict: r.verdict, dismissed: r.dismissed }));
+  const reviews = detail.reviews.map((r) => ({
+    id: r.id ?? "",
+    reviewer: authorName(r.reviewer ?? null),
+    verdict: r.verdict,
+    dismissed: r.dismissed,
+    onVersion: r.onVersion?.versionNumber ?? null,
+    createdAt: toIso(r.createdAt),
+  }));
   const decision = decisionFor(detail.state);
   const approvals = approvalCount(detail.reviews);
   const requiredApprovals = detail.requiredApprovals ?? 1;
@@ -138,7 +153,7 @@ export function consolidateFeedback(detail: FeedbackDetail) {
   const versions = (detail.versions ?? []).map((v) => ({
     number: v.versionNumber,
     createdBy: authorName(v.createdBy ?? null),
-    createdAt: v.createdAt instanceof Date ? v.createdAt.toISOString() : (v.createdAt ?? null),
+    createdAt: toIso(v.createdAt),
   }));
 
   const ordered = threads.map((t, i) => ({ t, i })).sort((a, b) => rank(a.t) - rank(b.t) || a.i - b.i).map((x) => x.t);

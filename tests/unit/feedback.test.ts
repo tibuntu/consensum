@@ -49,6 +49,64 @@ describe("consolidateFeedback", () => {
   });
 });
 
+describe("consolidateFeedback identities and timestamps", () => {
+  it("exposes comment id/createdAt, thread createdAt, and review id/createdAt/onVersion", () => {
+    const detail: FeedbackDetail = {
+      state: "CHANGES_REQUESTED",
+      annotations: [
+        {
+          id: "ann_1",
+          anchorExact: "services",
+          status: "ACTIVE",
+          threadStatus: "OPEN",
+          kind: "COMMENT",
+          createdAt: new Date(0),
+          comments: [
+            { id: "cmt_1", body: "which provider?", author: { name: "Sam" }, createdAt: new Date(0) },
+          ],
+        },
+      ],
+      reviews: [
+        {
+          id: "rev_1",
+          verdict: "REQUEST_CHANGES",
+          dismissed: false,
+          reviewer: { name: "Sam" },
+          createdAt: new Date(0),
+          onVersion: { versionNumber: 3 },
+        },
+      ],
+    };
+    const { threads, reviews } = consolidateFeedback(detail);
+    expect(threads[0].createdAt).toBe("1970-01-01T00:00:00.000Z");
+    expect(threads[0].comments[0]).toMatchObject({
+      id: "cmt_1",
+      createdAt: "1970-01-01T00:00:00.000Z",
+      body: "which provider?",
+    });
+    expect(reviews[0]).toMatchObject({
+      id: "rev_1",
+      verdict: "REQUEST_CHANGES",
+      onVersion: 3,
+      createdAt: "1970-01-01T00:00:00.000Z",
+    });
+  });
+
+  it("nulls missing timestamps and ids instead of emitting undefined", () => {
+    const detail: FeedbackDetail = {
+      state: "OPEN",
+      annotations: [
+        { anchorExact: "x", status: "ACTIVE", threadStatus: "OPEN", comments: [{ body: "hi" }] },
+      ],
+      reviews: [{ verdict: "APPROVE", dismissed: false }],
+    };
+    const { threads, reviews } = consolidateFeedback(detail);
+    expect(threads[0].createdAt).toBeNull();
+    expect(threads[0].comments[0]).toMatchObject({ id: "", createdAt: null });
+    expect(reviews[0]).toMatchObject({ id: "", createdAt: null, onVersion: null });
+  });
+});
+
 const baseThread = (over: Partial<Parameters<typeof consolidateFeedback>[0]["annotations"][number]> = {}) => ({
   id: "ann_1", anchorExact: "cloud setup", kind: "COMMENT", status: "ACTIVE", threadStatus: "OPEN",
   severity: null, category: null, createdOnVersion: { versionNumber: 1 },
