@@ -6,6 +6,10 @@ type Author = { name?: string | null; email?: string | null } | null;
 interface DetailAnnotation {
   id?: string;
   anchorExact: string | null;
+  anchorPrefix?: string | null;
+  anchorSuffix?: string | null;
+  startOffset?: number | null;
+  endOffset?: number | null;
   kind?: string;
   status: string;
   threadStatus: string;
@@ -30,6 +34,10 @@ export interface FeedbackDetail {
 export interface FeedbackThread {
   id: string;
   quote: string | null;
+  anchorPrefix: string | null;
+  anchorSuffix: string | null;
+  startOffset: number | null;
+  endOffset: number | null;
   kind: string;
   status: string;
   threadStatus: string;
@@ -89,6 +97,10 @@ export function consolidateFeedback(detail: FeedbackDetail) {
   const threads: FeedbackThread[] = detail.annotations.map((a) => ({
     id: a.id ?? "",
     quote: a.anchorExact,
+    anchorPrefix: a.anchorPrefix ?? null,
+    anchorSuffix: a.anchorSuffix ?? null,
+    startOffset: a.startOffset ?? null,
+    endOffset: a.endOffset ?? null,
     kind: a.kind ?? "COMMENT",
     status: a.status, // backward-compat alias; Annotation.status IS the anchor state (ACTIVE/MOVED/ORPHANED)
     threadStatus: a.threadStatus,

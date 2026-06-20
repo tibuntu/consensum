@@ -234,3 +234,46 @@ describe("consolidateFeedback suggestions", () => {
     expect(consolidateFeedback(detail).markdown).toContain('Suggested replacement:_ "URLs"');
   });
 });
+
+describe("consolidateFeedback anchor span", () => {
+  it("exposes offsets and anchor context, nulling absent values", () => {
+    const detail: FeedbackDetail = {
+      state: "CHANGES_REQUESTED",
+      annotations: [
+        {
+          anchorExact: "services",
+          anchorPrefix: "the ",
+          anchorSuffix: " layer",
+          startOffset: 10,
+          endOffset: 18,
+          status: "ACTIVE",
+          threadStatus: "OPEN",
+          kind: "SUGGESTION",
+          suggestedText: "URLs",
+          comments: [{ body: "Suggested edit", author: { name: "Tibuntu" } }],
+        },
+        {
+          anchorExact: null,
+          status: "ACTIVE",
+          threadStatus: "OPEN",
+          kind: "COMMENT",
+          comments: [{ body: "general note", author: { name: "Sam" } }],
+        },
+      ],
+      reviews: [],
+    };
+    const { threads } = consolidateFeedback(detail);
+    expect(threads[0]).toMatchObject({
+      startOffset: 10,
+      endOffset: 18,
+      anchorPrefix: "the ",
+      anchorSuffix: " layer",
+    });
+    expect(threads[1]).toMatchObject({
+      startOffset: null,
+      endOffset: null,
+      anchorPrefix: null,
+      anchorSuffix: null,
+    });
+  });
+});
