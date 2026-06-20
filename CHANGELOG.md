@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.0](https://github.com/tibuntu/consensum/compare/v0.6.1...v0.7.0) (2026-06-20)
+
+
+### Features
+
+* **api:** expose anchor offsets and context on feedback threads ([2a291a4](https://github.com/tibuntu/consensum/commit/2a291a43a788dd12bda421b9b13ab8f1d93a921b))
+* **api:** expose comment/review ids, timestamps, and reviewed version in feedback API ([6d45161](https://github.com/tibuntu/consensum/commit/6d4516183e43b049b70d3804fbfffd99097b3db5))
+
+
+### Bug Fixes
+
+* **api:** expose suggestion replacement text in feedback API ([3519f91](https://github.com/tibuntu/consensum/commit/3519f91acd08db82188013121d52988b0117f1e8))
+
 ## [0.6.1](https://github.com/tibuntu/consensum/compare/v0.6.0...v0.6.1) (2026-06-19)
 
 
