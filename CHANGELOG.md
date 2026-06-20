@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/tibuntu/consensum/compare/v0.7.0...v0.8.0) (2026-06-20)
+
+
+### Features
+
+* **auth:** gate self-service registration behind an email allowlist ([75df860](https://github.com/tibuntu/consensum/commit/75df86004003973d66b76cb64bf78af9aef02144))
+
 ## [0.7.0](https://github.com/tibuntu/consensum/compare/v0.6.1...v0.7.0) (2026-06-20)
 
 
