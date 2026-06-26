@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.0](https://github.com/tibuntu/consensum/compare/v0.9.0...v0.10.0) (2026-06-26)
+
+
+### Features
+
+* **agent-api:** harden the agent review-loop contract ([a2a5d42](https://github.com/tibuntu/consensum/commit/a2a5d4275f5878d3a6ae2fd5e90249eb4be480f7))
+
+
+### Bug Fixes
+
+* **deps:** dedupe @codemirror/state to a single version ([7a72afa](https://github.com/tibuntu/consensum/commit/7a72afaebc92f7b6feac103e39e7d6bd5127980e))
+
 ## [0.9.0](https://github.com/tibuntu/consensum/compare/v0.8.0...v0.9.0) (2026-06-26)
 
 
