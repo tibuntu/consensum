@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.9.0](https://github.com/tibuntu/consensum/compare/v0.8.0...v0.9.0) (2026-06-26)
+
+
+### Features
+
+* **ui:** UI overhaul — identity, accessibility, and review workflow ([b8ad15c](https://github.com/tibuntu/consensum/commit/b8ad15c8a1aaffcc077dc7088dc7d599eaea5f8e))
+
+
+### Bug Fixes
+
+* **deps:** update better-auth monorepo to v1.6.20 ([307c857](https://github.com/tibuntu/consensum/commit/307c8579cfafa53564a3fb24d3026dea5b15ad49))
+* **deps:** update dev dependencies ([8425928](https://github.com/tibuntu/consensum/commit/84259280bee7e3fb68d5357e3db37f753489b989))
+* **deps:** update pnpm to v11.9.0 ([740c06d](https://github.com/tibuntu/consensum/commit/740c06dc63a679f8bb11a09a00854363625301a8))
+* **docker:** drop npm from the runtime image to clear a Trivy HIGH ([137a4e0](https://github.com/tibuntu/consensum/commit/137a4e06935619e37f378dd5953e3c48a3321acd))
+
 ## [0.8.0](https://github.com/tibuntu/consensum/compare/v0.7.0...v0.8.0) (2026-06-20)
 
 
