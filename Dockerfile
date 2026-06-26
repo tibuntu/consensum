@@ -43,6 +43,10 @@ FROM base AS runner
 # openssl provides libssl3 for Prisma's schema engine (apt's build is current,
 # so no manual patching is needed and trivy stays clean).
 RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+# npm ships in the node base image but is never used at runtime — the app runs
+# via `node` directly and build tooling is pnpm/corepack. Remove it so npm's
+# bundled undici (and any future npm-bundled CVE) doesn't reach the runtime image.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 ENV NODE_ENV=production
 ENV DATABASE_URL="file:/data/app.db"
 ENV PORT=3000
