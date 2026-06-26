@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { CopyButton } from "@/components/ui/CopyButton";
 
 type TokenRow = { id: string; label: string; lastUsedAt: Date | string | null; createdAt: Date | string };
 
@@ -115,15 +116,18 @@ export default function TokenManager({
       )}
 
       {created && (
-        <Card className="flex flex-col gap-2 border-[var(--state-approved)] bg-[var(--state-approved-bg)] p-4">
+        <Card className="flex flex-col gap-2 border-[var(--state-approved)] p-4" style={{ background: "var(--state-approved-bg)" }}>
           <p className="text-sm font-medium text-foreground">Copy this token now — it won&apos;t be shown again.</p>
-          <Input
-            data-testid="new-token"
-            readOnly
-            value={created}
-            className="font-mono"
-            onFocus={(e) => e.currentTarget.select()}
-          />
+          <div className="flex gap-2">
+            <Input
+              data-testid="new-token"
+              readOnly
+              value={created}
+              className="font-mono"
+              onFocus={(e) => e.currentTarget.select()}
+            />
+            <CopyButton value={created} className="shrink-0" />
+          </div>
           <Button variant="ghost" size="sm" onClick={() => setCreated(null)} className="self-start">
             Done
           </Button>
@@ -131,7 +135,7 @@ export default function TokenManager({
       )}
 
       {tokens.length === 0 ? (
-        <Card className="p-6 text-sm text-muted">No tokens yet.</Card>
+        <Card className="p-6 text-sm text-muted">No tokens yet — create one above to call the API or use the /consensum-push-plan command.</Card>
       ) : (
         <ul className="flex flex-col gap-2">
           {tokens.map((t) => (
@@ -153,7 +157,13 @@ export default function TokenManager({
       )}
 
       <div className="flex flex-col gap-2">
-        <h2 className="text-lg font-semibold text-foreground">CLI setup</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold text-foreground">CLI setup</h2>
+          <CopyButton
+            label="Copy commands"
+            value={`export CONSENSUM_BASE_URL="${baseUrl || "http://localhost:3000"}"\nexport CONSENSUM_API_TOKEN="csm_…"   # the token shown above\n# /consensum-push-plan and /consensum-pull-feedback ship in this repo's .claude/commands/`}
+          />
+        </div>
         <pre className="overflow-x-auto rounded-[var(--radius-app)] border border-border bg-[var(--state-neutral-bg)] p-4 text-xs text-foreground">
 {`export CONSENSUM_BASE_URL="${baseUrl || "http://localhost:3000"}"
 export CONSENSUM_API_TOKEN="csm_…"   # the token shown above

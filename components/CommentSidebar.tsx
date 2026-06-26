@@ -29,6 +29,7 @@ function ThreadCard({
   onApplySuggestion: (annotationId: string) => Promise<void>;
 }) {
   const [reply, setReply] = useState("");
+  const [replying, setReplying] = useState(false);
   const resolved = annotation.threadStatus === "RESOLVED";
   const isSuggestion = annotation.kind === "SUGGESTION";
 
@@ -36,6 +37,7 @@ function ThreadCard({
     if (!reply.trim()) return;
     await onAddComment(annotation.id, reply);
     setReply("");
+    setReplying(false);
   }
 
   return (
@@ -45,7 +47,7 @@ function ThreadCard({
       className={`flex cursor-pointer flex-col gap-2 p-3 ${resolved ? "opacity-50" : ""} ${focused ? "ring-2 ring-primary/40" : ""}`}
     >
       {annotation.anchorExact && (
-        <p className="border-l-2 border-[var(--state-open)] pl-2 text-xs italic text-muted">
+        <p className="border-l-2 border-border pl-2 text-xs italic text-muted">
           &ldquo;{annotation.anchorExact.slice(0, 80)}&rdquo;
           {status === "MOVED" && <span className="text-xs text-[var(--state-open)]"> moved</span>}
         </p>
@@ -95,25 +97,40 @@ function ThreadCard({
         ))}
       </ul>
       <div className="flex flex-col gap-1">
-        <Textarea
-          aria-label="reply"
-          value={reply}
-          onChange={(e) => setReply(e.target.value)}
-          rows={2}
-          placeholder="Reply"
-        />
-        <div className="flex gap-2">
-          <Button variant="primary" size="sm" onClick={submitReply}>
-            Reply
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => onToggleThread(annotation.id, resolved ? "OPEN" : "RESOLVED")}
-          >
-            {resolved ? "Reopen" : "Resolve"}
-          </Button>
-        </div>
+        {replying ? (
+          <>
+            <Textarea
+              aria-label="reply"
+              autoFocus
+              value={reply}
+              onChange={(e) => setReply(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              rows={2}
+              placeholder="Reply"
+            />
+            <div className="flex gap-2">
+              <Button variant="primary" size="sm" onClick={(e) => { e.stopPropagation(); submitReply(); }}>
+                Reply
+              </Button>
+              <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setReplying(false); setReply(""); }}>
+                Cancel
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setReplying(true); }}>
+              Reply
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); onToggleThread(annotation.id, resolved ? "OPEN" : "RESOLVED"); }}
+            >
+              {resolved ? "Reopen" : "Resolve"}
+            </Button>
+          </div>
+        )}
       </div>
     </Card>
   );

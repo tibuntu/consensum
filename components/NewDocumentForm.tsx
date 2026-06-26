@@ -42,7 +42,7 @@ export default function NewDocumentForm() {
         Title
         <Input
           aria-label="title"
-          placeholder="Title"
+          placeholder="e.g. Q3 Platform Roadmap"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />

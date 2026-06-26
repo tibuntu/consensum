@@ -44,6 +44,16 @@ export function buildHighlightRanges(
 }
 
 /**
+ * Token-driven class for an annotation highlight. Kept separate from `applyHighlights`
+ * (which needs the DOM) so it is unit-testable, and so highlights are styled by the
+ * design-token system in `globals.css` — `.annotation-highlight{,-moved}` flip for
+ * dark mode, unlike the old hardcoded `bg-yellow-200` / `bg-orange-200`.
+ */
+export function highlightClass(status?: string): string {
+  return `${status === "MOVED" ? "annotation-highlight-moved" : "annotation-highlight"} cursor-pointer`;
+}
+
+/**
  * Wrap each range's `[start,end)` slice (offsets measured against the container's
  * concatenated text content) in a `<mark data-annotation-id>`. Idempotent: existing
  * marks are unwrapped first, then re-applied. Ranges that would cross an element
@@ -54,11 +64,10 @@ export function applyHighlights(container: HTMLElement, ranges: HighlightRange[]
   for (const range of ranges) {
     wrapRange(container, range, () => {
       const mark = document.createElement("mark");
-      const moved = range.status === "MOVED";
-      mark.className = `${moved ? "bg-orange-200" : "bg-yellow-200"} cursor-pointer`;
+      mark.className = highlightClass(range.status);
       mark.setAttribute("data-annotation-id", range.id);
       mark.setAttribute("data-status", range.status ?? "ACTIVE");
-      if (moved) mark.title = "This comment moved when the document was edited.";
+      if (range.status === "MOVED") mark.title = "This comment moved when the document was edited.";
       return mark;
     });
   }
