@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const STEPS = [
   {
@@ -29,8 +31,9 @@ export default async function Index() {
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-border bg-surface/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
-          <span className="font-semibold text-foreground">◆ Consensum</span>
+          <span className="font-mono font-semibold text-foreground">◆ Consensum</span>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Link href="/login"><Button variant="ghost" size="sm">Log in</Button></Link>
             <Link href="/register"><Button size="sm">Sign up</Button></Link>
           </div>
@@ -39,7 +42,7 @@ export default async function Index() {
 
       <main className="flex-1">
         <section className="mx-auto flex max-w-3xl flex-col items-center gap-6 px-6 py-24 text-center sm:py-32">
-          <span className="rounded-full border border-border bg-primary-subtle px-3 py-1 text-sm font-medium text-primary">
+          <span className="rounded-full border border-border bg-primary-subtle px-3 py-1 font-mono text-xs font-semibold uppercase tracking-wider text-primary">
             Plan review for the age of agents
           </span>
           <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
@@ -53,16 +56,34 @@ export default async function Index() {
             <Link href="/register"><Button>Get started</Button></Link>
             <Link href="/login"><Button variant="secondary">Log in</Button></Link>
           </div>
+          <div className="mt-8 w-full max-w-lg">
+            <div className="rounded-[var(--radius-app)] border border-border bg-surface p-5 text-left shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-mono text-sm font-semibold text-foreground">Q3 Platform Roadmap</span>
+                <Badge tone="approved">Approved</Badge>
+              </div>
+              <div className="mt-4 space-y-2" aria-hidden>
+                <div className="h-2 w-5/6 rounded bg-primary-subtle" />
+                <div className="h-2 w-full rounded bg-primary-subtle" />
+                <div className="h-2 w-2/3 rounded bg-primary-subtle" />
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-xs text-muted">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary font-mono text-[10px] font-semibold text-primary-fg">BL</span>
+                <span>Blair approved · 2 of 2 reviewers</span>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section className="mx-auto max-w-5xl px-6 pb-24">
+          <h2 className="mb-6 text-center font-mono text-xs font-semibold uppercase tracking-wider text-muted">How it works</h2>
           <div className="grid gap-4 sm:grid-cols-3">
             {STEPS.map((s) => (
               <Card key={s.step} className="flex flex-col gap-3 p-6">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-subtle text-sm font-semibold text-primary">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-subtle font-mono text-sm font-semibold text-primary">
                   {s.step}
                 </span>
-                <h2 className="font-semibold text-foreground">{s.title}</h2>
+                <h3 className="font-semibold text-foreground">{s.title}</h3>
                 <p className="text-sm text-muted">{s.body}</p>
               </Card>
             ))}
@@ -71,12 +92,8 @@ export default async function Index() {
       </main>
 
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-2 px-6 py-6 text-sm text-muted sm:flex-row">
-          <span>◆ Consensum — review the plan, then build.</span>
-          <div className="flex gap-4">
-            <Link href="/login" className="hover:text-foreground">Log in</Link>
-            <Link href="/register" className="hover:text-foreground">Sign up</Link>
-          </div>
+        <div className="mx-auto max-w-5xl px-6 py-6 text-center text-sm text-muted">
+          <span className="font-mono">◆ Consensum — review the plan, then build.</span>
         </div>
       </footer>
     </div>

@@ -22,6 +22,13 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
     markdown: doc.currentVersion?.markdown ?? "",
     requiredApprovals: doc.requiredApprovals,
     approvals: approvalCount(doc.reviews),
+    reviews: doc.reviews
+      .filter((r) => !r.dismissed)
+      .map((r) => ({
+        reviewer: r.reviewer?.name?.trim() || r.reviewer?.email || "Someone",
+        verdict: r.verdict,
+        onVersionNumber: r.onVersion?.versionNumber ?? null,
+      })),
     annotations: doc.annotations.map((a) => ({
       id: a.id,
       anchorExact: a.anchorExact,

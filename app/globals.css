@@ -21,7 +21,14 @@
   --state-neutral-bg: #f1f5f9;
   --danger: #dc2626;
   --danger-fg: #ffffff;
+  --danger-hover: #b91c1c;
   --radius: 0.625rem;
+
+  /* Annotation highlight tokens (flip in dark; see .annotation-highlight). */
+  --highlight-bg: #fef08a;
+  --highlight-fg: #1e1b2e;
+  --highlight-moved-bg: #fed7aa;
+  --highlight-moved-fg: #1e1b2e;
 
   /* Presence palette — stable per-user colors for avatars, remote cursors and
      selections. Tuned for the light surface; the dark overrides below lift
@@ -65,8 +72,17 @@
   --state-approved-bg: #0f2e1a;
   --state-neutral: #cbd5e1;
   --state-neutral-bg: #1e293b;
-  --danger: #b91c1c;
-  --danger-fg: #ffffff;
+  /* Lift danger on the dark surface (was #b91c1c, darker than --primary's lift —
+     destructive actions lost salience). Light-red + dark fg, matching how
+     --primary lifts in dark (F74). */
+  --danger: #f87171;
+  --danger-fg: #2a0f12;
+  --danger-hover: #ef4444;
+
+  --highlight-bg: #4a3d10;
+  --highlight-fg: #f6e9b5;
+  --highlight-moved-bg: #4a2f12;
+  --highlight-moved-fg: #f6d9bd;
 
   /* Dark overrides: lighter, slightly desaturated hues so the per-user colors
      read against the dark surface without going hot. */
@@ -111,6 +127,46 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Annotation highlights — token-driven so they flip for dark mode instead of
+   staying hot yellow/orange on the dark surface (F72/F25). */
+.annotation-highlight {
+  background: var(--highlight-bg);
+  color: var(--highlight-fg);
+  border-radius: 0.125rem;
+}
+.annotation-highlight-moved {
+  background: var(--highlight-moved-bg);
+  color: var(--highlight-moved-fg);
+  border-radius: 0.125rem;
+}
+
+/* Consistent, token-coloured keyboard focus ring across the shell — buttons, nav
+   links, the theme toggle, sign-out and clickable cards previously fell back to
+   inconsistent UA defaults (F80/F13/F12). Inputs/textarea keep their own focus
+   styles (components/ui/Input.tsx), so they are intentionally excluded. */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Respect reduced-motion: neutralise transitions/animations and smooth scroll
+   for users who ask for it (F81). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* --- Markdown (prose) theming --- */

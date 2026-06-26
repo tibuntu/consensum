@@ -41,6 +41,11 @@ export interface ClientAnnotation {
   appliedInVersionNumber: number | null;
   comments: ClientComment[];
 }
+export interface ClientReview {
+  reviewer: string;
+  verdict: string;
+  onVersionNumber: number | null;
+}
 export interface ClientDocument {
   id: string;
   title: string;
@@ -49,6 +54,7 @@ export interface ClientDocument {
   markdown: string;
   requiredApprovals: number;
   approvals: number;
+  reviews: ClientReview[];
   annotations: ClientAnnotation[];
 }
 
@@ -108,6 +114,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [annotations, setAnnotations] = useState<ClientAnnotation[]>(doc.annotations);
+  const [reviews, setReviews] = useState<ClientReview[]>(doc.reviews);
   const [selection, setSelection] = useState<PendingSelection | null>(null);
   const [pendingBody, setPendingBody] = useState("");
   const [suggesting, setSuggesting] = useState(false);
@@ -381,7 +388,8 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
     const rect = container.getBoundingClientRect();
     if (rect.height === 0) return;
     programmaticScrollRef.current = true;
-    window.scrollTo({ top: scrollTargetTop(window.scrollY, rect.top, rect.height, targetScroll), behavior: "smooth" });
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: scrollTargetTop(window.scrollY, rect.top, rect.height, targetScroll), behavior: prefersReduced ? "auto" : "smooth" });
     const clear = () => { programmaticScrollRef.current = false; };
     window.addEventListener("scrollend", clear, { once: true });
     const fallback = setTimeout(clear, 1000);
@@ -499,6 +507,15 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
         comments: a.comments,
       }))
     );
+    setReviews(
+      (document.reviews ?? [])
+        .filter((r: { dismissed: boolean }) => !r.dismissed)
+        .map((r: { reviewer?: { name?: string | null; email?: string | null } | null; verdict: string; onVersion?: { versionNumber: number } | null }) => ({
+          reviewer: r.reviewer?.name?.trim() || r.reviewer?.email || "Someone",
+          verdict: r.verdict,
+          onVersionNumber: r.onVersion?.versionNumber ?? null,
+        }))
+    );
   }, [doc.id, versionNumber]);
 
   const applySuggestion = useCallback(async (annotationId: string) => {
@@ -547,6 +564,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
           setAnnotations((prev) => prev.map((a) => a.id === e.annotationId ? { ...a, threadStatus: e.threadStatus ?? a.threadStatus } : a));
         } else if (e.type === "review.updated") {
           setDocState(e.state);
+          refetchDetail();
         } else if (e.type === "version.created") {
           refetchDetail();
         } else if (e.type === "presence.sync" || e.type === "presence.updated" || e.type === "presence.left") {
@@ -709,9 +727,11 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <div className="mb-4 flex items-center gap-3">
-          <h1 className="text-2xl font-semibold text-foreground">{doc.title}</h1>
-          <PresenceRoster roster={roster} currentUserId={currentUserId} />
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex min-w-0 items-center gap-2">
+            <h1 className="truncate text-2xl font-semibold text-foreground">{doc.title}</h1>
+            <PresenceRoster roster={roster} currentUserId={currentUserId} />
+          </div>
           <SessionBanner
             session={session}
             currentUserId={currentUserId}
@@ -720,26 +740,40 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
             followAttached={attached}
             onResumeFollow={resumeFollow}
           />
-          {mode === "review" && (
-            <Button
-              variant="secondary"
-              size="sm"
-              data-testid="copy-plan"
-              aria-label="Copy plan to clipboard"
-              onClick={copyMarkdown}
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            {mode === "review" && (
+              <Button
+                variant="secondary"
+                size="sm"
+                data-testid="copy-plan"
+                aria-label="Copy plan to clipboard"
+                onClick={copyMarkdown}
+              >
+                {copied ? "Copied!" : "Copy"}
+              </Button>
+            )}
+            {mode === "review" && editEnabled && (
+              <Button variant="secondary" size="sm" onClick={() => { setDraft(markdown); setMode("edit"); }}>Edit</Button>
+            )}
+            <Link
+              href={`/app/documents/${doc.id}/history`}
+              data-testid="history-link"
+              className="inline-flex items-center rounded-[var(--radius-app)] px-2.5 py-1 text-sm font-medium text-foreground hover:bg-primary-subtle"
             >
-              {copied ? "Copied!" : "Copy"}
-            </Button>
-          )}
-          {mode === "review" && editEnabled && (
-            <Button variant="secondary" size="sm" onClick={() => { setDraft(markdown); setMode("edit"); }}>Edit</Button>
-          )}
-          <Link href={`/app/documents/${doc.id}/history`} data-testid="history-link" className="text-sm text-primary hover:underline">History</Link>
-          {isOwner && (
-            <Button variant="danger" size="sm" data-testid="delete-document" onClick={() => setConfirmingDelete(true)}>
-              Delete
-            </Button>
-          )}
+              History
+            </Link>
+            {isOwner && (
+              <Button
+                variant="ghost"
+                size="sm"
+                data-testid="delete-document"
+                className="text-[var(--danger)] sm:ml-1"
+                onClick={() => setConfirmingDelete(true)}
+              >
+                Delete
+              </Button>
+            )}
+          </div>
         </div>
         {mode === "edit" ? (
           <DocumentEditor value={draft} onChange={setDraft} onSave={saveVersion} onCancel={() => { setDraft(markdown); setMode("review"); }} saving={saving} error={saveError} />
@@ -748,7 +782,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
             ref={containerRef}
             data-testid="doc-body"
             onClick={onContainerClick}
-            className="prose prose-violet max-w-none rounded-[var(--radius-app)] border border-border bg-surface p-6 relative"
+            className="prose prose-violet min-h-[50vh] max-w-none rounded-[var(--radius-app)] border border-border bg-surface p-6 relative"
           >
             <RenderedMarkdown key={versionNumber} markdown={markdown} />
             <PresenceCursors cursors={remoteCursors(roster, currentUserId)} />
@@ -756,6 +790,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
         )}
       </div>
 
+      {mode === "review" && (
       <aside className="flex w-full shrink-0 flex-col gap-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-80 lg:self-start lg:overflow-y-auto">
         <Card className="flex flex-col gap-2 p-3">
           <div className="flex items-center justify-between gap-2">
@@ -774,7 +809,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
             )}
           </div>
           <div className="flex items-center justify-between gap-2 text-sm text-muted">
-            <span data-testid="approval-progress">{doc.approvals} of {requiredApprovals} approvals</span>
+            <span data-testid="approval-progress">{reviews.filter((r) => r.verdict === "APPROVE").length} of {requiredApprovals} approvals</span>
             {isOwner && (
               <label className="flex items-center gap-1 text-xs">
                 Required
@@ -786,11 +821,50 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
                   data-testid="required-approvals"
                   value={requiredApprovals}
                   onChange={(e) => changeThreshold(Number(e.target.value))}
-                  className="w-16 rounded-md border border-border bg-surface px-1.5 py-0.5 text-foreground accent-[var(--primary)]"
+                  className="w-16 rounded-[var(--radius-app)] border border-border bg-surface px-1.5 py-0.5 text-foreground accent-[var(--primary)]"
                 />
               </label>
             )}
           </div>
+          {isOwner && (
+            <div data-testid="reviewers" className="flex flex-col gap-1 border-t border-border pt-2">
+              <span className="text-xs font-medium text-muted">Reviewers</span>
+              {reviews.length === 0 ? (
+                <p className="text-xs text-muted">No reviews yet. Anyone who opens this document can approve or request changes.</p>
+              ) : (
+                <ul className="flex flex-col gap-1">
+                  {reviews.map((r, i) => {
+                    const outdated = r.onVersionNumber != null && r.onVersionNumber < versionNumber;
+                    const verdict =
+                      r.verdict === "APPROVE"
+                        ? { label: "Approved", color: "var(--state-approved)" }
+                        : r.verdict === "REQUEST_CHANGES"
+                          ? { label: "Changes requested", color: "var(--state-changes)" }
+                          : { label: "Commented", color: "var(--muted)" };
+                    return (
+                      <li key={i} className="flex items-center justify-between gap-2 text-sm">
+                        <span className="min-w-0 truncate text-foreground">{r.reviewer}</span>
+                        <span className="flex shrink-0 items-center gap-1 text-xs">
+                          <span style={{ color: verdict.color }}>{verdict.label}</span>
+                          {r.onVersionNumber != null && (
+                            <span
+                              className="text-muted"
+                              title={outdated ? `Reviewed v${r.onVersionNumber}, superseded by v${versionNumber}` : undefined}
+                            >
+                              · v{r.onVersionNumber}{outdated ? " (outdated)" : ""}
+                            </span>
+                          )}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {docState === "CHANGES_REQUESTED" && (
+                <p className="text-xs text-muted">Address the feedback and save a new version — reviewers are notified to take another look.</p>
+              )}
+            </div>
+          )}
         </Card>
 
         {selection && (
@@ -870,6 +944,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
           onApplySuggestion={applySuggestion}
         />
       </aside>
+      )}
     </div>
   );
 }

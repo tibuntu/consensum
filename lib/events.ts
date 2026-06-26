@@ -6,6 +6,7 @@ export interface ClientNotification {
   documentId: string;
   documentTitle: string;
   actorId: string | null;
+  actorName?: string | null;
   read: boolean;
   createdAt: string; // ISO
 }

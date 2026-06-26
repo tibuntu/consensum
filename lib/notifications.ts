@@ -16,9 +16,10 @@ export async function notifyParticipants(documentId: string, actorId: string, ty
 
   const doc = await prisma.document.findUnique({ where: { id: documentId }, select: { title: true } });
   const documentTitle = doc?.title ?? "";
+  const actor = await prisma.user.findUnique({ where: { id: actorId }, select: { name: true, email: true } });
+  const actorName = actor?.name?.trim() || actor?.email || "Someone";
 
   const nt = type as NotificationType;
-  let actorName: string | null = null; // resolved lazily, only if an email is enqueued
 
   for (const p of recipients) {
     const prefs = parsePrefs(p.user?.notificationPrefs);
@@ -34,6 +35,7 @@ export async function notifyParticipants(documentId: string, actorId: string, ty
         documentId,
         documentTitle,
         actorId: row.actorId,
+        actorName,
         read: row.read,
         createdAt: row.createdAt.toISOString(),
       };
@@ -42,22 +44,26 @@ export async function notifyParticipants(documentId: string, actorId: string, ty
 
     // Email: only emailable types, and only if enabled for this recipient.
     if (EMAILABLE.has(type) && isEnabled(prefs, nt, "email")) {
-      if (actorName === null) {
-        const actor = await prisma.user.findUnique({ where: { id: actorId }, select: { name: true } });
-        actorName = actor?.name ?? "Someone";
-      }
       enqueueEmailEvent(p.userId, documentId, type as "comment" | "review" | "version", actorName);
     }
   }
 }
 
 export async function listNotifications(userId: string) {
-  return prisma.notification.findMany({
+  const rows = await prisma.notification.findMany({
     where: { userId },
     orderBy: [{ read: "asc" }, { createdAt: "desc" }],
     take: 50,
     include: { document: { select: { title: true } } },
   });
+  const actorIds = [...new Set(rows.map((r) => r.actorId).filter((x): x is string => !!x))];
+  const actors = actorIds.length
+    ? await prisma.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true, email: true } })
+    : [];
+  const nameById = new Map(actors.map((a) => [a.id, a.name?.trim() || a.email || "Someone"] as const));
+  // Match notifyParticipants: a known but since-deleted actor falls back to
+  // "Someone" (not the generic label), so live and reloaded inbox labels agree.
+  return rows.map((r) => ({ ...r, actorName: r.actorId ? nameById.get(r.actorId) ?? "Someone" : null }));
 }
 
 export async function unreadCount(userId: string) {

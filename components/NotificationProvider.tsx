@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { ClientNotification, DocEvent } from "@/lib/events";
 import { nextUnread, shouldFireOsNotification } from "@/lib/notification-client";
+import { notificationLabel } from "@/lib/notification-format";
 
 interface Ctx {
   unread: number;
@@ -56,7 +57,7 @@ export function NotificationProvider({
             })
           ) {
             seen.current.add(e.notification.id);
-            new Notification(e.notification.documentTitle || "Consensum", { body: `New ${e.notification.type}` });
+            new Notification(e.notification.documentTitle || "Consensum", { body: notificationLabel(e.notification.type, e.notification.actorName) });
           }
         } else if (e.type === "notification.read") {
           setItems((prev) => prev.map((n) => (n.id === e.id ? { ...n, read: true } : n)));

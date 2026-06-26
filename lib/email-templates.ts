@@ -5,7 +5,7 @@ export interface RenderInput { recipientName: string; docTitle: string; docId: s
 
 const NOUN: Record<ActivityEvent["type"], [string, string]> = {
   comment: ["comment", "comments"],
-  review: ["review", "reviews"],
+  review: ["decision", "decisions"],
   version: ["new version", "new versions"],
 };
 

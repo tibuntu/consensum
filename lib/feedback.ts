@@ -169,8 +169,9 @@ export function consolidateFeedback(detail: FeedbackDetail) {
     lines.push("");
   }
   if (reviews.length) {
-    lines.push("## Verdicts");
-    for (const r of reviews) lines.push(`- ${r.reviewer}: ${r.verdict}${r.dismissed ? " (dismissed)" : ""}`);
+    const VERDICT_LABEL: Record<string, string> = { APPROVE: "Approved", REQUEST_CHANGES: "Changes requested", COMMENT: "Commented" };
+    lines.push("## Decisions");
+    for (const r of reviews) lines.push(`- ${r.reviewer}: ${VERDICT_LABEL[r.verdict] ?? r.verdict}${r.dismissed ? " (dismissed)" : ""}`);
   }
 
   return {

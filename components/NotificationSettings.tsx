@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   NOTIFICATION_TYPES,
   NOTIFICATION_CHANNELS,
@@ -10,7 +10,7 @@ import { isValidCell, type NotificationPrefs } from "@/lib/notification-prefs";
 
 const TYPE_LABELS: Record<NotificationType, string> = {
   comment: "Comments & replies",
-  review: "Reviews & verdicts",
+  review: "Reviews & decisions",
   version: "New versions",
   resolve: "Thread resolved",
 };
@@ -23,6 +23,9 @@ const CHANNEL_LABELS: Record<NotificationChannel, string> = {
 export function NotificationSettings({ initial }: { initial: NotificationPrefs }) {
   const [prefs, setPrefs] = useState<NotificationPrefs>(initial);
   const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<"saved" | "error" | null>(null);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (savedTimer.current) clearTimeout(savedTimer.current); }, []);
 
   async function toggle(type: NotificationType, channel: NotificationChannel) {
     const next = !(prefs[type]?.[channel] === true);
@@ -40,19 +43,31 @@ export function NotificationSettings({ initial }: { initial: NotificationPrefs }
     const prev = prefs;
     setPrefs((p) => ({ ...p, [type]: { ...p[type], [channel]: next } }));
     setSaving(true);
+    setStatus(null);
     const res = await fetch("/api/settings/notifications", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ type, channel, enabled: next }),
     }).catch(() => null);
     setSaving(false);
-    if (!res || !res.ok) setPrefs(prev); // revert on failure
+    if (!res || !res.ok) {
+      setPrefs(prev); // revert on failure
+      setStatus("error");
+      return;
+    }
+    setStatus("saved");
+    if (savedTimer.current) clearTimeout(savedTimer.current);
+    savedTimer.current = setTimeout(() => setStatus(null), 2000);
   }
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold text-foreground">Notifications</h1>
       <p className="text-sm text-muted">Choose how you&apos;re notified for each kind of activity on your documents.</p>
+      <div className="min-h-[1.25rem] text-sm">
+        {status === "saved" && <span role="status" className="text-[var(--state-approved)]">Saved</span>}
+        {status === "error" && <span role="alert" className="text-[var(--state-changes)]">Couldn&apos;t save — check your connection and try again.</span>}
+      </div>
       <div className="overflow-x-auto">
         <table className="text-sm">
           <thead>

@@ -33,6 +33,7 @@ export default async function AppLayout({
     documentId: n.documentId,
     documentTitle: n.document.title,
     actorId: n.actorId,
+    actorName: n.actorName,
     read: n.read,
     createdAt: n.createdAt.toISOString(),
   }));

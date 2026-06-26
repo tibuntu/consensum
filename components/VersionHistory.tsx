@@ -16,17 +16,20 @@ export function VersionHistory({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Version history</h1>
-        <Link href={`/app/documents/${documentId}`} className="text-sm text-primary hover:underline">← Back to document</Link>
+        <Link href={`/app/documents/${documentId}`} className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
+          Back to document
+        </Link>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <label className="text-muted">Compare</label>
-        <select data-testid="from-select" className="rounded border border-border bg-surface px-2 py-1"
+        <select data-testid="from-select" className="rounded-[var(--radius-app)] border border-border bg-surface px-2 py-1"
           value={from} onChange={(e) => nav(Number(e.target.value), to)}>
           {numbers.map((n) => <option key={n} value={n}>v{n}</option>)}
         </select>
         <span className="text-muted">→</span>
-        <select data-testid="to-select" className="rounded border border-border bg-surface px-2 py-1"
+        <select data-testid="to-select" className="rounded-[var(--radius-app)] border border-border bg-surface px-2 py-1"
           value={to} onChange={(e) => nav(from, Number(e.target.value))}>
           {numbers.map((n) => <option key={n} value={n}>v{n}</option>)}
         </select>
@@ -35,8 +38,13 @@ export function VersionHistory({
       {singleMarkdown !== null ? (
         <p className="text-sm text-muted">Only one version exists — no earlier version to compare.</p>
       ) : rows ? (
-        <div data-testid="diff" className="overflow-x-auto rounded border border-border">
-          <div className="grid grid-cols-1 border-b border-border bg-[var(--state-neutral-bg)] text-xs font-medium text-muted lg:grid-cols-2">
+        <>
+        <div className="flex gap-4 text-xs text-muted">
+          <span><span className="font-mono font-semibold text-[var(--state-approved)]">+</span> Added</span>
+          <span><span className="font-mono font-semibold text-[var(--state-changes)]">−</span> Removed</span>
+        </div>
+        <div data-testid="diff" className="max-h-[70vh] overflow-auto rounded-[var(--radius-app)] border border-border">
+          <div className="sticky top-0 z-10 grid grid-cols-1 border-b border-border bg-[var(--state-neutral-bg)] text-xs font-medium text-muted lg:grid-cols-2">
             <span className="border-b border-border px-2 py-1 lg:border-b-0 lg:border-r">Old · v{from}</span>
             <span className="px-2 py-1">New · v{to}</span>
           </div>
@@ -47,6 +55,7 @@ export function VersionHistory({
             </div>
           ))}
         </div>
+        </>
       ) : (
         <p className="text-sm text-muted">Select two different versions to compare.</p>
       )}
@@ -59,11 +68,23 @@ function Side({ spans, text, number, side, kind }: {
   side: "old" | "new"; kind: DiffRow["kind"];
 }) {
   const empty = (side === "old" && kind === "added") || (side === "new" && kind === "removed");
+  const marker = empty
+    ? ""
+    : side === "new" && (kind === "added" || kind === "changed")
+      ? "+"
+      : side === "old" && (kind === "removed" || kind === "changed")
+        ? "−"
+        : "";
+  const markerColor = marker === "+" ? "var(--state-approved)" : marker === "−" ? "var(--state-changes)" : undefined;
   const bg = empty ? "" : kind === "removed" && side === "old" ? "bg-[var(--state-changes-bg)]"
     : kind === "added" && side === "new" ? "bg-[var(--state-approved-bg)]"
     : kind === "changed" ? (side === "old" ? "bg-[var(--state-changes-bg)]" : "bg-[var(--state-approved-bg)]") : "";
   return (
     <div className={`flex gap-2 border-b border-border px-2 py-0.5 ${bg}`}>
+      <span className="w-3 shrink-0 select-none text-center font-semibold" style={{ color: markerColor }}>
+        <span aria-hidden>{marker}</span>
+        {marker && <span className="sr-only">{marker === "+" ? "Added: " : "Removed: "}</span>}
+      </span>
       <span className="w-8 shrink-0 select-none text-right text-muted">{number ?? ""}</span>
       <pre className="whitespace-pre-wrap break-words">{spans ? spans.map((s, i) => (
         <span key={i} className={s.added ? "bg-[var(--state-approved)] text-[var(--primary-fg)]" : s.removed ? "bg-[var(--state-changes)] text-[var(--primary-fg)] line-through" : ""}>{s.value}</span>

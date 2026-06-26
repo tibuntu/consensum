@@ -3,14 +3,8 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { relativeTime } from "@/lib/time";
+import { notificationLabel } from "@/lib/notification-format";
 import { useNotifications } from "@/components/NotificationProvider";
-
-const TYPE_LABELS: Record<string, string> = {
-  comment: "New comment",
-  review: "New verdict",
-  version: "New version",
-  resolve: "Thread resolved",
-};
 
 export default function InboxList() {
   const { items, markRead, markAllRead } = useNotifications();
@@ -26,19 +20,22 @@ export default function InboxList() {
         )}
       </div>
       {items.length === 0 ? (
-        <Card className="p-6 text-sm text-muted">No notifications.</Card>
+        <Card className="p-6 text-sm text-muted">You&apos;re all caught up. New comments and decisions on your documents will appear here.</Card>
       ) : (
         <ul className="flex flex-col gap-2">
           {items.map((n) => (
             <li key={n.id} data-testid="notification">
-              <Card className={`transition-colors hover:bg-primary-subtle ${n.read ? "" : "border-l-2 border-l-primary"}`}>
+              <Card className={`transition-colors hover:bg-primary-subtle ${n.read ? "" : "border-l-4 border-l-primary"}`}>
                 <Link
                   href={`/app/documents/${n.documentId}`}
                   onClick={() => markRead(n.id)}
                   className={`flex items-center justify-between gap-4 p-3 ${n.read ? "text-muted" : "font-medium text-foreground"}`}
                 >
                   <span className="flex flex-col">
-                    <span>{TYPE_LABELS[n.type] ?? n.type}</span>
+                    <span className="flex items-center gap-2">
+                      {!n.read && <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
+                      {notificationLabel(n.type, n.actorName)}
+                    </span>
                     <span className="text-xs text-muted">{n.documentTitle}</span>
                   </span>
                   <span className="shrink-0 text-xs text-muted">{relativeTime(n.createdAt)}</span>

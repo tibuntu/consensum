@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { CopyButton } from "@/components/ui/CopyButton";
 import { WEBHOOK_EVENTS, type WebhookEvent } from "@/lib/enums";
 
 type WebhookRow = {
@@ -88,6 +89,9 @@ export default function WebhookManager({ initialWebhooks }: { initialWebhooks: W
           <Button type="submit" disabled={submitting || events.length === 0 || !url}>
             Create webhook
           </Button>
+          {(!url || events.length === 0) && (
+            <p className="text-xs text-muted">Enter an endpoint URL and select at least one event to create a webhook.</p>
+          )}
         </form>
       </Card>
 
@@ -98,15 +102,18 @@ export default function WebhookManager({ initialWebhooks }: { initialWebhooks: W
       )}
 
       {created && (
-        <Card className="flex flex-col gap-2 border-[var(--state-approved)] bg-[var(--state-approved-bg)] p-4">
+        <Card className="flex flex-col gap-2 border-[var(--state-approved)] p-4" style={{ background: "var(--state-approved-bg)" }}>
           <p className="text-sm font-medium text-foreground">Copy this signing secret now — it won&apos;t be shown again.</p>
-          <Input
-            data-testid="new-webhook-secret"
-            readOnly
-            value={created}
-            className="font-mono"
-            onFocus={(e) => e.currentTarget.select()}
-          />
+          <div className="flex gap-2">
+            <Input
+              data-testid="new-webhook-secret"
+              readOnly
+              value={created}
+              className="font-mono"
+              onFocus={(e) => e.currentTarget.select()}
+            />
+            <CopyButton value={created} className="shrink-0" />
+          </div>
           <Button variant="ghost" size="sm" onClick={() => setCreated(null)} className="self-start">
             Done
           </Button>
@@ -114,7 +121,7 @@ export default function WebhookManager({ initialWebhooks }: { initialWebhooks: W
       )}
 
       {hooks.length === 0 ? (
-        <Card className="p-6 text-sm text-muted">No webhooks yet.</Card>
+        <Card className="p-6 text-sm text-muted">No webhooks yet — add one above to get notified when a decision changes.</Card>
       ) : (
         <ul className="flex flex-col gap-2">
           {hooks.map((h) => (
