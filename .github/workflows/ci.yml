@@ -80,6 +80,9 @@ jobs:
   # are compiled/generated on the real target arch — no emulation.
   docker:
     runs-on: ${{ matrix.runner }}
+    # Gate the (expensive, multi-arch) image build on a green test suite: only
+    # build/scan/push once lint+unit+build and the e2e/agent-contract suite pass.
+    needs: [lint-test-build, e2e]
     permissions:
       contents: read
       packages: write # required to push images to GHCR
