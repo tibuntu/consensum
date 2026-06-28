@@ -30,6 +30,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      # The Postgres schema is generated from the canonical sqlite schema — fail if it's stale.
+      - run: node scripts/gen-postgres-schema.mjs --check
       # DB-backed unit tests (auth, schema) need a migrated SQLite DB. Use the project's
       # pinned prisma (pnpm exec), not pnpm dlx (which fetches a different version).
       - run: mkdir -p data && pnpm exec prisma migrate deploy
@@ -73,6 +75,40 @@ jobs:
           path: .planning/ai-integration/evidence/
           retention-days: 7
 
+  # Provider parity: run the same unit suite against a real PostgreSQL service so the
+  # dual-DB support can't silently regress. SQLite coverage stays in lint-test-build.
+  test-postgres:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: consensum
+          POSTGRES_PASSWORD: consensum
+          POSTGRES_DB: consensum
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U consensum -d consensum"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DB_PROVIDER: postgres
+      DATABASE_URL: "postgresql://consensum:consensum@localhost:5432/consensum"
+      AUTH_SECRET: "ci-secret-not-for-production-change-me-32+"
+      BASE_URL: "http://localhost:3000"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 24
+          cache: pnpm
+      # postinstall runs `prisma generate`; with DB_PROVIDER=postgres it produces the
+      # Postgres client, and migrate deploy applies the Postgres migration lineage.
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prisma migrate deploy
+      - run: pnpm test:unit
+
   # Multi-arch build matrix: one native runner per platform (no QEMU). Each leg
   # builds, Trivy-scans, and pushes its single-arch image BY DIGEST (no tag). The
   # docker-merge job then assembles the tagged multi-arch manifest from the
@@ -82,7 +118,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     # Gate the (expensive, multi-arch) image build on a green test suite: only
     # build/scan/push once lint+unit+build and the e2e/agent-contract suite pass.
-    needs: [lint-test-build, e2e]
+    needs: [lint-test-build, e2e, test-postgres]
     permissions:
       contents: read
       packages: write # required to push images to GHCR
