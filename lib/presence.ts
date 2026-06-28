@@ -1,4 +1,4 @@
-import { publish, type PresenceEntry, type PresenceCursor, type PresenceSelection, type PresenceScroll } from "@/lib/events";
+import { publish, subscribeRemote, type PresenceEntry, type PresenceCursor, type PresenceSelection, type PresenceScroll, type DocEvent } from "@/lib/events";
 
 export type { PresenceEntry, PresenceCursor, PresenceSelection, PresenceScroll };
 
@@ -7,10 +7,42 @@ type Registry = Map<string, Map<string, PresenceEntry>>;
 const globalForPresence = globalThis as unknown as {
   presenceRegistry?: Registry;
   presenceSweep?: ReturnType<typeof setInterval>;
+  presenceSubscribed?: Set<string>;
 };
 
 const registry: Registry = globalForPresence.presenceRegistry ?? new Map();
 if (process.env.NODE_ENV !== "production") globalForPresence.presenceRegistry = registry;
+
+// Documents whose peer-replica presence we're already merging.
+const subscribedDocs: Set<string> = globalForPresence.presenceSubscribed ?? new Set();
+globalForPresence.presenceSubscribed = subscribedDocs;
+
+// Merge a peer replica's presence event into the local roster, WITHOUT re-publishing
+// (subscribeRemote never delivers our own events, so there's no echo). On the
+// single-instance backend this never fires — the roster stays purely local.
+function applyRemote(documentId: string, event: DocEvent): void {
+  if (event.type === "presence.updated") {
+    let docMap = registry.get(documentId);
+    if (!docMap) {
+      docMap = new Map();
+      registry.set(documentId, docMap);
+    }
+    docMap.set(event.entry.userId, event.entry);
+  } else if (event.type === "presence.left") {
+    const docMap = registry.get(documentId);
+    if (!docMap) return;
+    docMap.delete(event.userId);
+    if (docMap.size === 0) registry.delete(documentId);
+  }
+}
+
+// Begin merging cross-replica presence for a document (idempotent). Cheap no-op on
+// the single-instance backend (subscribeRemote returns a no-op there).
+function ensureSubscribed(documentId: string): void {
+  if (subscribedDocs.has(documentId)) return;
+  subscribedDocs.add(documentId);
+  subscribeRemote(documentId, (event) => applyRemote(documentId, event));
+}
 
 /** Upsert the user's presence in a document, bump lastSeen, and broadcast.
  *  Every heartbeat states the full selection, cursor, and scroll truth: an object sets it,
@@ -22,6 +54,7 @@ export function heartbeat(
   cursor?: PresenceCursor | null,
   scroll?: PresenceScroll | null,
 ): void {
+  ensureSubscribed(documentId);
   let docMap = registry.get(documentId);
   if (!docMap) {
     docMap = new Map();
@@ -46,10 +79,13 @@ export function leave(documentId: string, userId: string): void {
 
 /** Current presence entries for a document (empty array when none). */
 export function roster(documentId: string): PresenceEntry[] {
+  ensureSubscribed(documentId);
   return Array.from(registry.get(documentId)?.values() ?? []);
 }
 
-/** Evict entries older than PRESENCE_TTL_MS, broadcasting presence.left for each. */
+/** Evict entries older than PRESENCE_TTL_MS, broadcasting presence.left for each.
+ *  Runs on every replica; remote entries stay fresh via peer heartbeats merged over
+ *  the bus, and a crashed peer's stale entries get swept here (idempotent left). */
 export function evictStale(): void {
   const ttl = Number(process.env.PRESENCE_TTL_MS ?? 15_000);
   const cutoff = Date.now() - ttl;
