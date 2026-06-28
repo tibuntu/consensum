@@ -248,6 +248,8 @@ model OutboxJob {
   attempts      Int      @default(0)
   maxAttempts   Int      @default(6)
   nextAttemptAt DateTime @default(now())
+  claimedAt     DateTime?            // set while DELIVERING; enables lease-based recovery of stuck jobs
+  claimedBy     String?              // worker/instance id holding the lease (diagnostics)
   lastError     String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

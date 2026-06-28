@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { randomUUID } from "node:crypto";
 
 const DEFAULT_BACKOFF_MS = [60_000, 300_000, 1_800_000, 7_200_000, 21_600_000];
 
@@ -56,43 +57,101 @@ export async function enqueue(
   return job.id;
 }
 
-/** Single-worker crash recovery: any DELIVERING row is orphaned, so re-arm it. */
+// A per-process identity for the lease holder. Atomic claiming (below) makes the
+// worker safe to run on every replica concurrently — no leader election.
+const WORKER_ID = randomUUID();
+const LEASE_MS = Number(process.env.OUTBOX_LEASE_MS ?? 300_000); // 5 min
+const isPostgres = /^postgres(ql)?:\/\//.test(process.env.DATABASE_URL ?? "");
+
+/**
+ * Reclaim jobs whose lease has expired — i.e. a worker crashed mid-delivery.
+ * Lease-based (not "reset all DELIVERING"), so a replica booting or polling never
+ * re-arms a job another live worker is actively delivering. Safe for N replicas.
+ */
 export async function recoverStuckJobs(): Promise<void> {
-  await prisma.outboxJob.updateMany({ where: { status: "DELIVERING" }, data: { status: "PENDING" } });
+  const cutoff = new Date(Date.now() - LEASE_MS);
+  await prisma.outboxJob.updateMany({
+    // Expired lease, or a DELIVERING row with no lease at all (anomalous/legacy) —
+    // both are stuck. A fresh lease (claimedAt >= cutoff) is left to its live owner.
+    where: { status: "DELIVERING", OR: [{ claimedAt: null }, { claimedAt: { lt: cutoff } }] },
+    data: { status: "PENDING", claimedAt: null, claimedBy: null },
+  });
+}
+
+type ClaimedJob = { id: string; type: string; payload: string; attempts: number; maxAttempts: number };
+
+/**
+ * Atomically claim up to `limit` due jobs, marking them DELIVERING under this
+ * worker's lease. Two replicas polling at once never grab the same job:
+ *   - Postgres: `FOR UPDATE SKIP LOCKED` lets each worker take a disjoint set.
+ *   - SQLite: a write transaction (single-writer file lock) serializes the claim.
+ */
+export async function claimDueJobs(limit: number): Promise<ClaimedJob[]> {
+  const now = new Date();
+  if (isPostgres) {
+    return prisma.$queryRaw<ClaimedJob[]>`
+      UPDATE "OutboxJob"
+         SET status = 'DELIVERING', "claimedAt" = ${now}, "claimedBy" = ${WORKER_ID}
+       WHERE id IN (
+         SELECT id FROM "OutboxJob"
+          WHERE status = 'PENDING' AND "nextAttemptAt" <= ${now}
+          ORDER BY "nextAttemptAt" ASC
+          LIMIT ${limit}
+          FOR UPDATE SKIP LOCKED
+       )
+      RETURNING id, type, payload, attempts, "maxAttempts";
+    `;
+  }
+  return prisma.$transaction(async (tx) => {
+    const due = await tx.outboxJob.findMany({
+      where: { status: "PENDING", nextAttemptAt: { lte: now } },
+      orderBy: { nextAttemptAt: "asc" },
+      take: limit,
+      select: { id: true },
+    });
+    if (due.length === 0) return [];
+    const ids = due.map((d) => d.id);
+    await tx.outboxJob.updateMany({
+      where: { id: { in: ids } },
+      data: { status: "DELIVERING", claimedAt: now, claimedBy: WORKER_ID },
+    });
+    return tx.outboxJob.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, type: true, payload: true, attempts: true, maxAttempts: true },
+    });
+  });
 }
 
 const BATCH = Number(process.env.OUTBOX_BATCH ?? 25);
 let ticking = false;
 
-/** Process all currently-due jobs once. Serialized via an in-process guard. */
+/** Process all currently-due jobs once. In-process guard + atomic cross-process claim. */
 export async function tick(): Promise<void> {
   if (ticking) return;
   ticking = true;
   try {
-    const now = new Date();
-    const due = await prisma.outboxJob.findMany({
-      where: { status: "PENDING", nextAttemptAt: { lte: now } },
-      orderBy: { nextAttemptAt: "asc" },
-      take: BATCH,
-    });
+    await recoverStuckJobs();
+    const due = await claimDueJobs(BATCH);
     for (const job of due) {
-      await prisma.outboxJob.update({ where: { id: job.id }, data: { status: "DELIVERING" } });
       const handler = handlers.get(job.type);
       if (!handler) {
         await prisma.outboxJob.update({
           where: { id: job.id },
-          data: { status: "DEAD", lastError: `no handler for type "${job.type}"` },
+          data: { status: "DEAD", lastError: `no handler for type "${job.type}"`, claimedAt: null, claimedBy: null },
         });
         continue;
       }
       try {
         await handler(JSON.parse(job.payload));
-        await prisma.outboxJob.update({ where: { id: job.id }, data: { status: "DONE" } });
+        await prisma.outboxJob.update({ where: { id: job.id }, data: { status: "DONE", claimedAt: null, claimedBy: null } });
       } catch (err) {
         const attempts = job.attempts + 1;
         const lastError = err instanceof Error ? err.message : String(err);
         if (attempts >= job.maxAttempts) {
-          await prisma.outboxJob.update({ where: { id: job.id }, data: { status: "DEAD", attempts, lastError } });
+          await prisma.outboxJob.update({
+            where: { id: job.id },
+            data: { status: "DEAD", attempts, lastError, claimedAt: null, claimedBy: null },
+          });
           const onDead = deadHandlers.get(job.type);
           if (onDead) {
             try { await onDead(JSON.parse(job.payload), lastError); }
@@ -106,6 +165,8 @@ export async function tick(): Promise<void> {
               attempts,
               lastError,
               nextAttemptAt: new Date(Date.now() + computeBackoffMs(attempts)),
+              claimedAt: null,
+              claimedBy: null,
             },
           });
         }

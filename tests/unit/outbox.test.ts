@@ -64,11 +64,26 @@ describe("outbox engine", () => {
     delete process.env.OUTBOX_BACKOFF_MS;
   });
 
-  it("recoverStuckJobs flips DELIVERING back to PENDING", async () => {
+  it("recoverStuckJobs reclaims a DELIVERING job with no lease", async () => {
     const id = await enqueue("test.noop", {});
     await prisma.outboxJob.update({ where: { id }, data: { status: "DELIVERING" } });
     await recoverStuckJobs();
     expect((await prisma.outboxJob.findUnique({ where: { id } }))?.status).toBe("PENDING");
+  });
+
+  it("recoverStuckJobs reclaims a DELIVERING job whose lease has expired", async () => {
+    const id = await enqueue("test.noop", {});
+    const stale = new Date(Date.now() - 10 * 60_000); // older than the 5-min lease
+    await prisma.outboxJob.update({ where: { id }, data: { status: "DELIVERING", claimedAt: stale, claimedBy: "dead-worker" } });
+    await recoverStuckJobs();
+    expect((await prisma.outboxJob.findUnique({ where: { id } }))?.status).toBe("PENDING");
+  });
+
+  it("recoverStuckJobs leaves a fresh lease alone (a live worker keeps its job)", async () => {
+    const id = await enqueue("test.noop", {});
+    await prisma.outboxJob.update({ where: { id }, data: { status: "DELIVERING", claimedAt: new Date(), claimedBy: "live-worker" } });
+    await recoverStuckJobs();
+    expect((await prisma.outboxJob.findUnique({ where: { id } }))?.status).toBe("DELIVERING");
   });
 
   it("startOutboxWorker does not auto-start under NODE_ENV=test", () => {
