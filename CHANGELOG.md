@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.11.0](https://github.com/tibuntu/consensum/compare/v0.10.0...v0.11.0) (2026-06-28)
+
+
+### Features
+
+* **auth:** DB-backed rate-limit storage + provider-matched adapter ([47366d2](https://github.com/tibuntu/consensum/commit/47366d2e3883e40a6496a3d90b4e0daf939fc1fa))
+* **db:** dual-provider Prisma scaffolding (sqlite + postgresql) ([a1509e4](https://github.com/tibuntu/consensum/commit/a1509e46363a72958eb673006322b9febc20b38e))
+* **db:** select Prisma driver adapter by DATABASE_URL (pg vs sqlite) ([eb2c0df](https://github.com/tibuntu/consensum/commit/eb2c0df62f566eddead3c184fe74c2ba56db9c58))
+* **deploy:** multi-replica docker-compose reference (postgres + 2 replicas) ([23ce0b8](https://github.com/tibuntu/consensum/commit/23ce0b8de53aeaa663c053057f72c2d28378d994))
+* **docker:** build and run the image on PostgreSQL (build-arg + gated migrate) ([d8aee94](https://github.com/tibuntu/consensum/commit/d8aee942e55673db5e6848685135ee7a01196c12))
+* **events:** cross-replica event bus via Postgres LISTEN/NOTIFY ([59d7a0b](https://github.com/tibuntu/consensum/commit/59d7a0bef249e581004b662070cf5d0b195829b6))
+* **outbox:** atomic claiming + lease-based recovery for multi-replica ([0ba07b9](https://github.com/tibuntu/consensum/commit/0ba07b9fef3b4456220b0fb51135fe863cee1ac0))
+* **presence:** converge presence + review-session across replicas ([b302add](https://github.com/tibuntu/consensum/commit/b302addb47582835de9b963beedf75a0c0e7ac9e))
+
+
+### Bug Fixes
+
+* **deps:** update better-auth monorepo to v1.6.21 ([15eee5a](https://github.com/tibuntu/consensum/commit/15eee5af0fb785d37f49b1850b3f41af81f52d61))
+
 ## [0.10.0](https://github.com/tibuntu/consensum/compare/v0.9.0...v0.10.0) (2026-06-26)
 
 
