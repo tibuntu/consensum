@@ -23,8 +23,16 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV BUILD_STANDALONE=1
-RUN pnpm dlx prisma generate
-RUN pnpm build
+# Which Prisma client to bake into the image: sqlite (default, single-container)
+# or postgres. Build the multi-replica image with `--build-arg DB_PROVIDER=postgres`.
+ARG DB_PROVIDER=sqlite
+RUN DB_PROVIDER=$DB_PROVIDER pnpm dlx prisma generate
+# `next build` evaluates route modules, which construct the module-level PrismaClient
+# in lib/db.ts. Give it a DATABASE_URL whose scheme matches the baked client so
+# construction succeeds; Prisma connects lazily, so no database is contacted at build.
+RUN DB_PROVIDER=$DB_PROVIDER \
+    DATABASE_URL="$([ "$DB_PROVIDER" = "postgres" ] && echo "postgresql://build@localhost:5432/build" || echo "file:/tmp/build.db")" \
+    pnpm build
 
 # Minimal Prisma CLI for `migrate deploy` on startup, installed with npm so the
 # tree is flat and symlink-free. openssl must be present so Prisma's platform
@@ -48,8 +56,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -
 # bundled undici (and any future npm-bundled CVE) doesn't reach the runtime image.
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 ENV NODE_ENV=production
+# Single-container default; override with a postgres:// URL for multi-replica.
 ENV DATABASE_URL="file:/data/app.db"
 ENV PORT=3000
+# Run `migrate deploy` on startup (single-container UX). Set false when a one-shot
+# migration job applies migrations before multi-replica app instances start.
+ENV RUN_MIGRATIONS_ON_START=true
 # Next standalone server.js binds to $HOSTNAME, which Docker auto-sets to the
 # container ID — leaving the server off loopback so the HEALTHCHECK's 127.0.0.1
 # probe is refused. Bind to all interfaces (Next's documented config).
@@ -76,5 +88,7 @@ VOLUME /data
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:3000/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-# Apply migrations from the isolated Prisma dir, then start the standalone server.
-CMD ["sh", "-c", "cd /app/_prisma && node node_modules/prisma/build/index.js migrate deploy && cd /app && exec node server.js"]
+# Apply migrations from the isolated Prisma dir (unless RUN_MIGRATIONS_ON_START=false,
+# e.g. a one-shot job runs them ahead of a multi-replica rollout), then start the
+# standalone server. DB_PROVIDER selects the sqlite vs postgres migration lineage.
+CMD ["sh", "-c", "if [ \"$RUN_MIGRATIONS_ON_START\" != \"false\" ]; then cd /app/_prisma && node node_modules/prisma/build/index.js migrate deploy && cd /app; fi; exec node server.js"]
