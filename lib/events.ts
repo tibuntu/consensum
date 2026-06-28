@@ -76,11 +76,17 @@ export type DocEvent =
 // single-instance) and a Postgres LISTEN/NOTIFY backend that fans events out
 // across replicas (active-active). Callers — SSE routes, feedback-wait, presence,
 // review-session — never see the difference.
+//
+// `subscribeRemote` fires ONLY for events that arrived from another replica (never
+// for this process's own publishes). Server-side registries (presence, sessions)
+// use it to merge peer state into their local maps without re-publishing or
+// double-applying their own writes. On the in-process backend it never fires.
 // ---------------------------------------------------------------------------
 
 interface EventBus {
   publish(key: string, event: DocEvent): void;
   subscribe(key: string, handler: (e: DocEvent) => void): () => void;
+  subscribeRemote(key: string, handler: (e: DocEvent) => void): () => void;
 }
 
 // In-process delivery. Used directly for SQLite, and as the local-delivery layer
@@ -98,6 +104,10 @@ class LocalBus implements EventBus {
     this.emitter.on(key, handler);
     return () => this.emitter.off(key, handler);
   }
+  // Single-instance has no remote events, so a remote-only subscription never fires.
+  subscribeRemote(): () => void {
+    return () => {};
+  }
 }
 
 const NOTIFY_CHANNEL = "consensum_events";
@@ -111,7 +121,8 @@ const MAX_NOTIFY_BYTES = 7900;
 // locally but skipped cross-replica — remote clients recover on the next
 // refetch/reconnect (SSE already tolerates gaps).
 export class PostgresBus implements EventBus {
-  private readonly local = new LocalBus();
+  private readonly local = new LocalBus(); // all subscribers: local + remote events
+  private readonly remoteOnly = new LocalBus(); // subscribeRemote: peer events only
   private readonly instanceId = randomUUID();
   private readonly url: string;
   private client: Client | null = null;
@@ -131,6 +142,11 @@ export class PostgresBus implements EventBus {
   subscribe(key: string, handler: (e: DocEvent) => void): () => void {
     void this.ensureConnected(); // start LISTENing so cross-replica events arrive
     return this.local.subscribe(key, handler);
+  }
+
+  subscribeRemote(key: string, handler: (e: DocEvent) => void): () => void {
+    void this.ensureConnected();
+    return this.remoteOnly.subscribe(key, handler);
   }
 
   /** Await the LISTEN connection (used by tests and graceful startup). */
@@ -202,7 +218,8 @@ export class PostgresBus implements EventBus {
       return;
     }
     if (!msg.k || !msg.e || msg.i === this.instanceId) return; // ignore our own
-    this.local.publish(msg.k, msg.e);
+    this.local.publish(msg.k, msg.e); // SSE/feedback subscribers (local + remote)
+    this.remoteOnly.publish(msg.k, msg.e); // registry merge (peer events only)
   }
 
   private scheduleReconnect(): void {
@@ -240,4 +257,13 @@ export function publish(documentId: string, event: DocEvent): void {
 
 export function subscribe(documentId: string, handler: (e: DocEvent) => void): () => void {
   return bus.subscribe(documentId, handler);
+}
+
+/**
+ * Subscribe to events that arrived from ANOTHER replica only (never this process's
+ * own publishes). Used by the presence / review-session registries to merge peer
+ * state. On the single-instance backend this never fires.
+ */
+export function subscribeRemote(documentId: string, handler: (e: DocEvent) => void): () => void {
+  return bus.subscribeRemote(documentId, handler);
 }
