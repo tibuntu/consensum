@@ -7,7 +7,7 @@
 #   open http://localhost:8080
 services:
   db:
-    image: postgres:17
+    image: postgres:18
     environment:
       POSTGRES_USER: consensum
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-consensum}
