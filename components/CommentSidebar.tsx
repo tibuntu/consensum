@@ -46,6 +46,9 @@ function ThreadCard({
       onClick={() => onSelect(annotation.id)}
       className={`flex cursor-pointer flex-col gap-2 p-3 ${resolved ? "opacity-50" : ""} ${focused ? "ring-2 ring-primary/40" : ""}`}
     >
+      {annotation.scope === "DOCUMENT" && (
+        <p className="text-xs font-medium text-muted">Whole document</p>
+      )}
       {annotation.anchorExact && (
         <p className="border-l-2 border-border pl-2 text-xs italic text-muted">
           &ldquo;{annotation.anchorExact.slice(0, 80)}&rdquo;
@@ -155,16 +158,27 @@ export default function CommentSidebar({
   onToggleThread: (annotationId: string, nextStatus: string) => Promise<void>;
   onApplySuggestion: (annotationId: string) => Promise<void>;
 }) {
-  const orphaned = annotations.filter((a) => statusById[a.id] === "ORPHANED");
-  const live = annotations.filter((a) => statusById[a.id] !== "ORPHANED");
+  const general = annotations.filter((a) => a.scope === "DOCUMENT");
+  const inline = annotations.filter((a) => a.scope !== "DOCUMENT");
+  const orphaned = inline.filter((a) => statusById[a.id] === "ORPHANED");
+  const live = inline.filter((a) => statusById[a.id] !== "ORPHANED");
 
   return (
     <div className="flex flex-col gap-3">
       <h2 className="text-sm font-semibold text-muted">Comments</h2>
-      {live.length === 0 && orphaned.length === 0 ? (
-        <p className="text-sm text-muted">Select text in the document to add a comment.</p>
+      {general.length === 0 && live.length === 0 && orphaned.length === 0 ? (
+        <p className="text-sm text-muted">Select text to comment inline, or add a general comment.</p>
       ) : (
         <>
+          {general.length > 0 && (
+            <div data-testid="general-section" className="flex flex-col gap-2">
+              <h3 className="text-xs font-semibold uppercase text-muted">General</h3>
+              {general.map((a) => (
+                <ThreadCard key={a.id} annotation={a} status="ACTIVE" focused={focusedId === a.id} isOwner={isOwner}
+                  onSelect={onSelectThread} onAddComment={onAddComment} onToggleThread={onToggleThread} onApplySuggestion={onApplySuggestion} />
+              ))}
+            </div>
+          )}
           {live.map((a) => (
             <ThreadCard
               key={a.id}

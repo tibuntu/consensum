@@ -31,6 +31,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
       })),
     annotations: doc.annotations.map((a) => ({
       id: a.id,
+      scope: a.scope,
       anchorExact: a.anchorExact,
       anchorPrefix: a.anchorPrefix,
       anchorSuffix: a.anchorSuffix,

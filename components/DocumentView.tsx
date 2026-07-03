@@ -13,7 +13,7 @@ import { leaderScroll, scrollTargetTop } from "@/lib/follow-client";
 import PresenceRoster from "@/components/PresenceRoster";
 import PresenceCursors from "@/components/PresenceCursors";
 import SessionBanner from "@/components/SessionBanner";
-import type { SessionAction } from "@/lib/enums";
+import { SEVERITIES, type SessionAction } from "@/lib/enums";
 import type { PresenceEntry, PresenceCursor, PresenceSelection, PresenceScroll, ReviewSession } from "@/lib/events";
 import CommentSidebar from "@/components/CommentSidebar";
 import DocumentEditor from "@/components/DocumentEditor";
@@ -29,6 +29,7 @@ export interface ClientComment {
 }
 export interface ClientAnnotation {
   id: string;
+  scope: string;
   anchorExact: string | null;
   anchorPrefix: string | null;
   anchorSuffix: string | null;
@@ -139,6 +140,9 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
   ]);
   const [session, setSession] = useState<ReviewSession | null>(null);
   const [sessionPending, setSessionPending] = useState(false);
+  const [generalOpen, setGeneralOpen] = useState(false);
+  const [generalBody, setGeneralBody] = useState("");
+  const [generalSeverity, setGeneralSeverity] = useState("");
 
   const postSessionAction = useCallback(
     (action: SessionAction) => {
@@ -433,6 +437,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
       const { annotation } = await res.json();
       const created: ClientAnnotation = {
         id: annotation.id,
+        scope: annotation.scope ?? "INLINE",
         anchorExact: annotation.anchorExact,
         anchorPrefix: annotation.anchorPrefix,
         anchorSuffix: annotation.anchorSuffix,
@@ -470,6 +475,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
       const { annotation } = await res.json();
       const created: ClientAnnotation = {
         id: annotation.id,
+        scope: annotation.scope ?? "INLINE",
         anchorExact: annotation.anchorExact,
         anchorPrefix: annotation.anchorPrefix,
         anchorSuffix: annotation.anchorSuffix,
@@ -491,6 +497,38 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
     }
   }
 
+  async function submitGeneralComment() {
+    if (!generalBody.trim()) return;
+    const res = await fetch(`/api/documents/${doc.id}/annotations`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ body: generalBody, scope: "document", ...(generalSeverity ? { severity: generalSeverity } : {}) }),
+    });
+    if (res.status === 201) {
+      const { annotation } = await res.json();
+      const created: ClientAnnotation = {
+        id: annotation.id,
+        scope: annotation.scope ?? "DOCUMENT",
+        anchorExact: null,
+        anchorPrefix: null,
+        anchorSuffix: null,
+        startOffset: null,
+        endOffset: null,
+        threadStatus: annotation.threadStatus,
+        status: annotation.status ?? "ACTIVE",
+        kind: annotation.kind ?? "COMMENT",
+        suggestedText: null,
+        appliedInVersionNumber: null,
+        comments: (annotation.comments ?? []).map((c: ClientComment) => ({ id: c.id, body: c.body, author: c.author })),
+      };
+      setAnnotations((prev) => (prev.some((x) => x.id === created.id) ? prev : [...prev, created]));
+      setGeneralOpen(false);
+      setGeneralBody("");
+      setGeneralSeverity("");
+      setFocusedId(created.id);
+    }
+  }
+
   const refetchDetail = useCallback(async () => {
     const res = await fetch(`/api/documents/${doc.id}`);
     if (!res.ok) return;
@@ -499,8 +537,8 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
     setVersionNumber(document.currentVersion?.versionNumber ?? versionNumber);
     setDocState(document.state);
     setAnnotations(
-      document.annotations.map((a: ClientAnnotation & { appliedInVersion?: { versionNumber: number } | null }) => ({
-        id: a.id, anchorExact: a.anchorExact, anchorPrefix: a.anchorPrefix, anchorSuffix: a.anchorSuffix,
+      document.annotations.map((a: ClientAnnotation & { appliedInVersion?: { versionNumber: number } | null; scope?: string }) => ({
+        id: a.id, scope: a.scope ?? "INLINE", anchorExact: a.anchorExact, anchorPrefix: a.anchorPrefix, anchorSuffix: a.anchorSuffix,
         startOffset: a.startOffset, endOffset: a.endOffset, threadStatus: a.threadStatus, status: a.status,
         kind: a.kind ?? "COMMENT", suggestedText: a.suggestedText ?? null,
         appliedInVersionNumber: a.appliedInVersion?.versionNumber ?? a.appliedInVersionNumber ?? null,
@@ -555,7 +593,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
         } else if (e.type === "annotation.created") {
           const a = e.annotation;
           setAnnotations((prev) => prev.some((x) => x.id === a.id) ? prev : [...prev, {
-            id: a.id, anchorExact: a.anchorExact, anchorPrefix: a.anchorPrefix, anchorSuffix: a.anchorSuffix,
+            id: a.id, scope: a.scope ?? "INLINE", anchorExact: a.anchorExact, anchorPrefix: a.anchorPrefix, anchorSuffix: a.anchorSuffix,
             startOffset: a.startOffset, endOffset: a.endOffset, threadStatus: a.threadStatus, status: a.status ?? "ACTIVE",
             kind: a.kind ?? "COMMENT", suggestedText: a.suggestedText ?? null, appliedInVersionNumber: null,
             comments: (a.comments ?? []).map((c: ClientComment) => ({ id: c.id, body: c.body, author: c.author })),
@@ -864,6 +902,50 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
                 <p className="text-xs text-muted">Address the feedback and save a new version — reviewers are notified to take another look.</p>
               )}
             </div>
+          )}
+        </Card>
+
+        <Card className="flex flex-col gap-2 p-3">
+          {generalOpen ? (
+            <>
+              <p className="text-xs text-muted">Commenting on the whole document</p>
+              <Textarea
+                aria-label="general comment"
+                autoFocus
+                value={generalBody}
+                onChange={(e) => setGeneralBody(e.target.value)}
+                rows={3}
+                placeholder="Add a general comment"
+              />
+              <select
+                aria-label="severity"
+                data-testid="general-severity"
+                value={generalSeverity}
+                onChange={(e) => setGeneralSeverity(e.target.value)}
+                className="rounded-[var(--radius-app)] border border-border bg-surface px-1.5 py-1 text-sm text-foreground"
+              >
+                <option value="">No severity</option>
+                {SEVERITIES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <div className="flex gap-2">
+                <Button variant="primary" size="sm" onClick={submitGeneralComment} disabled={!generalBody.trim()}>
+                  Comment
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => { setGeneralOpen(false); setGeneralBody(""); setGeneralSeverity(""); }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </>
+          ) : (
+            <Button variant="secondary" size="sm" data-testid="add-general-comment" onClick={() => setGeneralOpen(true)}>
+              Add general comment
+            </Button>
           )}
         </Card>
 
