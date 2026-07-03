@@ -15,6 +15,7 @@ export interface AnnotationAnchor {
   anchorPrefix: string | null;
   anchorSuffix: string | null;
   threadStatus: string;
+  scope?: string;
 }
 
 /**
@@ -30,6 +31,11 @@ export function buildHighlightRanges(
   const ranges: HighlightRange[] = [];
   const statuses: Record<string, string> = {};
   for (const a of annotations) {
+    if (a.scope === "DOCUMENT") {
+      // No anchor to relocate: document-scoped threads are always ACTIVE and never highlighted.
+      statuses[a.id] = "ACTIVE";
+      continue;
+    }
     const r = relocate(containerText, {
       exact: a.anchorExact ?? "",
       prefix: a.anchorPrefix ?? "",

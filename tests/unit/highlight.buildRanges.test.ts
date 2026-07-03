@@ -36,4 +36,12 @@ describe("buildHighlightRanges", () => {
     ]);
     expect(ranges.map((r) => r.id)).toEqual(["active"]);
   });
+
+  test("reports document-scoped annotations as ACTIVE with no range", () => {
+    const { ranges, statuses } = buildHighlightRanges("hello world, this is the doc body", [
+      { id: "g1", anchorExact: null, anchorPrefix: null, anchorSuffix: null, threadStatus: "OPEN", scope: "DOCUMENT" },
+    ]);
+    expect(ranges).toEqual([]);
+    expect(statuses).toEqual({ g1: "ACTIVE" });
+  });
 });
