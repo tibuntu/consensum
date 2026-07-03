@@ -53,7 +53,7 @@ test("notifications: comment notifies the plan owner", async ({ browser }) => {
   await pageB.goto(url);
   await pageB.getByTestId("doc-body").getByText("Shared content").first().selectText();
   await pageB.getByLabel("comment").fill("a question from B");
-  await pageB.getByRole("button", { name: "Comment" }).click();
+  await pageB.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(pageB.getByTestId("thread")).toContainText("a question from B");
 
   // A sees an inbox notification.

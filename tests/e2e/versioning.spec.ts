@@ -33,7 +33,7 @@ test("edit re-anchors (moved) and resets approval", async ({ browser }) => {
 
   await page.getByTestId("doc-body").getByText("brown fox").first().selectText();
   await page.getByLabel("comment").fill("which fox?");
-  await page.getByRole("button", { name: "Comment" }).click();
+  await page.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(page.locator('mark[data-annotation-id]')).toHaveCount(1);
 
   // Reviewer B joins via link-grant and approves.
@@ -76,7 +76,7 @@ test("comments propagate live between two clients", async ({ browser }) => {
 
   await pageA.getByTestId("doc-body").getByText("Shared content").first().selectText();
   await pageA.getByLabel("comment").fill("hello from A");
-  await pageA.getByRole("button", { name: "Comment" }).click();
+  await pageA.getByRole("button", { name: "Comment", exact: true }).click();
 
   await expect(pageB.getByTestId("thread")).toContainText("hello from A", { timeout: 10_000 });
 

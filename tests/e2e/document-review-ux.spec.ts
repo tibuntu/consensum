@@ -78,7 +78,7 @@ test("comment threads collapse the reply box until Reply is clicked", async ({ b
   // Owner comments on their own document to create a thread.
   await page.getByTestId("doc-body").getByText("cloud setup").first().selectText();
   await page.getByLabel("comment").fill("Which provider?");
-  await page.getByRole("button", { name: "Comment" }).click();
+  await page.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(page.getByTestId("thread")).toContainText("Which provider?");
 
   // The reply composer is collapsed until the thread's Reply button is clicked.

@@ -27,7 +27,7 @@ test("create, annotate, comment, request changes", async ({ browser }) => {
   // select the phrase "cloud setup" in the rendered body
   await page.getByTestId("doc-body").getByText("cloud setup").first().selectText();
   await page.getByLabel("comment").fill("which cloud provider?");
-  await page.getByRole("button", { name: "Comment" }).click();
+  await page.getByRole("button", { name: "Comment", exact: true }).click();
 
   // thread appears with the comment, and a highlight exists
   await expect(page.getByTestId("thread")).toContainText("which cloud provider?");

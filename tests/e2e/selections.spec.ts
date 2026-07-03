@@ -64,7 +64,7 @@ test("remote selection coexists with an annotation highlight", async ({ browser 
   // A creates an annotation (mirrors review.spec.ts).
   await pageA.getByTestId("doc-body").getByText("cloud setup").first().selectText();
   await pageA.getByLabel("comment").fill("which cloud provider?");
-  await pageA.getByRole("button", { name: "Comment" }).click();
+  await pageA.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(pageA.locator("mark[data-annotation-id]")).toHaveCount(1);
 
   await register(pageB, "Grace");

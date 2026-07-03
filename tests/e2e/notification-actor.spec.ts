@@ -26,7 +26,7 @@ test("inbox names who acted on the document", async ({ browser }) => {
   await B.goto(url);
   await B.getByTestId("doc-body").getByText("Shared content").first().selectText();
   await B.getByLabel("comment").fill("a question from Blair");
-  await B.getByRole("button", { name: "Comment" }).click();
+  await B.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(B.getByTestId("thread")).toContainText("a question from Blair");
 
   await A.goto("/app/inbox");
