@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.12.0](https://github.com/tibuntu/consensum/compare/v0.11.1...v0.12.0) (2026-07-03)
+
+
+### Features
+
+* accept document-scoped annotations in create service and route ([011e380](https://github.com/tibuntu/consensum/commit/011e3807c337f62c7e0578229f727abab38cdb66))
+* add scope column to Annotation for document-scoped comments ([e41377f](https://github.com/tibuntu/consensum/commit/e41377f9f469435cc64acfe43441ad78f5e09aeb))
+* deliver document-scoped threads in consolidated feedback (schemaVersion 2) ([47093b2](https://github.com/tibuntu/consensum/commit/47093b2f9df4619f4923e72b0a0dd38fcef8e3e9))
+* exclude document-scoped annotations from highlight relocation ([0a5d0d0](https://github.com/tibuntu/consensum/commit/0a5d0d021ff55cecc9b18f2c71755421429bea7c))
+* general-comment composer and sidebar group in review UI ([f982eb7](https://github.com/tibuntu/consensum/commit/f982eb707cf606bfea769086d551b889cb0a8adf))
+* keep document-scoped annotations ACTIVE across revisions ([41ce049](https://github.com/tibuntu/consensum/commit/41ce049a80498dee7008a0bff5ac0eedff90e004))
+
 ## [0.11.1](https://github.com/tibuntu/consensum/compare/v0.11.0...v0.11.1) (2026-07-02)
 
 
