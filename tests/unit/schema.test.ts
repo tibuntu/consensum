@@ -74,4 +74,26 @@ describe("domain schema", () => {
     await prisma.document.delete({ where: { id: doc.id } });
     await prisma.user.delete({ where: { id: user.id } });
   });
+
+  it("Annotation scope defaults to INLINE and round-trips DOCUMENT", async () => {
+    const now = new Date();
+    const user = await prisma.user.create({
+      data: { id: `scp-${Date.now()}`, name: "Scp", email: `scp-${Date.now()}@e.com`, emailVerified: false, createdAt: now, updatedAt: now },
+    });
+    const doc = await prisma.document.create({ data: { title: "Scope Doc", ownerId: user.id } });
+    const v1 = await prisma.documentVersion.create({
+      data: { documentId: doc.id, versionNumber: 1, markdown: "# Hi", contentHash: "h", createdById: user.id },
+    });
+    const inline = await prisma.annotation.create({
+      data: { documentId: doc.id, createdOnVersionId: v1.id, authorId: user.id, anchorExact: "Hi" },
+    });
+    expect(inline.scope).toBe("INLINE");
+    const global = await prisma.annotation.create({
+      data: { documentId: doc.id, createdOnVersionId: v1.id, authorId: user.id, scope: "DOCUMENT" },
+    });
+    expect(global.scope).toBe("DOCUMENT");
+    expect(global.anchorExact).toBeNull();
+    await prisma.document.delete({ where: { id: doc.id } });
+    await prisma.user.delete({ where: { id: user.id } });
+  });
 });

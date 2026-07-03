@@ -144,6 +144,7 @@ model Annotation {
   createdOnVersionId String
   createdOnVersion   DocumentVersion @relation("AnnotationVersion", fields: [createdOnVersionId], references: [id], onDelete: Restrict)
   kind               String   @default("COMMENT")
+  scope              String   @default("INLINE") // INLINE | DOCUMENT (see lib/enums.ts ANNOTATION_SCOPES)
   anchorExact        String?
   anchorPrefix       String?
   anchorSuffix       String?

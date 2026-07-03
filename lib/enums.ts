@@ -7,6 +7,9 @@ export type DocumentSource = (typeof DOCUMENT_SOURCES)[number];
 export const ANNOTATION_KINDS = ["COMMENT", "SUGGESTION"] as const;
 export type AnnotationKind = (typeof ANNOTATION_KINDS)[number];
 
+export const ANNOTATION_SCOPES = ["INLINE", "DOCUMENT"] as const;
+export type AnnotationScope = (typeof ANNOTATION_SCOPES)[number];
+
 export const ANCHOR_STATUSES = ["ACTIVE", "MOVED", "ORPHANED"] as const;
 export type AnchorStatus = (typeof ANCHOR_STATUSES)[number];
 
