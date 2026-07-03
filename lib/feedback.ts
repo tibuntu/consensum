@@ -213,6 +213,8 @@ export function consolidateFeedback(detail: FeedbackDetail) {
   }
 
   return {
+    // v2: threads carry `scope` ("inline" | "document"); document-scoped threads
+    // render as "General comment" markdown sections (quote stays null for them).
     schemaVersion: 2 as const,
     decision,
     state: detail.state,

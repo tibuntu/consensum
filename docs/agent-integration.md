@@ -72,7 +72,7 @@ Bearer token, owner-scoped:
 |----------|---------|
 | `POST /api/plans` | Push a plan; returns `{ id, reviewUrl }`. Scope `plans:write`. |
 | `PATCH /api/plans/[id]` | Post a revised version (optimistic-locked on `baseVersionNumber`). Scope `plans:write`. |
-| `GET /api/plans/[id]/feedback` | Structured feedback (`schemaVersion`, threads with severity/category, reviews, rollups, markdown). Supports `?include=` / `?exclude=` (`blocking`, `unresolved`, `resolved`, `orphaned`). Scope `feedback:read`. |
+| `GET /api/plans/[id]/feedback` | Structured feedback (`schemaVersion`, threads with severity/category/scope — `scope: "document"` marks whole-plan general comments with `quote: null`, reviews, rollups, markdown). Supports `?include=` / `?exclude=` (`blocking`, `unresolved`, `resolved`, `orphaned`). Scope `feedback:read`. |
 | `GET /api/plans/[id]/feedback/wait?timeoutMs=` | Long-poll: blocks until the decision/state changes or the (clamped) timeout, then returns the same body with a `timedOut` flag. Scope `feedback:read`. |
 
 For CI or headless agents that can't hold a connection open, register an

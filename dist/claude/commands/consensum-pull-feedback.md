@@ -51,7 +51,7 @@ Requires env vars: `CONSENSUM_BASE_URL` and `CONSENSUM_API_TOKEN`. The plan id i
       The returned `threads[]` will be narrowed to live blocking / open items. The `rollup` in this response still reflects the full unfiltered totals, so the overall picture is preserved. Each thread also carries `mustResolve` (true for an OPEN blocker) and `anchorState` (`ACTIVE` / `MOVED` / `ORPHANED`).
 
    c. Group and present threads in severity order: **BLOCKER → MAJOR → MINOR → NIT → (null/unset last)**. For each thread show:
-      - `quote` (the anchored text)
+      - `quote` (the anchored text). Threads may carry `scope: "document"` — these are whole-plan general comments, so `quote` is legitimately `null`; present them as plan-wide concerns rather than anchored feedback (in the `markdown` transcript they appear as `## [SEV] General comment` sections before the inline threads).
       - the **full** comment thread (every `comments[].body`, oldest first) — not just the latest, so earlier still-unaddressed points aren't missed
       - `category`, `raisedOnVersion`
       - for a RESOLVED thread, its `resolution` (`FIXED` / `WONTFIX` / `OBSOLETE`) — `WONTFIX` / `OBSOLETE` need no action
