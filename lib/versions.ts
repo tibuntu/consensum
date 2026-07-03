@@ -69,7 +69,9 @@ export async function createVersion(userId: string, documentId: string, baseVers
     // its own result for display and ignores these persisted offsets; the
     // persisted values are raw-markdown-space (relevant if a future machine
     // API consumes them). See the Part 2 design doc.
-    const annotations = await tx.annotation.findMany({ where: { documentId } });
+    // Document-scoped annotations have no anchor: they are never re-anchored
+    // and stay ACTIVE across every revision.
+    const annotations = await tx.annotation.findMany({ where: { documentId, scope: "INLINE" } });
     for (const a of annotations) {
       const result = relocate(markdown, { exact: a.anchorExact ?? "", prefix: a.anchorPrefix ?? "", suffix: a.anchorSuffix ?? "" });
       if (result.status === "ACTIVE") summary.active++;

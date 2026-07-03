@@ -57,6 +57,25 @@ describe("versions service", () => {
 
     await prisma.document.delete({ where: { id: docId } });
   });
+
+  it("carries document-scoped annotations across versions untouched", async () => {
+    const user = await makeUser();
+    const docId = await createDocument(user.id, "Doc", V1);
+    await createAnnotation(user.id, docId, quoteFor(V1, "quick brown fox"), "inline survives");
+    const global = await createAnnotation(user.id, docId, { scope: "DOCUMENT", severity: "BLOCKER" }, "overall note");
+
+    const res = await createVersion(user.id, docId, 1, V2);
+    expect(res.unchanged).toBe(false);
+    if (res.unchanged) throw new Error("unreachable");
+    expect(res.summary).toEqual({ active: 1, moved: 0, orphaned: 0 });
+
+    const reloaded = await prisma.annotation.findUnique({ where: { id: global.id } });
+    expect(reloaded?.status).toBe("ACTIVE");
+    expect(reloaded?.startOffset).toBeNull();
+    expect(reloaded?.endOffset).toBeNull();
+
+    await prisma.document.delete({ where: { id: docId } });
+  });
 });
 
 describe("version read helpers", () => {
