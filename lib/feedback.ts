@@ -11,6 +11,7 @@ interface DetailAnnotation {
   startOffset?: number | null;
   endOffset?: number | null;
   kind?: string;
+  scope?: string;
   status: string;
   threadStatus: string;
   resolution?: string | null;
@@ -42,6 +43,8 @@ export interface FeedbackThread {
   startOffset: number | null;
   endOffset: number | null;
   kind: string;
+  // "inline" (text-anchored) or "document" (whole-plan general comment).
+  scope: string;
   status: string;
   threadStatus: string;
   // Why a RESOLVED thread was closed (FIXED / WONTFIX / OBSOLETE), else null —
@@ -118,6 +121,7 @@ export function consolidateFeedback(detail: FeedbackDetail) {
     startOffset: a.startOffset ?? null,
     endOffset: a.endOffset ?? null,
     kind: a.kind ?? "COMMENT",
+    scope: a.scope === "DOCUMENT" ? "document" : "inline",
     status: a.status, // backward-compat alias; Annotation.status IS the anchor state (ACTIVE/MOVED/ORPHANED)
     threadStatus: a.threadStatus,
     resolution: a.resolution ?? null,
@@ -182,10 +186,19 @@ export function consolidateFeedback(detail: FeedbackDetail) {
   }));
 
   const ordered = threads.map((t, i) => ({ t, i })).sort((a, b) => rank(a.t) - rank(b.t) || a.i - b.i).map((x) => x.t);
+  const general = ordered.filter((t) => t.scope === "document");
+  const inline = ordered.filter((t) => t.scope !== "document");
   const lines: string[] = [`# Review feedback — decision: ${decision}`, ""];
   lines.push(`Approvals: ${approvals} of ${requiredApprovals}`, "");
-  if (ordered.length === 0) lines.push("_No inline comments._", "");
-  for (const t of ordered) {
+  for (const t of general) {
+    const sev = t.severity ? `[${t.severity}] ` : "";
+    const tags = t.threadStatus === "RESOLVED" ? " [resolved]" : "";
+    lines.push(`## ${sev}General comment${tags}`);
+    for (const c of t.comments) lines.push(`- **${c.author}:** ${c.body}`);
+    lines.push("");
+  }
+  if (inline.length === 0) lines.push("_No inline comments._", "");
+  for (const t of inline) {
     const sev = t.severity ? `[${t.severity}] ` : "";
     const tags = `${t.anchorState === "ORPHANED" ? " (orphaned)" : t.anchorState === "MOVED" ? " (moved)" : ""}${t.threadStatus === "RESOLVED" ? " [resolved]" : ""}${t.appliedInVersion ? ` [applied as v${t.appliedInVersion.versionNumber}]` : ""}`;
     lines.push(`## ${sev}On "${t.quote ?? "(unanchored)"}"${tags}`);
@@ -200,7 +213,7 @@ export function consolidateFeedback(detail: FeedbackDetail) {
   }
 
   return {
-    schemaVersion: 1 as const,
+    schemaVersion: 2 as const,
     decision,
     state: detail.state,
     requiredApprovals,

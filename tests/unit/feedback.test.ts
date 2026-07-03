@@ -121,7 +121,7 @@ it("stamps schemaVersion and structured fields", () => {
     annotations: [baseThread({ id: "ann_a", severity: "BLOCKER", category: "security", createdOnVersion: { versionNumber: 4 } })],
     reviews: [{ verdict: "REQUEST_CHANGES", dismissed: false, reviewer: { name: "Sam" } }],
   });
-  expect(r.schemaVersion).toBe(1);
+  expect(r.schemaVersion).toBe(2);
   expect(r.currentVersion).toBe(4);
   expect(r.versions[0]).toMatchObject({ number: 4, createdBy: "Alex" });
   expect(r.threads[0]).toMatchObject({ id: "ann_a", severity: "BLOCKER", category: "security", anchorState: "ACTIVE", raisedOnVersion: 4 });
@@ -422,5 +422,48 @@ describe("consolidateFeedback anchor span", () => {
       anchorPrefix: null,
       anchorSuffix: null,
     });
+  });
+});
+
+describe("document-scoped (general) threads", () => {
+  const generalThread = {
+    id: "g1", anchorExact: null, scope: "DOCUMENT", kind: "COMMENT", status: "ACTIVE", threadStatus: "OPEN",
+    severity: "BLOCKER", category: "scope", createdOnVersion: { versionNumber: 1 },
+    comments: [{ body: "needs a rollback plan", author: { name: "Rev" } }],
+  };
+  const inlineThread = {
+    id: "i1", anchorExact: "cloud setup", kind: "COMMENT", status: "ACTIVE", threadStatus: "OPEN",
+    severity: null, category: null, createdOnVersion: { versionNumber: 1 },
+    comments: [{ body: "which provider?", author: { name: "Rev" } }],
+  };
+
+  it("serializes scope, null quote, and renders General comment before inline sections", () => {
+    const r = consolidateFeedback({ state: "OPEN", annotations: [inlineThread, generalThread], reviews: [] } as unknown as FeedbackDetail);
+    expect(r.schemaVersion).toBe(2);
+    const g = r.threads.find((t) => t.id === "g1")!;
+    expect(g.scope).toBe("document");
+    expect(g.quote).toBeNull();
+    expect(g.anchorState).toBe("ACTIVE");
+    expect(g.mustResolve).toBe(true);
+    expect(r.threads.find((t) => t.id === "i1")!.scope).toBe("inline");
+    expect(r.rollup.mustResolve).toBe(1);
+    const gIdx = r.markdown.indexOf("## [BLOCKER] General comment");
+    const iIdx = r.markdown.indexOf('## On "cloud setup"');
+    expect(gIdx).toBeGreaterThan(-1);
+    expect(iIdx).toBeGreaterThan(gIdx);
+    expect(r.markdown).not.toContain("(unanchored)");
+    expect(r.markdown).not.toContain("No inline comments");
+  });
+
+  it("keeps the no-inline placeholder when only general comments exist, and tags resolved ones", () => {
+    const resolved = { ...generalThread, threadStatus: "RESOLVED", resolution: "FIXED" };
+    const r = consolidateFeedback({ state: "OPEN", annotations: [resolved], reviews: [] } as unknown as FeedbackDetail);
+    expect(r.markdown).toContain("## [BLOCKER] General comment [resolved]");
+    expect(r.markdown).toContain("_No inline comments._");
+  });
+
+  it("orphaned filter does not drop document threads", () => {
+    const r = consolidateFeedback({ state: "OPEN", annotations: [generalThread], reviews: [] } as unknown as FeedbackDetail);
+    expect(filterThreads(r.threads, { exclude: ["orphaned"] })).toHaveLength(1);
   });
 });
