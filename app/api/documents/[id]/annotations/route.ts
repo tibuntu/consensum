@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api";
 import { createAnnotation } from "@/lib/annotations";
-import { ANNOTATION_KINDS, type AnnotationKind, SEVERITIES, type Severity } from "@/lib/enums";
+import { ANNOTATION_KINDS, type AnnotationKind, type AnnotationScope, SEVERITIES, type Severity } from "@/lib/enums";
 import { isParticipant } from "@/lib/authz";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -10,9 +10,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   if (!(await isParticipant(user.id, id))) return NextResponse.json({ error: "not found" }, { status: 404 });
   const body = await req.json().catch(() => null);
-  if (
-    !body ||
-    typeof body.body !== "string" ||
+  if (!body || typeof body.body !== "string") {
+    return NextResponse.json({ error: "body required" }, { status: 400 });
+  }
+  let scope: AnnotationScope;
+  if (body.scope == null || body.scope === "inline") scope = "INLINE";
+  else if (body.scope === "document") scope = "DOCUMENT";
+  else return NextResponse.json({ error: 'scope must be "inline" or "document"' }, { status: 400 });
+  const kind: AnnotationKind | undefined =
+    typeof body.kind === "string" && ANNOTATION_KINDS.includes(body.kind as AnnotationKind)
+      ? (body.kind as AnnotationKind)
+      : undefined;
+  if (scope === "DOCUMENT") {
+    if (kind === "SUGGESTION") {
+      return NextResponse.json({ error: "document-scoped annotations cannot be suggestions" }, { status: 400 });
+    }
+    if (body.quote != null || body.startOffset != null || body.endOffset != null) {
+      return NextResponse.json({ error: "document-scoped annotations must not include quote or offsets" }, { status: 400 });
+    }
+  } else if (
     typeof body.startOffset !== "number" ||
     typeof body.endOffset !== "number" ||
     !body.quote ||
@@ -22,10 +38,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   ) {
     return NextResponse.json({ error: "quote, startOffset, endOffset and body required" }, { status: 400 });
   }
-  const kind: AnnotationKind | undefined =
-    typeof body.kind === "string" && ANNOTATION_KINDS.includes(body.kind as AnnotationKind)
-      ? (body.kind as AnnotationKind)
-      : undefined;
   let severity: Severity | undefined;
   if (body.severity != null) {
     if (typeof body.severity !== "string" || !SEVERITIES.includes(body.severity as Severity)) {
@@ -39,7 +51,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const annotation = await createAnnotation(
     user.id,
     id,
-    { quote: body.quote, startOffset: body.startOffset, endOffset: body.endOffset, kind, severity, category, suggestedText },
+    { quote: body.quote ?? undefined, startOffset: body.startOffset ?? undefined, endOffset: body.endOffset ?? undefined, scope, kind, severity, category, suggestedText },
     body.body
   );
   return NextResponse.json({ annotation }, { status: 201 });

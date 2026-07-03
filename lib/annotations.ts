@@ -2,32 +2,48 @@ import { prisma } from "@/lib/db";
 import type { Quote } from "@/lib/anchoring";
 import { relocate } from "@/lib/anchoring";
 import { createVersion } from "@/lib/versions";
-import type { AnnotationKind, Severity, ThreadStatus, Resolution } from "@/lib/enums";
+import type { AnnotationKind, AnnotationScope, Severity, ThreadStatus, Resolution } from "@/lib/enums";
 import { publish } from "@/lib/events";
 import { notifyParticipants } from "@/lib/notifications";
 import { dispatch } from "@/lib/webhooks";
 
-export async function createAnnotation(
-  userId: string,
-  documentId: string,
-  anchor: { quote: Quote; startOffset: number; endOffset: number; kind?: AnnotationKind; severity?: Severity | null; category?: string | null; suggestedText?: string | null },
-  body: string
-) {
+export interface CreateAnnotationInput {
+  quote?: Quote;
+  startOffset?: number;
+  endOffset?: number;
+  scope?: AnnotationScope;
+  kind?: AnnotationKind;
+  severity?: Severity | null;
+  category?: string | null;
+  suggestedText?: string | null;
+}
+
+export async function createAnnotation(userId: string, documentId: string, input: CreateAnnotationInput, body: string) {
+  const scope: AnnotationScope = input.scope ?? "INLINE";
+  const kind: AnnotationKind = input.kind ?? "COMMENT";
+  if (scope === "DOCUMENT") {
+    if (kind === "SUGGESTION") throw new Error("document-scoped annotations cannot be suggestions");
+    if (input.quote || input.startOffset != null || input.endOffset != null)
+      throw new Error("document-scoped annotations cannot carry an anchor");
+  } else if (!input.quote || input.startOffset == null || input.endOffset == null) {
+    throw new Error("inline annotations require quote, startOffset and endOffset");
+  }
   const doc = await prisma.document.findUnique({ where: { id: documentId }, select: { currentVersionId: true } });
   if (!doc?.currentVersionId) throw new Error("document has no current version");
   const annotation = await prisma.annotation.create({
     data: {
       documentId,
       createdOnVersionId: doc.currentVersionId,
-      kind: anchor.kind ?? "COMMENT",
-      anchorExact: anchor.quote.exact,
-      anchorPrefix: anchor.quote.prefix,
-      anchorSuffix: anchor.quote.suffix,
-      startOffset: anchor.startOffset,
-      endOffset: anchor.endOffset,
-      severity: anchor.severity ?? null,
-      category: anchor.category ?? null,
-      suggestedText: anchor.kind === "SUGGESTION" ? (anchor.suggestedText ?? null) : null,
+      scope,
+      kind,
+      anchorExact: input.quote?.exact ?? null,
+      anchorPrefix: input.quote?.prefix ?? null,
+      anchorSuffix: input.quote?.suffix ?? null,
+      startOffset: input.startOffset ?? null,
+      endOffset: input.endOffset ?? null,
+      severity: input.severity ?? null,
+      category: input.category ?? null,
+      suggestedText: kind === "SUGGESTION" ? (input.suggestedText ?? null) : null,
       authorId: userId,
       comments: { create: { authorId: userId, body } },
     },

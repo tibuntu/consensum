@@ -167,3 +167,58 @@ describe("applySuggestion", () => {
     await expect(applySuggestion(userId, sugg.id, 2)).rejects.toThrow(/already applied/);
   });
 });
+
+describe("document-scoped annotations", () => {
+  async function setup() {
+    const now = new Date();
+    const suffix = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+    const user = await prisma.user.create({
+      data: { id: `g-${suffix}`, email: `g-${suffix}@e.com`, name: "G", emailVerified: false, createdAt: now, updatedAt: now },
+    });
+    const docId = await createDocument(user.id, "Plan", "The cloud setup needs review.");
+    return { userId: user.id, docId };
+  }
+
+  it("creates a document-scoped thread with null anchors, ACTIVE status, and full thread machinery", async () => {
+    const { userId, docId } = await setup();
+    const ann = await createAnnotation(userId, docId, { scope: "DOCUMENT", severity: "BLOCKER", category: "scope" }, "overall: missing rollback");
+    expect(ann.scope).toBe("DOCUMENT");
+    expect(ann.anchorExact).toBeNull();
+    expect(ann.anchorPrefix).toBeNull();
+    expect(ann.anchorSuffix).toBeNull();
+    expect(ann.startOffset).toBeNull();
+    expect(ann.endOffset).toBeNull();
+    expect(ann.status).toBe("ACTIVE");
+    expect(ann.kind).toBe("COMMENT");
+    expect(ann.severity).toBe("BLOCKER");
+    await addComment(userId, ann.id, "agree");
+    await setThreadStatus(userId, ann.id, "RESOLVED", "FIXED");
+    const loaded = await prisma.annotation.findUnique({ where: { id: ann.id }, include: { comments: true } });
+    expect(loaded?.comments).toHaveLength(2);
+    expect(loaded?.threadStatus).toBe("RESOLVED");
+    await prisma.document.delete({ where: { id: docId } });
+  });
+
+  it("rejects document scope combined with an anchor", async () => {
+    const { userId, docId } = await setup();
+    const md = "The cloud setup needs review.";
+    await expect(
+      createAnnotation(userId, docId, { scope: "DOCUMENT", quote: buildQuote(md, 4, 15), startOffset: 4, endOffset: 15 }, "x")
+    ).rejects.toThrow(/cannot carry an anchor/);
+    await prisma.document.delete({ where: { id: docId } });
+  });
+
+  it("rejects document-scoped suggestions", async () => {
+    const { userId, docId } = await setup();
+    await expect(
+      createAnnotation(userId, docId, { scope: "DOCUMENT", kind: "SUGGESTION", suggestedText: "nope" }, "x")
+    ).rejects.toThrow(/cannot be suggestions/);
+    await prisma.document.delete({ where: { id: docId } });
+  });
+
+  it("rejects inline annotations without a full anchor", async () => {
+    const { userId, docId } = await setup();
+    await expect(createAnnotation(userId, docId, {}, "x")).rejects.toThrow(/require quote/);
+    await prisma.document.delete({ where: { id: docId } });
+  });
+});
