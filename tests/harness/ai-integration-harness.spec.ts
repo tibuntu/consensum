@@ -176,6 +176,16 @@ test("agent round-trip: push → request-changes → revise → 409 → approve"
     severities: ["MAJOR", "BLOCKER", "NIT", "MINOR(SUGGESTION)"],
   });
 
+  const aGlobal = await reviewer.request.post(`/api/documents/${id}/annotations`, {
+    data: { body: "Plan-wide: define the rollback path before any rollout.", scope: "document", severity: "MAJOR", category: "safety" },
+  });
+  expect(aGlobal.status()).toBe(201);
+  cap("loop-03b-global-annotation-created", {
+    note: "Reviewer added a document-scoped (general) comment — no anchor.",
+    scope: "document",
+    severity: "MAJOR",
+  });
+
   // --- REVIEWER requests changes ---------------------------------------------
   const reqChanges = await reviewer.request.post(`/api/documents/${id}/reviews`, { data: { verdict: "REQUEST_CHANGES" } });
   expect(reqChanges.status()).toBeLessThan(300);
@@ -188,7 +198,12 @@ test("agent round-trip: push → request-changes → revise → 409 → approve"
   // --- AGENT pulls the actionable (filtered) feedback ------------------------
   await agentCall(request, "loop-06-feedback-filtered", "get", `/api/plans/${id}/feedback?include=blocking,unresolved`, token);
   // ...and the full unfiltered payload.
-  await agentCall(request, "loop-07-feedback-full", "get", `/api/plans/${id}/feedback`, token);
+  const full = await agentCall(request, "loop-07-feedback-full", "get", `/api/plans/${id}/feedback`, token);
+  const fullBody = full.json as { threads: Array<{ scope: string; quote: string | null }>; markdown: string };
+  const globalThread = fullBody.threads.find((t) => t.scope === "document");
+  expect(globalThread).toBeTruthy();
+  expect(globalThread!.quote).toBeNull();
+  expect(fullBody.markdown).toContain("General comment");
 
   // --- AGENT attempts a STALE revise → 409 -----------------------------------
   const stale = await agentCall(request, "loop-08-patch-stale-409", "patch", `/api/plans/${id}`, token, {
