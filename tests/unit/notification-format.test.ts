@@ -7,6 +7,7 @@ describe("notificationLabel", () => {
     expect(notificationLabel("review", "Blair")).toBe("Blair recorded a decision");
     expect(notificationLabel("version", "Blair")).toBe("Blair added a new version");
     expect(notificationLabel("resolve", "Blair")).toBe("Blair resolved a thread");
+    expect(notificationLabel("shared", "Blair")).toBe("Blair shared a document");
   });
 
   test("falls back to a generic label without an actor", () => {
@@ -14,6 +15,7 @@ describe("notificationLabel", () => {
     expect(notificationLabel("review", null)).toBe("New decision");
     expect(notificationLabel("version", null)).toBe("New version");
     expect(notificationLabel("resolve", undefined)).toBe("Thread resolved");
+    expect(notificationLabel("shared", null)).toBe("Document shared with you");
   });
 
   test("uses the raw type for unknown kinds", () => {

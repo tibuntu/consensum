@@ -13,6 +13,7 @@ export const DEFAULT_PREFS: NotificationPrefs = {
   review: { inApp: true, email: true, desktop: false },
   version: { inApp: true, email: true, desktop: false },
   resolve: { inApp: true, desktop: false },
+  shared: { inApp: true, desktop: false },
 };
 
 function freshDefaults(): NotificationPrefs {
@@ -21,6 +22,7 @@ function freshDefaults(): NotificationPrefs {
     review: { ...DEFAULT_PREFS.review },
     version: { ...DEFAULT_PREFS.version },
     resolve: { ...DEFAULT_PREFS.resolve },
+    shared: { ...DEFAULT_PREFS.shared },
   };
 }
 

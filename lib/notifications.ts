@@ -49,6 +49,34 @@ export async function notifyParticipants(documentId: string, actorId: string, ty
   }
 }
 
+/** Notify a single newly-added participant that a document was shared with them.
+ *  In-app + desktop only (never emailed); respects the recipient's inApp pref. */
+export async function notifyShared(documentId: string, recipientId: string, actorId: string) {
+  const [doc, actor, recipient] = await Promise.all([
+    prisma.document.findUnique({ where: { id: documentId }, select: { title: true } }),
+    prisma.user.findUnique({ where: { id: actorId }, select: { name: true, email: true } }),
+    prisma.user.findUnique({ where: { id: recipientId }, select: { notificationPrefs: true } }),
+  ]);
+  const prefs = parsePrefs(recipient?.notificationPrefs);
+  if (!isEnabled(prefs, "shared" as NotificationType, "inApp")) return;
+
+  const actorName = actor?.name?.trim() || actor?.email || "Someone";
+  const row = await prisma.notification.create({
+    data: { userId: recipientId, documentId, actorId, type: "shared" },
+  });
+  const payload: ClientNotification = {
+    id: row.id,
+    type: row.type,
+    documentId,
+    documentTitle: doc?.title ?? "",
+    actorId: row.actorId,
+    actorName,
+    read: row.read,
+    createdAt: row.createdAt.toISOString(),
+  };
+  publish(`user-${recipientId}`, { type: "notification.created", notification: payload });
+}
+
 export async function listNotifications(userId: string) {
   const rows = await prisma.notification.findMany({
     where: { userId },
