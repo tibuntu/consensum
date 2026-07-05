@@ -11,6 +11,7 @@ interface Participant {
   email: string;
   role: string;
   isOwner: boolean;
+  required: boolean;
 }
 
 export default function ShareDialog({
@@ -29,6 +30,7 @@ export default function ShareDialog({
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("REVIEWER");
+  const [addRequired, setAddRequired] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
   const [manageError, setManageError] = useState<string | null>(null);
@@ -74,7 +76,7 @@ export default function ShareDialog({
       const res = await fetch(`/api/documents/${documentId}/participants`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), role }),
+        body: JSON.stringify({ email: email.trim(), role, required: role === "REVIEWER" ? addRequired : false }),
       });
       if (res.status === 409) {
         setInviteError("No account for that email");
@@ -86,6 +88,7 @@ export default function ShareDialog({
       }
       setEmail("");
       setRole("REVIEWER");
+      setAddRequired(false);
       await load();
     } finally {
       setInviting(false);
@@ -101,6 +104,19 @@ export default function ShareDialog({
     }).catch(() => null);
     if (!res || !res.ok) {
       setManageError("Couldn't update that role. Please try again.");
+    }
+    await load();
+  }
+
+  async function changeRequired(userId: string, next: boolean) {
+    setManageError(null);
+    const res = await fetch(`/api/documents/${documentId}/participants/${userId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ required: next }),
+    }).catch(() => null);
+    if (!res || !res.ok) {
+      setManageError("Couldn't update required status. Please try again.");
     }
     await load();
   }
@@ -169,6 +185,16 @@ export default function ShareDialog({
               <option value="REVIEWER">Reviewer</option>
               <option value="VIEWER">Viewer</option>
             </select>
+            <label className="flex items-center gap-1 text-sm text-foreground">
+              <input
+                type="checkbox"
+                aria-label="required reviewer"
+                checked={addRequired}
+                disabled={role !== "REVIEWER"}
+                onChange={(e) => setAddRequired(e.target.checked)}
+              />
+              Required
+            </label>
             <Button size="sm" onClick={invite} disabled={inviting || !email.trim()}>
               Share
             </Button>
@@ -202,6 +228,17 @@ export default function ShareDialog({
                         <option value="REVIEWER">Reviewer</option>
                         <option value="VIEWER">Viewer</option>
                       </select>
+                      {p.role === "REVIEWER" && (
+                        <label className="flex items-center gap-1 text-xs text-muted">
+                          <input
+                            type="checkbox"
+                            aria-label={`required for ${p.email}`}
+                            checked={p.required}
+                            onChange={(e) => changeRequired(p.userId, e.target.checked)}
+                          />
+                          Required
+                        </label>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
