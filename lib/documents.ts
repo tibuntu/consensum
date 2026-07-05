@@ -8,12 +8,14 @@ export async function createDocument(
   markdown: string,
   opts?: { source?: DocumentSource; agentContext?: string; requiredApprovals?: number; requireBlockerResolution?: boolean; idempotencyKey?: string }
 ) {
+  const source = opts?.source ?? "WEB";
   const doc = await prisma.document.create({
     data: {
       title,
       ownerId: userId,
       state: "OPEN",
-      source: opts?.source ?? "WEB",
+      source,
+      visibility: source === "CLAUDE_CODE" ? "LINK" : "PRIVATE",
       agentContext: opts?.agentContext ?? null,
       idempotencyKey: opts?.idempotencyKey ?? null,
       requiredApprovals: opts?.requiredApprovals ?? 1,
