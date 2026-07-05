@@ -54,6 +54,7 @@ export interface ClientDocument {
   versionNumber: number;
   markdown: string;
   requiredApprovals: number;
+  requireBlockerResolution: boolean;
   approvals: number;
   reviews: ClientReview[];
   annotations: ClientAnnotation[];
@@ -123,6 +124,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
   const [applyError, setApplyError] = useState<string | null>(null);
   const [docState, setDocState] = useState(doc.state);
   const [requiredApprovals, setRequiredApprovals] = useState(doc.requiredApprovals);
+  const [requireBlockerResolution, setRequireBlockerResolutionState] = useState(doc.requireBlockerResolution);
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [mode, setMode] = useState<"review" | "edit">("review");
   const [markdown, setMarkdown] = useState(doc.markdown);
@@ -746,6 +748,19 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
     }
   }
 
+  async function changeRequireBlockerResolution(enabled: boolean) {
+    setRequireBlockerResolutionState(enabled);
+    const res = await fetch(`/api/documents/${doc.id}/settings`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ requireBlockerResolution: enabled }),
+    }).catch(() => null);
+    if (res && res.ok) {
+      const data = await res.json();
+      if (typeof data.state === "string") setDocState(data.state);
+    }
+  }
+
   return (
     <div className="flex w-full flex-col gap-6 lg:flex-row">
       {confirmingDelete && (
@@ -864,6 +879,19 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
               </label>
             )}
           </div>
+          {isOwner && (
+            <label className="flex items-center gap-1.5 text-xs text-muted">
+              <input
+                type="checkbox"
+                data-testid="require-blocker-resolution"
+                aria-label="require blocker resolution"
+                checked={requireBlockerResolution}
+                onChange={(e) => changeRequireBlockerResolution(e.target.checked)}
+                className="accent-[var(--primary)]"
+              />
+              Require blocker resolution before approval
+            </label>
+          )}
           {isOwner && (
             <div data-testid="reviewers" className="flex flex-col gap-1 border-t border-border pt-2">
               <span className="text-xs font-medium text-muted">Reviewers</span>

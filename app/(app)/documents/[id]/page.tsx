@@ -21,6 +21,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
     versionNumber: doc.currentVersion?.versionNumber ?? 1,
     markdown: doc.currentVersion?.markdown ?? "",
     requiredApprovals: doc.requiredApprovals,
+    requireBlockerResolution: doc.requireBlockerResolution,
     approvals: approvalCount(doc.reviews),
     reviews: doc.reviews
       .filter((r) => !r.dismissed)
