@@ -47,9 +47,11 @@ test("web: private-by-default, list isolation, owner-only edit, non-participant 
   expect(vis.ok()).toBeTruthy();
   await pageB.goto(urlA);
   await expect(pageB.getByTestId("doc-body")).toContainText("cloud setup");
-  // Now it appears in B's list.
+  // Now it appears in B's list. B is a non-required REVIEWER on an OPEN doc, so
+  // the same title also shows under the home page's "Open reviews" queue
+  // section — `.first()` picks either match, both link to the same document.
   await pageB.goto("/");
-  await expect(pageB.getByText("A Plan")).toBeVisible();
+  await expect(pageB.getByText("A Plan").first()).toBeVisible();
 
   // B (participant) cannot create a new version: PATCH → 403.
   const patchB = await pageB.request.patch(`/api/documents/${idA}`, {
