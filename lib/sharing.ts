@@ -87,7 +87,7 @@ export async function shareWith(
 type SetRoleResult = { ok: true } | { error: "not_participant" } | { error: "cannot_change_owner" };
 
 /** Owner updates an existing participant's role. Target must already be a participant. */
-export async function setRole(documentId: string, userId: string, role: DocumentRole): Promise<SetRoleResult> {
+export async function setRole(actorId: string, documentId: string, userId: string, role: DocumentRole): Promise<SetRoleResult> {
   const doc = await prisma.document.findUnique({ where: { id: documentId }, select: { ownerId: true } });
   if (doc?.ownerId === userId) return { error: "cannot_change_owner" };
   const existing = await prisma.documentParticipant.findUnique({
@@ -99,7 +99,7 @@ export async function setRole(documentId: string, userId: string, role: Document
     where: { documentId_userId: { documentId, userId } },
     data: { role, required: role === "REVIEWER" ? undefined : false },
   });
-  if (role !== "REVIEWER") await recomputeStateAndDispatch(userId, documentId).catch(() => {});
+  if (role !== "REVIEWER") await recomputeStateAndDispatch(actorId, documentId).catch(() => {});
   return { ok: true };
 }
 

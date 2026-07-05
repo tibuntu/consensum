@@ -111,7 +111,7 @@ describe("lib/sharing", () => {
       const docId = await createDocument(owner.id, "Plan", "body");
       await prisma.documentParticipant.create({ data: { documentId: docId, userId: target.id, role: "VIEWER" } });
 
-      const result = await setRole(docId, target.id, "REVIEWER");
+      const result = await setRole(owner.id, docId, target.id, "REVIEWER");
       expect(result).toEqual({ ok: true });
 
       const row = await prisma.documentParticipant.findUnique({
@@ -119,7 +119,7 @@ describe("lib/sharing", () => {
       });
       expect(row?.role).toBe("REVIEWER");
 
-      const back = await setRole(docId, target.id, "VIEWER");
+      const back = await setRole(owner.id, docId, target.id, "VIEWER");
       expect(back).toEqual({ ok: true });
       const row2 = await prisma.documentParticipant.findUnique({
         where: { documentId_userId: { documentId: docId, userId: target.id } },
@@ -134,7 +134,7 @@ describe("lib/sharing", () => {
       const stranger = await makeUser("s6");
       const docId = await createDocument(owner.id, "Plan", "body");
 
-      const result = await setRole(docId, stranger.id, "REVIEWER");
+      const result = await setRole(owner.id, docId, stranger.id, "REVIEWER");
       expect(result).toEqual({ error: "not_participant" });
 
       await prisma.document.delete({ where: { id: docId } });
@@ -144,7 +144,7 @@ describe("lib/sharing", () => {
       const owner = await makeUser("o6b");
       const docId = await createDocument(owner.id, "Plan", "body");
 
-      const result = await setRole(docId, owner.id, "VIEWER");
+      const result = await setRole(owner.id, docId, owner.id, "VIEWER");
       expect(result).toEqual({ error: "cannot_change_owner" });
 
       await prisma.document.delete({ where: { id: docId } });
@@ -283,7 +283,7 @@ describe("lib/sharing", () => {
       const reviewer = await makeUser("dm-r");
       const docId = await createDocument(owner.id, "Plan", "body");
       await prisma.documentParticipant.create({ data: { documentId: docId, userId: reviewer.id, role: "REVIEWER", required: true } });
-      await setRole(docId, reviewer.id, "VIEWER");
+      await setRole(owner.id, docId, reviewer.id, "VIEWER");
       const row = await prisma.documentParticipant.findUnique({ where: { documentId_userId: { documentId: docId, userId: reviewer.id } } });
       expect(row?.role).toBe("VIEWER");
       expect(row?.required).toBe(false);
