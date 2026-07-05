@@ -96,6 +96,7 @@ model Document {
   owner             User             @relation("DocumentOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   state             String           @default("DRAFT")
   requiredApprovals Int              @default(1)
+  requireBlockerResolution Boolean @default(false)  // opt-in: no APPROVED while a BLOCKER thread is OPEN
   source            String           @default("WEB")
   agentContext      String?
   idempotencyKey    String?                            // client-supplied key for idempotent create

@@ -6,7 +6,7 @@ export async function createDocument(
   userId: string,
   title: string,
   markdown: string,
-  opts?: { source?: DocumentSource; agentContext?: string; requiredApprovals?: number; idempotencyKey?: string }
+  opts?: { source?: DocumentSource; agentContext?: string; requiredApprovals?: number; requireBlockerResolution?: boolean; idempotencyKey?: string }
 ) {
   const doc = await prisma.document.create({
     data: {
@@ -17,6 +17,7 @@ export async function createDocument(
       agentContext: opts?.agentContext ?? null,
       idempotencyKey: opts?.idempotencyKey ?? null,
       requiredApprovals: opts?.requiredApprovals ?? 1,
+      requireBlockerResolution: opts?.requireBlockerResolution ?? false,
     },
   });
   const version = await prisma.documentVersion.create({
