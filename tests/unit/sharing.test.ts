@@ -57,6 +57,27 @@ describe("lib/sharing", () => {
       await prisma.document.delete({ where: { id: docId } });
     });
 
+    it("resolves a mixed-case input email to the lowercase-stored account", async () => {
+      // better-auth persists emails lowercased, so a lowercase-stored account
+      // must still be found when the owner types the address with uppercase.
+      const owner = await makeUser("o3b");
+      const now = new Date();
+      const target = await prisma.user.create({
+        data: { id: `u-t3b-${Date.now()}-${++userSeq}`, name: "Alice", email: "alice@ex.com", emailVerified: false, createdAt: now, updatedAt: now },
+      });
+      const docId = await createDocument(owner.id, "Plan", "body");
+
+      const result = await shareWith(owner.id, docId, "Alice@EX.com", "VIEWER");
+      expect(result).toEqual({ ok: true, userId: target.id });
+
+      const row = await prisma.documentParticipant.findUnique({
+        where: { documentId_userId: { documentId: docId, userId: target.id } },
+      });
+      expect(row?.role).toBe("VIEWER");
+
+      await prisma.document.delete({ where: { id: docId } });
+    });
+
     it("is idempotent: re-sharing updates the role and does not create a second notification", async () => {
       const owner = await makeUser("o4");
       const target = await makeUser("t4");

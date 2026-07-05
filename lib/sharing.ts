@@ -46,11 +46,12 @@ type ShareResult = { ok: true; userId: string } | { error: "no_account" | "canno
  * existing participant just updates their role and does NOT re-notify — only a
  * newly-created row triggers notifyShared.
  *
- * Email matching: trimmed only, NOT lowercased. better-auth stores User.email
- * exactly as submitted at signup (no normalization hook in lib/auth.ts) and
- * User.email is a case-sensitive @unique column (no NOCASE collation in
- * prisma/schema.prisma) — lowercasing the lookup key here would silently miss
- * a real account whose email has any uppercase characters.
+ * Email matching: trimmed AND lowercased. better-auth's built-in /sign-up/email
+ * route persists `email.toLowerCase()` (dist/api/routes/sign-up.mjs), and the
+ * OIDC/oauth account-linking paths lowercase too — so every stored User.email is
+ * already lowercase. The lookup key must therefore be lowercased to match, or an
+ * owner typing a collaborator's email with any uppercase (e.g. "Jane.Doe@Co.com")
+ * would wrongly resolve to no_account for a genuinely-registered user.
  */
 export async function shareWith(
   ownerId: string,
@@ -58,7 +59,7 @@ export async function shareWith(
   email: string,
   role: DocumentRole,
 ): Promise<ShareResult> {
-  const target = await prisma.user.findUnique({ where: { email: email.trim() }, select: { id: true } });
+  const target = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() }, select: { id: true } });
   if (!target) return { error: "no_account" };
   if (target.id === ownerId) return { error: "cannot_share_owner" };
 
