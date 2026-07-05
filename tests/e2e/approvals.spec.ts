@@ -28,6 +28,12 @@ test("approval threshold gates approval", async ({ browser }) => {
   await expect(owner).toHaveURL(/\/documents\//);
   const url = owner.url();
   await expect(owner.getByTestId("approval-progress")).toHaveText("0 of 2 approvals");
+  const docId = url.split("/documents/")[1];
+
+  // Web docs are PRIVATE by default; flip to LINK so the reviewer can open it
+  // and auto-join as REVIEWER, mirroring the pre-M8 link-grant behavior.
+  const vis = await owner.request.patch(`/api/documents/${docId}/settings`, { data: { visibility: "LINK" } });
+  expect(vis.ok()).toBeTruthy();
 
   // Reviewer opens the same doc (becomes a participant on access-grant) and approves.
   await reviewer.goto(url);

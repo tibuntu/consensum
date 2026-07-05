@@ -34,6 +34,15 @@ async function countEventSources(context: BrowserContext): Promise<void> {
   });
 }
 
+// Web docs are PRIVATE by default; flip to LINK using the owner's authenticated
+// context so a second user can open the URL and auto-join as REVIEWER,
+// mirroring the pre-M8 link-grant behavior these collaboration specs rely on.
+async function makeLinkVisible(owner: Page, docUrl: string): Promise<void> {
+  const docId = docUrl.split("/documents/")[1];
+  const res = await owner.request.patch(`/api/documents/${docId}/settings`, { data: { visibility: "LINK" } });
+  expect(res.ok()).toBeTruthy();
+}
+
 async function moveOverDocBody(page: Page): Promise<void> {
   const box = await page.getByTestId("doc-body").boundingBox();
   if (!box) throw new Error("doc-body has no bounding box");
@@ -49,6 +58,7 @@ test("remote cursor appears on move and clears when the pointer leaves the doc",
 
   await register(pageA, "Ada");
   const docUrl = await createDoc(pageA, "Cursor demo", "# Hello\n\nReview me together.\n\nAnother paragraph here.");
+  await makeLinkVisible(pageA, docUrl);
 
   await register(pageB, "Grace");
   await pageB.goto(docUrl);
@@ -79,6 +89,7 @@ test("a remote cursor and a remote selection coexist", async ({ browser }) => {
 
   await register(pageA, "Ada");
   const docUrl = await createDoc(pageA, "Cursor+selection demo", "# Hello\n\nReview me together.\n\nAnother paragraph here.");
+  await makeLinkVisible(pageA, docUrl);
 
   await register(pageB, "Grace");
   await pageB.goto(docUrl);

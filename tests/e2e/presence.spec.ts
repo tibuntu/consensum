@@ -10,6 +10,15 @@ async function register(page: Page, name: string): Promise<void> {
   await expect(page).toHaveURL(/\/$/);
 }
 
+// Web docs are PRIVATE by default; flip to LINK using the owner's authenticated
+// context so a second user can open the URL and auto-join as REVIEWER,
+// mirroring the pre-M8 link-grant behavior these collaboration specs rely on.
+async function makeLinkVisible(owner: Page, docUrl: string): Promise<void> {
+  const docId = docUrl.split("/documents/")[1];
+  const res = await owner.request.patch(`/api/documents/${docId}/settings`, { data: { visibility: "LINK" } });
+  expect(res.ok()).toBeTruthy();
+}
+
 // Instrument window.EventSource construction count BEFORE any app script runs.
 async function countEventSources(context: BrowserContext): Promise<void> {
   await context.addInitScript(() => {
@@ -41,6 +50,7 @@ test("presence roster shows both viewers and stays at two EventSources", async (
   await pageA.getByRole("button", { name: "Create document" }).click();
   await expect(pageA).toHaveURL(/\/documents\/[^/]+$/);
   const docUrl = pageA.url();
+  await makeLinkVisible(pageA, docUrl);
 
   // User B registers and opens the same document (link-grant adds them as participant).
   await register(pageB, "Grace");

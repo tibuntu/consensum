@@ -46,6 +46,12 @@ test("notifications: comment notifies the plan owner", async ({ browser }) => {
   await expect(pageA).toHaveURL(/\/documents\//);
   const url = pageA.url();
 
+  // Web docs are PRIVATE by default; flip to LINK so the reviewer can open it
+  // and auto-join as REVIEWER, mirroring the pre-M8 link-grant behavior.
+  const docId = url.split("/documents/")[1];
+  const vis = await pageA.request.patch(`/api/documents/${docId}/settings`, { data: { visibility: "LINK" } });
+  expect(vis.ok()).toBeTruthy();
+
   // Reviewer B comments on it.
   const ctxB = await browser.newContext();
   const pageB = await ctxB.newPage();

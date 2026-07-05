@@ -11,6 +11,15 @@ async function register(page: Page): Promise<string> {
   return email;
 }
 
+// Web docs are PRIVATE by default; flip to LINK using the owner's authenticated
+// context so a second user can open the URL and auto-join as REVIEWER,
+// mirroring the pre-M8 link-grant behavior these collaboration specs rely on.
+async function makeLinkVisible(owner: Page, docUrl: string): Promise<void> {
+  const docId = docUrl.split("/documents/")[1];
+  const res = await owner.request.patch(`/api/documents/${docId}/settings`, { data: { visibility: "LINK" } });
+  expect(res.ok()).toBeTruthy();
+}
+
 async function setEditorText(page: Page, text: string) {
   const editor = page.getByTestId("editor").locator(".cm-content");
   await editor.click();
@@ -35,6 +44,8 @@ test("edit re-anchors (moved) and resets approval", async ({ browser }) => {
   await page.getByLabel("comment").fill("which fox?");
   await page.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(page.locator('mark[data-annotation-id]')).toHaveCount(1);
+
+  await makeLinkVisible(page, url);
 
   // Reviewer B joins via link-grant and approves.
   const ctxB = await browser.newContext();
@@ -67,6 +78,7 @@ test("comments propagate live between two clients", async ({ browser }) => {
   await pageA.getByRole("button", { name: "Create document" }).click();
   await expect(pageA).toHaveURL(/\/documents\//);
   const url = pageA.url();
+  await makeLinkVisible(pageA, url);
 
   const ctxB = await browser.newContext();
   const pageB = await ctxB.newPage();

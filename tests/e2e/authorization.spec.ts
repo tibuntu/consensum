@@ -19,7 +19,7 @@ async function createDoc(page: Page, title: string, markdown: string): Promise<s
   return page.url();
 }
 
-test("web: link-grant, list isolation, owner-only edit, non-participant blocked", async ({ browser }) => {
+test("web: private-by-default, list isolation, owner-only edit, non-participant blocked", async ({ browser }) => {
   const ctxA = await browser.newContext();
   const pageA = await ctxA.newPage();
   await register(pageA);
@@ -34,7 +34,17 @@ test("web: link-grant, list isolation, owner-only edit, non-participant blocked"
   await pageB.goto("/");
   await expect(pageB.getByText("A Plan")).toHaveCount(0);
 
-  // B opens A's doc by URL → auto-joins (link-grant).
+  // Web documents are PRIVATE by default: B opening A's doc by URL does NOT
+  // auto-join them. It gets not-found, and B's list still doesn't show it.
+  await pageB.goto(urlA);
+  await expect(pageB.getByText("This page could not be found.")).toBeVisible();
+  await pageB.goto("/");
+  await expect(pageB.getByText("A Plan")).toHaveCount(0);
+
+  // A explicitly makes the doc LINK-visible, restoring the old auto-join
+  // behavior for anyone with the URL: B can now open it and joins as REVIEWER.
+  const vis = await pageA.request.patch(`/api/documents/${idA}/settings`, { data: { visibility: "LINK" } });
+  expect(vis.ok()).toBeTruthy();
   await pageB.goto(urlA);
   await expect(pageB.getByTestId("doc-body")).toContainText("cloud setup");
   // Now it appears in B's list.

@@ -19,6 +19,15 @@ async function createDoc(page: Page, title: string, markdown: string): Promise<s
   return page.url();
 }
 
+// Web docs are PRIVATE by default; flip to LINK using the owner's authenticated
+// context so a second user can open the URL and auto-join as REVIEWER,
+// mirroring the pre-M8 link-grant behavior these collaboration specs rely on.
+async function makeLinkVisible(owner: Page, docUrl: string): Promise<void> {
+  const docId = docUrl.split("/documents/")[1];
+  const res = await owner.request.patch(`/api/documents/${docId}/settings`, { data: { visibility: "LINK" } });
+  expect(res.ok()).toBeTruthy();
+}
+
 test("remote selection appears as a tinted mark and clears on collapse", async ({ browser }) => {
   const ctxA = await browser.newContext();
   const ctxB = await browser.newContext();
@@ -27,6 +36,7 @@ test("remote selection appears as a tinted mark and clears on collapse", async (
 
   await register(pageA, "Ada");
   const docUrl = await createDoc(pageA, "Selection demo", "# Hello\n\nReview me together.\n\nAnother paragraph here.");
+  await makeLinkVisible(pageA, docUrl);
 
   await register(pageB, "Grace");
   await pageB.goto(docUrl);
@@ -67,6 +77,7 @@ test("remote selection coexists with an annotation highlight", async ({ browser 
   await pageA.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(pageA.locator("mark[data-annotation-id]")).toHaveCount(1);
 
+  await makeLinkVisible(pageA, docUrl);
   await register(pageB, "Grace");
   await pageB.goto(docUrl);
   await expect(pageB.getByTestId("doc-body")).toBeVisible();

@@ -1,5 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
 
+// Web docs are PRIVATE by default; flip to LINK using the owner's authenticated
+// context so a second user can open the URL and auto-join as REVIEWER,
+// mirroring the pre-M8 link-grant behavior these collaboration specs rely on.
+async function makeLinkVisible(owner: Page, docUrl: string): Promise<void> {
+  const docId = docUrl.split("/documents/")[1];
+  const res = await owner.request.patch(`/api/documents/${docId}/settings`, { data: { visibility: "LINK" } });
+  expect(res.ok()).toBeTruthy();
+}
+
 async function register(page: Page, name: string): Promise<void> {
   const email = `rev-${Date.now()}-${Math.round(Math.random() * 1e6)}@example.com`;
   await page.goto("/register");
@@ -32,6 +41,8 @@ test("create, annotate, comment, request changes", async ({ browser }) => {
   // thread appears with the comment, and a highlight exists
   await expect(page.getByTestId("thread")).toContainText("which cloud provider?");
   await expect(page.locator("mark[data-annotation-id]")).toHaveCount(1);
+
+  await makeLinkVisible(page, url);
 
   // Reviewer B joins via link-grant and requests changes.
   const ctxB = await browser.newContext();

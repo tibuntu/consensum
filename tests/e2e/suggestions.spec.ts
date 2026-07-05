@@ -19,6 +19,15 @@ async function createDoc(page: Page, title: string, markdown: string): Promise<s
   return page.url();
 }
 
+// Web docs are PRIVATE by default; flip to LINK using the owner's authenticated
+// context so a second user can open the URL and auto-join as REVIEWER,
+// mirroring the pre-M8 link-grant behavior these collaboration specs rely on.
+async function makeLinkVisible(owner: Page, docUrl: string): Promise<void> {
+  const docId = docUrl.split("/documents/")[1];
+  const res = await owner.request.patch(`/api/documents/${docId}/settings`, { data: { visibility: "LINK" } });
+  expect(res.ok()).toBeTruthy();
+}
+
 test("suggestion: propose → owner accept → new version, resolved, approval dismissed, provenance; non-owner apply 403", async ({ browser }) => {
   // Owner A creates a doc.
   const ctxA = await browser.newContext();
@@ -26,6 +35,7 @@ test("suggestion: propose → owner accept → new version, resolved, approval d
   await register(pageA);
   const urlA = await createDoc(pageA, "Cloud Plan", "The cloud setup needs review.");
   const idA = urlA.split("/documents/")[1];
+  await makeLinkVisible(pageA, urlA);
 
   // Reviewer B opens A's doc by URL (link-grant auto-join). Owners can't review
   // their own document (M4-P1), so B (a non-owner participant) approves it.

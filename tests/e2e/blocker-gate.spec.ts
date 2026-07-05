@@ -32,6 +32,11 @@ test("blocker gate holds approval until the thread resolves", async ({ browser }
   await owner.getByTestId("require-blocker-resolution").check();
   expect((await gateSaved).ok()).toBeTruthy();
 
+  // Web docs are PRIVATE by default; flip to LINK so the reviewer can open it
+  // and auto-join as REVIEWER, mirroring the pre-M8 link-grant behavior.
+  const vis = await owner.request.patch(`/api/documents/${docId}/settings`, { data: { visibility: "LINK" } });
+  expect(vis.ok()).toBeTruthy();
+
   // Reviewer becomes a participant, then raises a document-scoped BLOCKER via the session API.
   await reviewer.goto(url);
   await reviewer.waitForResponse((r) => r.url().includes("/presence") && r.request().method() === "POST");
