@@ -29,6 +29,7 @@ export default function ShareDialog({
   const [role, setRole] = useState<Role>("REVIEWER");
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
+  const [manageError, setManageError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/documents/${documentId}/participants`);
@@ -47,12 +48,18 @@ export default function ShareDialog({
   }, [load]);
 
   async function changeVisibility(next: string) {
+    const previous = visibility;
     setVisibility(next);
-    await fetch(`/api/documents/${documentId}/settings`, {
+    setManageError(null);
+    const res = await fetch(`/api/documents/${documentId}/settings`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ visibility: next }),
-    }).catch(() => {});
+    }).catch(() => null);
+    if (!res || !res.ok) {
+      setVisibility(previous);
+      setManageError("Couldn't change visibility. Please try again.");
+    }
   }
 
   async function invite() {
@@ -82,17 +89,25 @@ export default function ShareDialog({
   }
 
   async function changeRole(userId: string, nextRole: Role) {
-    await fetch(`/api/documents/${documentId}/participants/${userId}`, {
+    setManageError(null);
+    const res = await fetch(`/api/documents/${documentId}/participants/${userId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ role: nextRole }),
-    }).catch(() => {});
+    }).catch(() => null);
+    if (!res || !res.ok) {
+      setManageError("Couldn't update that role. Please try again.");
+    }
     await load();
   }
 
   async function removeParticipant(userId: string) {
     if (!confirm("Remove this participant from the document?")) return;
-    await fetch(`/api/documents/${documentId}/participants/${userId}`, { method: "DELETE" }).catch(() => {});
+    setManageError(null);
+    const res = await fetch(`/api/documents/${documentId}/participants/${userId}`, { method: "DELETE" }).catch(() => null);
+    if (!res || !res.ok) {
+      setManageError("Couldn't remove that participant. Please try again.");
+    }
     await load();
   }
 
@@ -123,6 +138,12 @@ export default function ShareDialog({
             <option value="LINK">Anyone with link</option>
           </select>
         </label>
+
+        {manageError && (
+          <p role="alert" className="text-sm text-danger">
+            {manageError}
+          </p>
+        )}
 
         <div className="flex flex-col gap-2 border-t border-border pt-3">
           <span className="text-sm font-medium text-foreground">Add someone</span>

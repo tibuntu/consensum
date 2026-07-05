@@ -1082,6 +1082,7 @@ export default function DocumentView({
           focusedId={focusedId}
           statusById={statusById}
           isOwner={isOwner}
+          canReview={canReview}
           onSelectThread={setFocusedId}
           onAddComment={addComment}
           onToggleThread={toggleThread}

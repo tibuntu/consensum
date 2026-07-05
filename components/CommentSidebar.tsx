@@ -14,6 +14,7 @@ function ThreadCard({
   status,
   focused,
   isOwner,
+  canReview,
   onSelect,
   onAddComment,
   onToggleThread,
@@ -23,6 +24,7 @@ function ThreadCard({
   status?: string;
   focused: boolean;
   isOwner: boolean;
+  canReview: boolean;
   onSelect: (id: string) => void;
   onAddComment: (annotationId: string, body: string) => Promise<void>;
   onToggleThread: (annotationId: string, nextStatus: string) => Promise<void>;
@@ -99,42 +101,44 @@ function ThreadCard({
           </li>
         ))}
       </ul>
-      <div className="flex flex-col gap-1">
-        {replying ? (
-          <>
-            <Textarea
-              aria-label="reply"
-              autoFocus
-              value={reply}
-              onChange={(e) => setReply(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              rows={2}
-              placeholder="Reply"
-            />
+      {canReview && (
+        <div className="flex flex-col gap-1">
+          {replying ? (
+            <>
+              <Textarea
+                aria-label="reply"
+                autoFocus
+                value={reply}
+                onChange={(e) => setReply(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                rows={2}
+                placeholder="Reply"
+              />
+              <div className="flex gap-2">
+                <Button variant="primary" size="sm" onClick={(e) => { e.stopPropagation(); submitReply(); }}>
+                  Reply
+                </Button>
+                <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setReplying(false); setReply(""); }}>
+                  Cancel
+                </Button>
+              </div>
+            </>
+          ) : (
             <div className="flex gap-2">
-              <Button variant="primary" size="sm" onClick={(e) => { e.stopPropagation(); submitReply(); }}>
+              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setReplying(true); }}>
                 Reply
               </Button>
-              <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setReplying(false); setReply(""); }}>
-                Cancel
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); onToggleThread(annotation.id, resolved ? "OPEN" : "RESOLVED"); }}
+              >
+                {resolved ? "Reopen" : "Resolve"}
               </Button>
             </div>
-          </>
-        ) : (
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setReplying(true); }}>
-              Reply
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => { e.stopPropagation(); onToggleThread(annotation.id, resolved ? "OPEN" : "RESOLVED"); }}
-            >
-              {resolved ? "Reopen" : "Resolve"}
-            </Button>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </Card>
   );
 }
@@ -144,6 +148,7 @@ export default function CommentSidebar({
   focusedId,
   statusById,
   isOwner,
+  canReview,
   onSelectThread,
   onAddComment,
   onToggleThread,
@@ -153,6 +158,7 @@ export default function CommentSidebar({
   focusedId: string | null;
   statusById: Record<string, string>;
   isOwner: boolean;
+  canReview: boolean;
   onSelectThread: (id: string) => void;
   onAddComment: (annotationId: string, body: string) => Promise<void>;
   onToggleThread: (annotationId: string, nextStatus: string) => Promise<void>;
@@ -174,7 +180,7 @@ export default function CommentSidebar({
             <div data-testid="general-section" className="flex flex-col gap-2">
               <h3 className="text-xs font-semibold uppercase text-muted">General</h3>
               {general.map((a) => (
-                <ThreadCard key={a.id} annotation={a} status="ACTIVE" focused={focusedId === a.id} isOwner={isOwner}
+                <ThreadCard key={a.id} annotation={a} status="ACTIVE" focused={focusedId === a.id} isOwner={isOwner} canReview={canReview}
                   onSelect={onSelectThread} onAddComment={onAddComment} onToggleThread={onToggleThread} onApplySuggestion={onApplySuggestion} />
               ))}
             </div>
@@ -186,6 +192,7 @@ export default function CommentSidebar({
               status={statusById[a.id]}
               focused={focusedId === a.id}
               isOwner={isOwner}
+              canReview={canReview}
               onSelect={onSelectThread}
               onAddComment={onAddComment}
               onToggleThread={onToggleThread}
@@ -196,7 +203,7 @@ export default function CommentSidebar({
             <div data-testid="orphaned-section" className="flex flex-col gap-2">
               <h3 className="text-xs font-semibold uppercase text-muted">Orphaned comments</h3>
               {orphaned.map((a) => (
-                <ThreadCard key={a.id} annotation={a} status="ORPHANED" focused={focusedId === a.id} isOwner={isOwner}
+                <ThreadCard key={a.id} annotation={a} status="ORPHANED" focused={focusedId === a.id} isOwner={isOwner} canReview={canReview}
                   onSelect={onSelectThread} onAddComment={onAddComment} onToggleThread={onToggleThread} onApplySuggestion={onApplySuggestion} />
               ))}
             </div>
