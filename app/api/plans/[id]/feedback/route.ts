@@ -11,14 +11,14 @@ function csv(v: string | null): string[] | undefined {
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const authd = await requireApiUser(req);
-  if (!authd) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!authd.ok) return authd.response;
   const { id } = await params;
-  if (!(await isOwner(authd.user.id, id))) return NextResponse.json({ error: "not found" }, { status: 404 });
-  if (!authd.scopes.includes("feedback:read")) return NextResponse.json({ error: "insufficient scope" }, { status: 403 });
+  if (!(await isOwner(authd.user.id, id))) return NextResponse.json({ error: "not found" }, { status: 404, headers: authd.headers });
+  if (!authd.scopes.includes("feedback:read")) return NextResponse.json({ error: "insufficient scope" }, { status: 403, headers: authd.headers });
   const url = new URL(req.url);
   const include = csv(url.searchParams.get("include"));
   const exclude = csv(url.searchParams.get("exclude"));
   const feedback = await getPlanFeedback(id, { include, exclude });
-  if (!feedback) return NextResponse.json({ error: "not found" }, { status: 404 });
-  return NextResponse.json(feedback);
+  if (!feedback) return NextResponse.json({ error: "not found" }, { status: 404, headers: authd.headers });
+  return NextResponse.json(feedback, { headers: authd.headers });
 }

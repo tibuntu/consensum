@@ -8,10 +8,10 @@ const DEFAULT_MAX_MS = 60000;
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const authd = await requireApiUser(req);
-  if (!authd) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!authd.ok) return authd.response;
   const { id } = await params;
-  if (!(await isOwner(authd.user.id, id))) return NextResponse.json({ error: "not found" }, { status: 404 });
-  if (!authd.scopes.includes("feedback:read")) return NextResponse.json({ error: "insufficient scope" }, { status: 403 });
+  if (!(await isOwner(authd.user.id, id))) return NextResponse.json({ error: "not found" }, { status: 404, headers: authd.headers });
+  if (!authd.scopes.includes("feedback:read")) return NextResponse.json({ error: "insufficient scope" }, { status: 403, headers: authd.headers });
 
   const envMax = Number(process.env.FEEDBACK_WAIT_MAX_MS);
   const maxMs = Number.isFinite(envMax) && envMax > 0 ? envMax : DEFAULT_MAX_MS;
@@ -20,6 +20,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const timeoutMs = clampTimeout(requested, maxMs, DEFAULT_TIMEOUT_MS);
 
   const result = await waitForFeedbackChange(id, timeoutMs);
-  if (result === null) return NextResponse.json({ error: "not found" }, { status: 404 });
-  return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
+  if (result === null) return NextResponse.json({ error: "not found" }, { status: 404, headers: authd.headers });
+  return NextResponse.json(result, { headers: { ...authd.headers, "Cache-Control": "no-store" } });
 }

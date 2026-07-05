@@ -24,3 +24,11 @@ export function baseUrl(env: NodeJS.ProcessEnv = process.env): string {
   const value = env.BASE_URL;
   return value && value !== "/" ? value : "http://localhost:3000";
 }
+
+/** Machine-API budget: requests per minute per token across /api/plans/**.
+ *  0 disables. Invalid or absent → default 120 (far above a full agent loop). */
+export function rateLimitMachineRpm(env: NodeJS.ProcessEnv = process.env): number {
+  const n = Number(env.RATE_LIMIT_MACHINE_RPM);
+  if (!Number.isFinite(n) || n < 0) return 120;
+  return Math.floor(n);
+}

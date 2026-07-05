@@ -27,6 +27,7 @@ export async function generateToken(
 export interface VerifiedToken {
   user: User;
   scopes: string[];
+  tokenId: string;
 }
 
 export async function verifyToken(authorization: string | null): Promise<VerifiedToken | null> {
@@ -37,7 +38,7 @@ export async function verifyToken(authorization: string | null): Promise<Verifie
   if (!row) return null;
   if (row.expiresAt && row.expiresAt.getTime() <= Date.now()) return null;
   await prisma.apiToken.update({ where: { id: row.id }, data: { lastUsedAt: new Date() } });
-  return { user: row.user, scopes: row.scopes.split(",").map((s) => s.trim()).filter(Boolean) };
+  return { user: row.user, scopes: row.scopes.split(",").map((s) => s.trim()).filter(Boolean), tokenId: row.id };
 }
 
 export async function listTokens(userId: string) {
