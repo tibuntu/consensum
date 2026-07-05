@@ -52,3 +52,36 @@ describe("PATCH /api/documents/[id]/settings", () => {
     expect((await PATCH(req({ requiredApprovals: 2 }), ctx(docId))).status).toBe(404);
   });
 });
+
+describe("PATCH /api/documents/[id]/settings — requireBlockerResolution", () => {
+  test("owner enables the gate → 200 + persisted + state returned", async () => {
+    const owner = await makeUser("g1");
+    vi.mocked(api.requireUser).mockResolvedValue({ id: owner.id } as never);
+    const docId = await createDocument(owner.id, "P", "body");
+    const res = await PATCH(req({ requireBlockerResolution: true }), ctx(docId));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.requireBlockerResolution).toBe(true);
+    expect(typeof data.state).toBe("string");
+    expect((await prisma.document.findUnique({ where: { id: docId } }))?.requireBlockerResolution).toBe(true);
+  });
+
+  test("non-boolean gate → 400; empty body → 400", async () => {
+    const owner = await makeUser("g2");
+    vi.mocked(api.requireUser).mockResolvedValue({ id: owner.id } as never);
+    const docId = await createDocument(owner.id, "P", "body");
+    expect((await PATCH(req({ requireBlockerResolution: "yes" }), ctx(docId))).status).toBe(400);
+    expect((await PATCH(req({}), ctx(docId))).status).toBe(400);
+  });
+
+  test("both fields in one request → both persisted", async () => {
+    const owner = await makeUser("g3");
+    vi.mocked(api.requireUser).mockResolvedValue({ id: owner.id } as never);
+    const docId = await createDocument(owner.id, "P", "body");
+    const res = await PATCH(req({ requiredApprovals: 2, requireBlockerResolution: true }), ctx(docId));
+    expect(res.status).toBe(200);
+    const doc = await prisma.document.findUnique({ where: { id: docId } });
+    expect(doc?.requiredApprovals).toBe(2);
+    expect(doc?.requireBlockerResolution).toBe(true);
+  });
+});

@@ -26,6 +26,13 @@ export async function POST(req: Request) {
     if (parsed === null) return NextResponse.json({ error: "requiredApprovals must be an integer 1–10" }, { status: 400 });
     requiredApprovals = parsed;
   }
+  let requireBlockerResolution: boolean | undefined;
+  if (body.requireBlockerResolution !== undefined) {
+    if (typeof body.requireBlockerResolution !== "boolean") {
+      return NextResponse.json({ error: "requireBlockerResolution must be a boolean" }, { status: 400 });
+    }
+    requireBlockerResolution = body.requireBlockerResolution;
+  }
   const headerKey = req.headers.get("idempotency-key")?.trim();
   const idempotencyKey = headerKey || (typeof body.idempotencyKey === "string" ? body.idempotencyKey.trim() : "") || undefined;
   const base = baseUrl();
@@ -37,7 +44,7 @@ export async function POST(req: Request) {
     if (existing) return NextResponse.json({ id: existing.id, reviewUrl: url(existing.id), idempotent: true }, { status: 200 });
   }
   try {
-    const id = await createDocument(authd.user.id, body.title, body.markdown, { source: "CLAUDE_CODE", agentContext, requiredApprovals, idempotencyKey });
+    const id = await createDocument(authd.user.id, body.title, body.markdown, { source: "CLAUDE_CODE", agentContext, requiredApprovals, requireBlockerResolution, idempotencyKey });
     return NextResponse.json({ id, reviewUrl: url(id) }, { status: 201 });
   } catch (e) {
     // Lost the create race on the same key — return the winning plan rather than erroring.
