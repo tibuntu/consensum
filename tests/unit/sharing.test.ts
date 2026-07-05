@@ -314,6 +314,22 @@ describe("lib/sharing", () => {
       expect(row?.required).toBe(false);
       await prisma.document.delete({ where: { id: docId } });
     });
+
+    it("re-sharing a required reviewer as non-required lifts the requirement and recomputes to APPROVED", async () => {
+      const owner = await makeUser("rs-o");
+      const required = await makeUser("rs-req");
+      const other = await makeUser("rs-oth");
+      const docId = await createDocument(owner.id, "Plan", "body");
+      await prisma.documentParticipant.create({ data: { documentId: docId, userId: required.id, role: "REVIEWER", required: true } });
+      await prisma.documentParticipant.create({ data: { documentId: docId, userId: other.id, role: "REVIEWER" } });
+      await submitReview(other.id, docId, "APPROVE");
+      expect((await prisma.document.findUnique({ where: { id: docId } }))?.state).toBe("OPEN");
+
+      await shareWith(owner.id, docId, required.email, "REVIEWER", false);
+      expect((await prisma.document.findUnique({ where: { id: docId } }))?.state).toBe("APPROVED");
+
+      await prisma.document.delete({ where: { id: docId } });
+    });
   });
 
   describe("listParticipants required", () => {

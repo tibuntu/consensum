@@ -69,7 +69,7 @@ export async function shareWith(
 
   const existing = await prisma.documentParticipant.findUnique({
     where: { documentId_userId: { documentId, userId: target.id } },
-    select: { id: true },
+    select: { id: true, required: true },
   });
   await prisma.documentParticipant.upsert({
     where: { documentId_userId: { documentId, userId: target.id } },
@@ -80,7 +80,11 @@ export async function shareWith(
     if (requiredFlag) await notifyReviewRequested(documentId, target.id, ownerId).catch(() => {});
     else await notifyShared(documentId, target.id, ownerId).catch(() => {});
   }
-  if (requiredFlag) await recomputeStateAndDispatch(ownerId, documentId).catch(() => {});
+  // Recompute whenever the required set changed (new required participant, or an
+  // existing participant's required flag flipped either way) — clearing a
+  // requirement can flip a doc OPEN→APPROVED just as adding one flips it back.
+  const requiredChanged = existing ? existing.required !== requiredFlag : requiredFlag;
+  if (requiredChanged) await recomputeStateAndDispatch(ownerId, documentId).catch(() => {});
   return { ok: true, userId: target.id };
 }
 

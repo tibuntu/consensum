@@ -90,7 +90,7 @@ export async function notifyReviewRequested(documentId: string, recipientId: str
   const prefs = parsePrefs(recipient?.notificationPrefs);
   const actorName = actor?.name?.trim() || actor?.email || "Someone";
 
-  if (isEnabled(prefs, "review_requested" as NotificationType, "inApp")) {
+  if (isEnabled(prefs, "review_requested", "inApp")) {
     const row = await prisma.notification.create({
       data: { userId: recipientId, documentId, actorId, type: "review_requested" },
     });
@@ -107,8 +107,8 @@ export async function notifyReviewRequested(documentId: string, recipientId: str
     publish(`user-${recipientId}`, { type: "notification.created", notification: payload });
   }
 
-  if (isEnabled(prefs, "review_requested" as NotificationType, "email")) {
-    enqueueEmailEvent(recipientId, documentId, "review_requested" as "comment" | "review" | "version", actorName);
+  if (isEnabled(prefs, "review_requested", "email")) {
+    enqueueEmailEvent(recipientId, documentId, "review_requested", actorName);
   }
 }
 

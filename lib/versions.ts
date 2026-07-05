@@ -93,6 +93,9 @@ export async function createVersion(userId: string, documentId: string, baseVers
     const openBlockers = doc.requireBlockerResolution
       ? await tx.annotation.count({ where: { documentId, severity: "BLOCKER", threadStatus: "OPEN" } })
       : 0;
+    // No requiredReviewerIds needed here: the updateMany above dismissed every
+    // active approval, so the count floor yields OPEN before the required-set
+    // check can matter. (State re-derives on the next review via recomputeState.)
     const state = computeDocumentState(
       reviews.map((r) => ({ verdict: r.verdict as ReviewVerdict, dismissed: r.dismissed })),
       doc.requiredApprovals,
