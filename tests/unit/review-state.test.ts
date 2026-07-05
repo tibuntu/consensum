@@ -31,3 +31,32 @@ describe("computeDocumentState", () => {
     ], 1)).toBe("OPEN");
   });
 });
+
+describe("blocker gate", () => {
+  const approve = { verdict: "APPROVE" as const, dismissed: false };
+  const reject = { verdict: "REQUEST_CHANGES" as const, dismissed: false };
+
+  it("threshold met + open blockers + gate on → CHANGES_REQUESTED", () => {
+    expect(computeDocumentState([approve], 1, { requireBlockerResolution: true, openBlockers: 1 })).toBe("CHANGES_REQUESTED");
+  });
+
+  it("threshold met + open blockers + gate off → APPROVED", () => {
+    expect(computeDocumentState([approve], 1, { requireBlockerResolution: false, openBlockers: 1 })).toBe("APPROVED");
+  });
+
+  it("threshold met + no open blockers + gate on → APPROVED", () => {
+    expect(computeDocumentState([approve], 1, { requireBlockerResolution: true, openBlockers: 0 })).toBe("APPROVED");
+  });
+
+  it("gate absent → APPROVED (legacy call shape)", () => {
+    expect(computeDocumentState([approve], 1)).toBe("APPROVED");
+  });
+
+  it("threshold not met + gate on → OPEN, not CHANGES_REQUESTED", () => {
+    expect(computeDocumentState([approve], 2, { requireBlockerResolution: true, openBlockers: 1 })).toBe("OPEN");
+  });
+
+  it("REQUEST_CHANGES still dominates with gate on and no blockers", () => {
+    expect(computeDocumentState([approve, reject], 1, { requireBlockerResolution: true, openBlockers: 0 })).toBe("CHANGES_REQUESTED");
+  });
+});
