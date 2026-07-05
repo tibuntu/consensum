@@ -884,7 +884,6 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
               <input
                 type="checkbox"
                 data-testid="require-blocker-resolution"
-                aria-label="require blocker resolution"
                 checked={requireBlockerResolution}
                 onChange={(e) => changeRequireBlockerResolution(e.target.checked)}
                 className="accent-[var(--primary)]"
