@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/api";
 import { getDocumentDetail, deleteDocument } from "@/lib/documents";
 import { createVersion, ConcurrencyError } from "@/lib/versions";
 import { ensureParticipant, isParticipant, isOwner } from "@/lib/authz";
+import { isEditUiEnabled } from "@/lib/config";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -22,6 +23,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   // not the owner may read but not edit (403). Mirrors design decision D4.
   if (!(await isParticipant(user.id, id))) return NextResponse.json({ error: "not found" }, { status: 404 });
   if (!(await isOwner(user.id, id))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!isEditUiEnabled()) {
+    return NextResponse.json({ error: "editing is disabled on this instance (EDIT_UI_ENABLED=false)" }, { status: 403 });
+  }
   const body = await req.json().catch(() => null);
   if (!body || typeof body.markdown !== "string" || typeof body.baseVersionNumber !== "number") {
     return NextResponse.json({ error: "markdown and baseVersionNumber required" }, { status: 400 });

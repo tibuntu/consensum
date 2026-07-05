@@ -1,5 +1,7 @@
-/** Whether the in-app document editing UI is shown. Default ON;
- *  operators opt out with EDIT_UI_ENABLED=false. UI-only — the edit API is not gated. */
+/** Whether in-app document editing is available. Default ON; operators opt out
+ *  with EDIT_UI_ENABLED=false, which gates both the edit UI and the session
+ *  edit API (PATCH /api/documents/[id]). The agent's PATCH /api/plans/[id] is
+ *  independent and never gated. */
 export function isEditUiEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   return env.EDIT_UI_ENABLED?.toLowerCase() !== "false";
 }
