@@ -253,6 +253,59 @@ test("agent round-trip: push → request-changes → revise → 409 → approve"
   await reviewerCtx.close();
 });
 
+test("blocker gate: approval is held until the BLOCKER thread resolves", async ({ browser, request }) => {
+  const ownerCtx = await browser.newContext();
+  const owner = await ownerCtx.newPage();
+  await register(owner);
+  const token = await mintToken(owner);
+
+  const push = await agentCall(request, "gate-01-push", "post", "/api/plans", token, {
+    title: "Gated Plan",
+    markdown: "# Plan\n\nShip it.",
+    requiredApprovals: 1,
+    requireBlockerResolution: true,
+  });
+  expect(push.status).toBe(201);
+  const id = (push.json as { id: string }).id;
+
+  // Reviewer joins via link-grant, raises a document-scoped BLOCKER, then approves.
+  const reviewerCtx = await browser.newContext();
+  const reviewer = await reviewerCtx.newPage();
+  await register(reviewer);
+  expect((await reviewer.request.get(`/api/documents/${id}`)).status()).toBe(200);
+
+  const blocker = await reviewer.request.post(`/api/documents/${id}/annotations`, {
+    data: { body: "Rollback plan missing.", scope: "document", severity: "BLOCKER" },
+  });
+  expect(blocker.status()).toBe(201);
+  const annotationId = ((await blocker.json()) as { annotation: { id: string } }).annotation.id;
+
+  const approve = await reviewer.request.post(`/api/documents/${id}/reviews`, { data: { verdict: "APPROVE" } });
+  expect(approve.status()).toBeLessThan(300);
+
+  // Gate holds: threshold met, but the open BLOCKER keeps the decision at changes_requested.
+  const gated = await agentCall(request, "gate-02-feedback-gated", "get", `/api/plans/${id}/feedback`, token);
+  const gatedBody = gated.json as { decision: string; rollup: { approvalGated: boolean; mustResolve: number }; markdown: string };
+  expect(gatedBody.decision).toBe("changes_requested");
+  expect(gatedBody.rollup.approvalGated).toBe(true);
+  expect(gatedBody.rollup.mustResolve).toBe(1);
+  expect(gatedBody.markdown).toContain("Approval is gated");
+
+  // Resolving the blocker flips the state; the wait endpoint returns approved.
+  const resolve = await reviewer.request.patch(`/api/annotations/${annotationId}`, {
+    data: { threadStatus: "RESOLVED", resolution: "FIXED" },
+  });
+  expect(resolve.ok()).toBeTruthy();
+
+  const released = await agentCall(request, "gate-03-wait-approved", "get", `/api/plans/${id}/feedback/wait?timeoutMs=8000`, token);
+  const relBody = released.json as { decision: string; rollup: { approvalGated: boolean } };
+  expect(relBody.decision).toBe("approved");
+  expect(relBody.rollup.approvalGated).toBe(false);
+
+  await ownerCtx.close();
+  await reviewerCtx.close();
+});
+
 test("edge probes: scope / cross-user / anon / timedOut / oversize", async ({ browser, request }) => {
   const ownerCtx = await browser.newContext();
   const owner = await ownerCtx.newPage();
