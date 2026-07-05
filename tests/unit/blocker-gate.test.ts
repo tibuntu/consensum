@@ -2,7 +2,8 @@ import { describe, expect, test } from "vitest";
 import { prisma } from "@/lib/db";
 import { createDocument } from "@/lib/documents";
 import { submitReview, setRequireBlockerResolution } from "@/lib/reviews";
-import { createAnnotation, setThreadStatus } from "@/lib/annotations";
+import { createAnnotation, setThreadStatus, applySuggestion } from "@/lib/annotations";
+import { createVersion } from "@/lib/versions";
 
 async function makeUser(label: string) {
   const now = new Date();
@@ -71,5 +72,62 @@ describe("blocker gate end-to-end (lib layer)", () => {
 
     expect(await setRequireBlockerResolution(owner.id, docId, true)).toBe("CHANGES_REQUESTED");
     expect(await setRequireBlockerResolution(owner.id, docId, false)).toBe("APPROVED");
+  });
+
+  test("applySuggestion resolves the BLOCKER thread and recomputes gated state", async () => {
+    const owner = await makeUser("o6");
+    const reviewer = await makeUser("r6");
+    const markdown = "The rollback strategy is undefined.";
+    const docId = await createDocument(owner.id, "P", markdown, { requireBlockerResolution: true });
+    const startOffset = markdown.indexOf("undefined");
+    const endOffset = startOffset + "undefined".length;
+    const ann = await createAnnotation(
+      reviewer.id,
+      docId,
+      {
+        quote: { exact: "undefined", prefix: "strategy is ", suffix: "." },
+        startOffset,
+        endOffset,
+        kind: "SUGGESTION",
+        severity: "BLOCKER",
+        suggestedText: "automated via terraform destroy",
+      },
+      "define rollback",
+    );
+
+    await submitReview(reviewer.id, docId, "APPROVE");
+    expect(await docState(docId)).toBe("CHANGES_REQUESTED");
+
+    await applySuggestion(owner.id, ann.id, 1);
+
+    // Two recomputes happen on apply: createVersion's in-transaction recompute
+    // runs while the thread is still OPEN, then the post-resolve blocker-gate
+    // hook runs after the thread flips to RESOLVED. The final state is OPEN,
+    // not APPROVED: applying the suggestion is a content change, so
+    // createVersion dismissed the active approval — approval dismissal
+    // dominates, and the gate no longer suppresses anything (0 open blockers,
+    // but also 0 active approvals → threshold not met).
+    expect(await docState(docId)).toBe("OPEN");
+
+    const applied = await prisma.annotation.findUnique({ where: { id: ann.id } });
+    expect(applied?.threadStatus).toBe("RESOLVED");
+    expect(applied?.resolution).toBe("FIXED");
+  });
+
+  test("createVersion recomputes with gate inputs when a blocker stays open across a revision", async () => {
+    const owner = await makeUser("o7");
+    const reviewer = await makeUser("r7");
+    const docId = await createDocument(owner.id, "P", "body", { requireBlockerResolution: true });
+    await createAnnotation(reviewer.id, docId, { scope: "DOCUMENT", severity: "BLOCKER" }, "must fix");
+    await submitReview(reviewer.id, docId, "APPROVE");
+    expect(await docState(docId)).toBe("CHANGES_REQUESTED");
+
+    await createVersion(owner.id, docId, 1, "revised body");
+
+    // The in-transaction recompute ran with gate inputs (blocker still OPEN),
+    // but the content change also dismissed the APPROVE review: zero active
+    // approvals and no REQUEST_CHANGES verdicts compute OPEN — not APPROVED,
+    // and not a stale CHANGES_REQUESTED carried over from the pre-revision gate.
+    expect(await docState(docId)).toBe("OPEN");
   });
 });
