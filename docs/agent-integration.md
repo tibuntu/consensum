@@ -77,3 +77,24 @@ Bearer token, owner-scoped:
 
 For CI or headless agents that can't hold a connection open, register an
 [outbound webhook](operations.md#outbound-webhooks) instead of long-polling.
+
+### Blocker gate (opt-in)
+
+Set `requireBlockerResolution: true` on `POST /api/plans` (or via
+`PATCH /api/plans/{id}/settings`) and the server refuses to enter `APPROVED`
+while any BLOCKER-severity thread is still OPEN — the decision stays
+`changes_requested` even when the approval threshold is met. The feedback
+payload then reports `rollup.approvalGated: true` and the digest names the
+blocking threads; resolving the last one flips the state and wakes
+`GET /api/plans/{id}/feedback/wait`. Default off: without the flag, severity
+stays advisory and `rollup.mustResolve` is the agent-side gate.
+
+### Rate limits
+
+Every token has a fixed budget across `/api/plans/**`
+(`RATE_LIMIT_MACHINE_RPM`, default 120 requests/minute — far above a full
+push → wait → pull cycle). Responses carry `X-RateLimit-Limit`,
+`X-RateLimit-Remaining`, and `X-RateLimit-Reset` (unix epoch seconds); an
+exceeded budget returns `429` with `Retry-After` (seconds). Agents should
+honor `Retry-After` before retrying. A long-poll on `feedback/wait` counts
+once, at request start.

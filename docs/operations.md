@@ -126,5 +126,10 @@ it with `OUTBOX_WORKER_AUTOSTART`, `OUTBOX_POLL_MS`, `OUTBOX_BACKOFF_MS`,
 
 ## Document editing UI
 
-`EDIT_UI_ENABLED` (default on) — set to `false` to hide the in-app document Edit button.
-The `PATCH /api/documents/[id]` edit endpoint is **not** gated; only the UI.
+`EDIT_UI_ENABLED` (default on) — set to `false` to disable in-app document
+editing: hides the Edit button **and** rejects the session edit API with `403`
+(agent revisions via the machine API are unaffected).
+
+`RATE_LIMIT_MACHINE_RPM` (default `120`) — per-token request budget per minute
+across the machine API (`/api/plans/**`). Set `0` to disable. Over-budget
+requests get `429` + `Retry-After`.
