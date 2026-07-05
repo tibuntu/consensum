@@ -14,9 +14,14 @@ const WINDOW_MS = 60_000;
 
 /**
  * Fixed 60s window per token over the DB-backed RateLimit table (the same
- * storage better-auth uses, so it works identically on SQLite and Postgres).
+ * storage better-auth uses — key formats are disjoint, and better-auth's
+ * table-wide expired-row prune incidentally garbage-collects our
+ * `machine:*` rows in production, so no explicit cleanup is needed).
  * Fail-open: a storage error logs and admits the request — agent-loop
- * availability beats strict quota enforcement.
+ * availability beats strict quota enforcement. The counting is deliberately
+ * approximate: the window-reset write is not a CAS, so concurrent requests
+ * racing a rollover can each be admitted with count=1. This is a soft
+ * guard for runaway agent loops, not a security boundary.
  */
 export async function checkMachineRateLimit(
   tokenId: string,
