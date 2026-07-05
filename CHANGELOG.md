@@ -1,5 +1,50 @@
 # Changelog
 
+## [0.13.0](https://github.com/tibuntu/consensum/compare/v0.12.0...v0.13.0) (2026-07-05)
+
+
+### Features
+
+* **access:** add document visibility and participant role columns ([9181f67](https://github.com/tibuntu/consensum/commit/9181f67dece8ef656ecf9f61d0b610dc26c11256))
+* **access:** capability-based resolveAccess module ([75f570c](https://github.com/tibuntu/consensum/commit/75f570cf88f5e98659b7294f167c7221acc161e2))
+* **access:** participant management API + visibility setting ([2e99876](https://github.com/tibuntu/consensum/commit/2e998766b5c20500a7fc9369217587cd067e4068))
+* **access:** share dialog and role-aware document affordances ([6d7a782](https://github.com/tibuntu/consensum/commit/6d7a7829cc838d4c5ff46ba4a71d7c52b8d83c6d))
+* **access:** shared notification type and notifyShared helper ([31896cd](https://github.com/tibuntu/consensum/commit/31896cd374527f10abff26e559e57a89c3e9bd8c))
+* **access:** sharing service (share, setRole, remove, setVisibility) ([fe08c08](https://github.com/tibuntu/consensum/commit/fe08c086dee362e2ce8a02a19140f1cb47ea5b18))
+* **access:** visibility by source in createDocument ([89e2388](https://github.com/tibuntu/consensum/commit/89e2388916009cb8dd92f0a98a7f2f51719be697))
+* **api:** EDIT_UI_ENABLED also gates the session edit endpoint ([4e382b0](https://github.com/tibuntu/consensum/commit/4e382b04aef014d085279e94f4a5f2a61aa60742))
+* **api:** expose requireBlockerResolution via settings and plan create ([b0c96d1](https://github.com/tibuntu/consensum/commit/b0c96d14a302705a9273237c1d9b0003b9fec6d2))
+* **api:** per-token rate limit on the machine API ([cb8feac](https://github.com/tibuntu/consensum/commit/cb8feac88a5eac929637482551b33737ffb6bf24))
+* **db:** requireBlockerResolution flag on Document (sqlite + postgres) ([457cf92](https://github.com/tibuntu/consensum/commit/457cf929cff84d38a66fed9b00f24f3c37c76e99))
+* **feedback:** approvalGated rollup flag and digest line for gated approvals ([429097b](https://github.com/tibuntu/consensum/commit/429097b00eb1bffd1b36752d48a42666653af919))
+* **reviewers:** add DocumentParticipant.required column ([9f346da](https://github.com/tibuntu/consensum/commit/9f346da3e1e1c0080e522d241627a3b16e4f1a98))
+* **reviewers:** add review_requested notification type ([bd4eb24](https://github.com/tibuntu/consensum/commit/bd4eb247ddf4d1a126ee27654a5c1edac72684ec))
+* **reviewers:** gate APPROVED on required reviewers in computeDocumentState ([8d8bc31](https://github.com/tibuntu/consensum/commit/8d8bc31309adf8f9c1498cf15209bad92ca4721f))
+* **reviewers:** listReviewQueue two-tier queue data ([3f9fd3f](https://github.com/tibuntu/consensum/commit/3f9fd3ff1a46c99599b02271b5df2f20801bbcd7))
+* **reviewers:** notifyReviewRequested helper ([c44cf3c](https://github.com/tibuntu/consensum/commit/c44cf3ca086d76f33fad588238d19fa826e25465))
+* **reviewers:** recompute state with required reviewer IDs ([19a864c](https://github.com/tibuntu/consensum/commit/19a864c6d44f3be11218149b5feca18b42177409))
+* **reviewers:** required flag on participants API ([acb92cc](https://github.com/tibuntu/consensum/commit/acb92cc277b1f8b1bbc8c081792f109a00bf81c0))
+* **reviewers:** required toggle in the share dialog ([4eeb708](https://github.com/tibuntu/consensum/commit/4eeb7086c4c8e849ff3fb8871c6d941480149844))
+* **reviewers:** review queue sections on the home page ([c5fa156](https://github.com/tibuntu/consensum/commit/c5fa156303ddeef822608d86c717647ac4053dbc))
+* **reviewers:** setRequired + required-aware shareWith/setRole/listParticipants ([b5edeb1](https://github.com/tibuntu/consensum/commit/b5edeb1e341e75a2765927d010d2ee08005b452c))
+* **reviews:** optional blocker gate in document-state computation ([273a207](https://github.com/tibuntu/consensum/commit/273a20722289db145ddb066180d401d83a63a3c8))
+* **reviews:** recompute gated document state on blocker-thread changes ([5a2f690](https://github.com/tibuntu/consensum/commit/5a2f690bd5cfb3018a4d626a56090776d9b34f17))
+* serve the app at / instead of /app ([a8b10e5](https://github.com/tibuntu/consensum/commit/a8b10e53090af7e571a3f628bfec26f6c23885e7))
+* **ui:** owner toggle for requiring blocker resolution before approval ([49b495e](https://github.com/tibuntu/consensum/commit/49b495e01c8356f13e36417e079289e47cc037cf))
+
+
+### Bug Fixes
+
+* **access:** gate comment-thread controls for viewers and handle share-dialog request failures ([d4e2fc9](https://github.com/tibuntu/consensum/commit/d4e2fc9199c5aa7f68ab53629d7972f7c58b402b))
+* **access:** live share-dialog visibility, setRole owner guard, and corrected reviewer copy ([42a82a0](https://github.com/tibuntu/consensum/commit/42a82a077e17bf723615e0132e420d49c01a2e01))
+* **access:** lowercase email in shareWith lookup to match stored emails ([d9027a5](https://github.com/tibuntu/consensum/commit/d9027a5819edacf91defff17a705f060b5ed1954))
+* **api:** log gate-recompute failures and correct fail-open budget header ([21e72b9](https://github.com/tibuntu/consensum/commit/21e72b9de0dee32c1bc7c66cedf21a09c2d5e0ac))
+* **deps:** update dev dependencies to v16.2.10 ([e0bc7b3](https://github.com/tibuntu/consensum/commit/e0bc7b3954e83e19cc3c8f5b8b839ffbc7f62096))
+* **deps:** update nextjs monorepo to v16.2.10 ([b3d1fdf](https://github.com/tibuntu/consensum/commit/b3d1fdfbcf8a48927862e0fa6bd8f9382c628a11))
+* **reviewers:** recompute on required-flag clear via shareWith; drop redundant casts ([aed45b2](https://github.com/tibuntu/consensum/commit/aed45b25633f9d14841f1167bb364babbb4273dc))
+* **reviewers:** thread actorId through setRole for correct decision attribution ([43a68a2](https://github.com/tibuntu/consensum/commit/43a68a239d98d737d6683b40a0c63024ba4d6bfe))
+* **ui:** let the wrapping label supply the gate toggle's accessible name ([cf5f127](https://github.com/tibuntu/consensum/commit/cf5f127834887395f6be07ec2863ab7fccc462cd))
+
 ## [0.12.0](https://github.com/tibuntu/consensum/compare/v0.11.1...v0.12.0) (2026-07-03)
 
 
