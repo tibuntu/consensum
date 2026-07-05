@@ -39,7 +39,7 @@ export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
 export const SESSION_ACTIONS = ["start", "join", "leave", "end"] as const;
 export type SessionAction = (typeof SESSION_ACTIONS)[number];
 
-export const NOTIFICATION_TYPES = ["comment", "review", "version", "resolve", "shared"] as const;
+export const NOTIFICATION_TYPES = ["comment", "review", "version", "resolve", "shared", "review_requested"] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 export const NOTIFICATION_CHANNELS = ["inApp", "email", "desktop"] as const;
@@ -52,4 +52,5 @@ export const NOTIFICATION_CELLS: Record<NotificationType, readonly NotificationC
   version: ["inApp", "email", "desktop"],
   resolve: ["inApp", "desktop"],
   shared: ["inApp", "desktop"],
+  review_requested: ["inApp", "email", "desktop"],
 };

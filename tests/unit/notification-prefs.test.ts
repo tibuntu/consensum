@@ -67,3 +67,10 @@ describe("applyPatch", () => {
     expect(() => applyPatch(DEFAULT_PREFS, "resolve", "email", true)).toThrow();
   });
 });
+
+describe("review_requested notification type", () => {
+  test("includes review_requested defaults (inApp+email on, desktop off)", () => {
+    const p = parsePrefs(null);
+    expect(p.review_requested).toEqual({ inApp: true, email: true, desktop: false });
+  });
+});

@@ -21,4 +21,9 @@ describe("notificationLabel", () => {
   test("uses the raw type for unknown kinds", () => {
     expect(notificationLabel("mystery", "Blair")).toBe("mystery");
   });
+
+  test("labels review_requested with and without an actor", () => {
+    expect(notificationLabel("review_requested", "Blair")).toBe("Blair requested your review");
+    expect(notificationLabel("review_requested", null)).toBe("Your review was requested");
+  });
 });

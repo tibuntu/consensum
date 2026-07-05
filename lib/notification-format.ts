@@ -16,6 +16,8 @@ export function notificationLabel(type: string, actorName?: string | null): stri
       return who ? `${who} resolved a thread` : "Thread resolved";
     case "shared":
       return who ? `${who} shared a document` : "Document shared with you";
+    case "review_requested":
+      return who ? `${who} requested your review` : "Your review was requested";
     default:
       return type;
   }
