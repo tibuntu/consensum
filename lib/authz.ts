@@ -1,34 +1,60 @@
 import { prisma } from "@/lib/db";
+import type { Visibility } from "@/lib/enums";
+
+export type AccessRole = "OWNER" | "REVIEWER" | "VIEWER";
+
+export interface Access {
+  role: AccessRole;
+  canView: boolean;
+  canReview: boolean;
+  canManage: boolean;
+  visibility: Visibility;
+}
 
 /**
- * Link-grant entry point: records the caller as a participant of the document
- * (idempotent). Returns false when the document does not exist — callers should
- * translate that to 404 rather than creating an orphan row or leaking existence.
+ * Resolve a caller's access to a document into capabilities.
+ *
+ * Returns null when the caller has no access — the route translates that to 404
+ * so a PRIVATE document never leaks its existence. In LINK mode a caller with no
+ * participant row is auto-joined as REVIEWER (this is the successor to the old
+ * ensureParticipant link-grant). In PRIVATE mode a caller with no row returns
+ * null with no side effect.
  */
-export async function ensureParticipant(userId: string, documentId: string): Promise<boolean> {
-  const doc = await prisma.document.findUnique({ where: { id: documentId }, select: { id: true } });
-  if (!doc) return false;
-  await prisma.documentParticipant.upsert({
-    where: { documentId_userId: { documentId, userId } },
-    create: { documentId, userId },
-    update: {},
+export async function resolveAccess(userId: string, documentId: string): Promise<Access | null> {
+  const doc = await prisma.document.findUnique({
+    where: { id: documentId },
+    select: { ownerId: true, visibility: true },
   });
-  return true;
-}
+  if (!doc) return null;
+  const visibility = doc.visibility as Visibility;
 
-/** True when the user already has a participant row for the document (no side effect). */
-export async function isParticipant(userId: string, documentId: string): Promise<boolean> {
-  const row = await prisma.documentParticipant.findUnique({
+  if (doc.ownerId === userId) {
+    return { role: "OWNER", canView: true, canReview: true, canManage: true, visibility };
+  }
+
+  const part = await prisma.documentParticipant.findUnique({
     where: { documentId_userId: { documentId, userId } },
-    select: { id: true },
+    select: { role: true },
   });
-  return row !== null;
-}
 
-/** True when the user owns the document. */
-export async function isOwner(userId: string, documentId: string): Promise<boolean> {
-  const doc = await prisma.document.findUnique({ where: { id: documentId }, select: { ownerId: true } });
-  return doc?.ownerId === userId;
+  let role = part?.role as "REVIEWER" | "VIEWER" | undefined;
+  if (!role) {
+    if (visibility !== "LINK") return null; // PRIVATE + no row => no access
+    await prisma.documentParticipant.upsert({
+      where: { documentId_userId: { documentId, userId } },
+      create: { documentId, userId, role: "REVIEWER" },
+      update: {},
+    });
+    role = "REVIEWER";
+  }
+
+  return {
+    role,
+    canView: true,
+    canReview: role === "REVIEWER",
+    canManage: false,
+    visibility,
+  };
 }
 
 /** Resolve an annotation to its document id, or null when the annotation is missing. */
