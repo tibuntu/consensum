@@ -59,6 +59,9 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
       editEnabled={editEnabled}
       currentUserId={session.user.id}
       currentUserName={currentUserName}
+      canReview={access.canReview}
+      canManage={access.canManage}
+      visibility={access.visibility}
     />
   );
 }

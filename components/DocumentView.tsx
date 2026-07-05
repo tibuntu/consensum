@@ -17,6 +17,7 @@ import { SEVERITIES, type SessionAction } from "@/lib/enums";
 import type { PresenceEntry, PresenceCursor, PresenceSelection, PresenceScroll, ReviewSession } from "@/lib/events";
 import CommentSidebar from "@/components/CommentSidebar";
 import DocumentEditor from "@/components/DocumentEditor";
+import ShareDialog from "@/components/ShareDialog";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Card } from "@/components/ui/Card";
@@ -112,7 +113,25 @@ interface PendingSelection {
   endOffset: number;
 }
 
-export default function DocumentView({ doc, isOwner, editEnabled, currentUserId, currentUserName }: { doc: ClientDocument; isOwner: boolean; editEnabled: boolean; currentUserId: string; currentUserName: string }) {
+export default function DocumentView({
+  doc,
+  isOwner,
+  editEnabled,
+  currentUserId,
+  currentUserName,
+  canReview,
+  canManage,
+  visibility,
+}: {
+  doc: ClientDocument;
+  isOwner: boolean;
+  editEnabled: boolean;
+  currentUserId: string;
+  currentUserName: string;
+  canReview: boolean;
+  canManage: boolean;
+  visibility: string;
+}) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [annotations, setAnnotations] = useState<ClientAnnotation[]>(doc.annotations);
@@ -145,6 +164,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
   const [generalOpen, setGeneralOpen] = useState(false);
   const [generalBody, setGeneralBody] = useState("");
   const [generalSeverity, setGeneralSeverity] = useState("");
+  const [shareOpen, setShareOpen] = useState(false);
 
   const postSessionAction = useCallback(
     (action: SessionAction) => {
@@ -779,6 +799,9 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
           </Card>
         </div>
       )}
+      {shareOpen && (
+        <ShareDialog documentId={doc.id} visibility={visibility} onClose={() => setShareOpen(false)} />
+      )}
       <div className="min-w-0 flex-1">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="flex min-w-0 items-center gap-2">
@@ -815,6 +838,16 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
             >
               History
             </Link>
+            {canManage && (
+              <Button
+                variant="secondary"
+                size="sm"
+                data-testid="share-document"
+                onClick={() => setShareOpen(true)}
+              >
+                Share
+              </Button>
+            )}
             {isOwner && (
               <Button
                 variant="ghost"
@@ -850,7 +883,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
             <Badge tone={stateTone(docState)} data-testid="doc-state">
               {STATE_LABELS[docState] ?? docState}
             </Badge>
-            {!isOwner && (
+            {!isOwner && canReview && (
               <div className="flex gap-2">
                 <Button variant="primary" size="sm" onClick={() => submitReview("APPROVE")}>
                   Approve
@@ -932,6 +965,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
           )}
         </Card>
 
+        {canReview && (
         <Card className="flex flex-col gap-2 p-3">
           {generalOpen ? (
             <>
@@ -975,8 +1009,9 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
             </Button>
           )}
         </Card>
+        )}
 
-        {selection && (
+        {canReview && selection && (
           <Card className="flex flex-col gap-2 p-3">
             <p className="text-xs text-muted">
               {suggesting ? "Suggesting an edit to" : "Commenting on"}: “{selection.quote.exact.slice(0, 60)}”
