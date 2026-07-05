@@ -100,6 +100,21 @@ describe("participants routes", () => {
       expect(res.status).toBe(400);
     });
 
+    test("owner shares with required: true → 200 + row.required === true", async () => {
+      const owner = await makeUser("prq");
+      const target = await makeUser("prqt");
+      const docId = await createDocument(owner.id, "P", "body");
+      vi.mocked(api.requireUser).mockResolvedValue({ id: owner.id } as never);
+      const res = await POST(jsonReq("POST", { email: target.email, role: "REVIEWER", required: true }), ctx(docId));
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data).toEqual({ ok: true, userId: target.id });
+      const row = await prisma.documentParticipant.findUnique({
+        where: { documentId_userId: { documentId: docId, userId: target.id } },
+      });
+      expect(row?.required).toBe(true);
+    });
+
     test("non-owner participant → 403", async () => {
       const owner = await makeUser("pno");
       const other = await makeUser("pnp");
@@ -157,6 +172,41 @@ describe("participants routes", () => {
       vi.mocked(api.requireUser).mockResolvedValue({ id: other.id } as never);
       const res = await PATCH_PARTICIPANT(jsonReq("PATCH", { role: "REVIEWER" }), ctxUser(docId, target.id));
       expect(res.status).toBe(403);
+    });
+
+    test("owner sets required: true on a VIEWER → 400", async () => {
+      const owner = await makeUser("qvr");
+      const target = await makeUser("qvrt");
+      const docId = await createDocument(owner.id, "P", "body");
+      await prisma.documentParticipant.create({ data: { documentId: docId, userId: target.id, role: "VIEWER" } });
+      vi.mocked(api.requireUser).mockResolvedValue({ id: owner.id } as never);
+      const res = await PATCH_PARTICIPANT(jsonReq("PATCH", { required: true }), ctxUser(docId, target.id));
+      expect(res.status).toBe(400);
+    });
+
+    test("owner sets required: true on a REVIEWER → 200 + persisted", async () => {
+      const owner = await makeUser("qrev");
+      const target = await makeUser("qrevt");
+      const docId = await createDocument(owner.id, "P", "body");
+      await prisma.documentParticipant.create({ data: { documentId: docId, userId: target.id, role: "REVIEWER" } });
+      vi.mocked(api.requireUser).mockResolvedValue({ id: owner.id } as never);
+      const res = await PATCH_PARTICIPANT(jsonReq("PATCH", { required: true }), ctxUser(docId, target.id));
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+      const row = await prisma.documentParticipant.findUnique({
+        where: { documentId_userId: { documentId: docId, userId: target.id } },
+      });
+      expect(row?.required).toBe(true);
+    });
+
+    test("owner provides neither role nor required → 400", async () => {
+      const owner = await makeUser("qnone");
+      const target = await makeUser("qnonet");
+      const docId = await createDocument(owner.id, "P", "body");
+      await prisma.documentParticipant.create({ data: { documentId: docId, userId: target.id, role: "VIEWER" } });
+      vi.mocked(api.requireUser).mockResolvedValue({ id: owner.id } as never);
+      const res = await PATCH_PARTICIPANT(jsonReq("PATCH", {}), ctxUser(docId, target.id));
+      expect(res.status).toBe(400);
     });
   });
 

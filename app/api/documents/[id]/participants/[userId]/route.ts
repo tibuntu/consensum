@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api";
 import { resolveAccess } from "@/lib/authz";
-import { setRole, removeParticipant } from "@/lib/sharing";
+import { setRole, setRequired, removeParticipant } from "@/lib/sharing";
 import { DOCUMENT_ROLES, type DocumentRole } from "@/lib/enums";
 
 type ManageGuard = { error: NextResponse } | { ok: true };
@@ -25,14 +25,31 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const guard = await requireManage(user.id, id);
   if ("error" in guard) return guard.error;
   const body = await req.json().catch(() => null);
-  const role = body?.role as DocumentRole;
-  if (!DOCUMENT_ROLES.includes(role)) return NextResponse.json({ error: "valid role required" }, { status: 400 });
-  const res = await setRole(user.id, id, userId, role);
-  if ("error" in res) {
-    const status = res.error === "cannot_change_owner" ? 400 : 404;
-    return NextResponse.json({ error: res.error }, { status });
+  const role = body?.role as DocumentRole | undefined;
+  const required = body?.required;
+
+  if (role !== undefined) {
+    if (!DOCUMENT_ROLES.includes(role)) return NextResponse.json({ error: "valid role required" }, { status: 400 });
+    const res = await setRole(user.id, id, userId, role);
+    if ("error" in res) {
+      const status = res.error === "cannot_change_owner" ? 400 : 404;
+      return NextResponse.json({ error: res.error }, { status });
+    }
   }
-  return NextResponse.json(res);
+
+  if (typeof required === "boolean") {
+    const res = await setRequired(user.id, id, userId, required);
+    if ("error" in res) {
+      const status = res.error === "not_participant" ? 404 : 400; // cannot_change_owner, not_reviewer → 400
+      return NextResponse.json({ error: res.error }, { status });
+    }
+  }
+
+  if (role === undefined && typeof required !== "boolean") {
+    return NextResponse.json({ error: "role or required required" }, { status: 400 });
+  }
+
+  return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string; userId: string }> }): Promise<NextResponse> {

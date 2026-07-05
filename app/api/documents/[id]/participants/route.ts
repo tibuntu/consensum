@@ -24,10 +24,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const body = await req.json().catch(() => null);
   const email = typeof body?.email === "string" ? body.email : null;
   const role = body?.role as DocumentRole;
+  const required = typeof body?.required === "boolean" ? body.required : false;
   if (!email || !DOCUMENT_ROLES.includes(role)) {
     return NextResponse.json({ error: "email and valid role required" }, { status: 400 });
   }
-  const res = await shareWith(user.id, id, email, role);
+  const res = await shareWith(user.id, id, email, role, required);
   if ("error" in res) {
     const status = res.error === "no_account" ? 409 : 400;
     return NextResponse.json({ error: res.error }, { status });
