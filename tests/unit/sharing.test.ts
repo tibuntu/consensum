@@ -6,6 +6,7 @@ import {
   listParticipants,
   shareWith,
   setRole,
+  setRequired,
   removeParticipant,
   setVisibility,
 } from "@/lib/sharing";
@@ -230,6 +231,100 @@ describe("lib/sharing", () => {
       const reviewerRow = rows.find((r) => r.userId === reviewer.id);
       expect(reviewerRow).toMatchObject({ userId: reviewer.id, email: reviewer.email, role: "REVIEWER", isOwner: false });
 
+      await prisma.document.delete({ where: { id: docId } });
+    });
+  });
+
+  describe("setRequired", () => {
+    it("marks a REVIEWER required, fires review_requested, and gates APPROVED", async () => {
+      const owner = await makeUser("sr-o");
+      const reviewer = await makeUser("sr-r");
+      const docId = await createDocument(owner.id, "Plan", "body");
+      await prisma.documentParticipant.create({ data: { documentId: docId, userId: reviewer.id, role: "REVIEWER" } });
+      const res = await setRequired(owner.id, docId, reviewer.id, true);
+      expect(res).toEqual({ ok: true });
+      const row = await prisma.documentParticipant.findUnique({ where: { documentId_userId: { documentId: docId, userId: reviewer.id } } });
+      expect(row?.required).toBe(true);
+      const notes = await prisma.notification.count({ where: { userId: reviewer.id, documentId: docId, type: "review_requested" } });
+      expect(notes).toBe(1);
+      await prisma.document.delete({ where: { id: docId } });
+    });
+
+    it("rejects a VIEWER (not_reviewer), the owner (cannot_change_owner), and a stranger (not_participant)", async () => {
+      const owner = await makeUser("sr-o2");
+      const viewer = await makeUser("sr-v2");
+      const stranger = await makeUser("sr-s2");
+      const docId = await createDocument(owner.id, "Plan", "body");
+      await prisma.documentParticipant.create({ data: { documentId: docId, userId: viewer.id, role: "VIEWER" } });
+      expect(await setRequired(owner.id, docId, viewer.id, true)).toEqual({ error: "not_reviewer" });
+      expect(await setRequired(owner.id, docId, owner.id, true)).toEqual({ error: "cannot_change_owner" });
+      expect(await setRequired(owner.id, docId, stranger.id, true)).toEqual({ error: "not_participant" });
+      await prisma.document.delete({ where: { id: docId } });
+    });
+
+    it("marking required flips an already-APPROVED doc back to OPEN", async () => {
+      const owner = await makeUser("sr-o3");
+      const reviewer = await makeUser("sr-r3");
+      const other = await makeUser("sr-x3");
+      const docId = await createDocument(owner.id, "Plan", "body");
+      await prisma.documentParticipant.create({ data: { documentId: docId, userId: reviewer.id, role: "REVIEWER" } });
+      await prisma.documentParticipant.create({ data: { documentId: docId, userId: other.id, role: "REVIEWER" } });
+      await submitReview(other.id, docId, "APPROVE");
+      expect((await prisma.document.findUnique({ where: { id: docId } }))?.state).toBe("APPROVED");
+      await setRequired(owner.id, docId, reviewer.id, true);
+      expect((await prisma.document.findUnique({ where: { id: docId } }))?.state).toBe("OPEN");
+      await prisma.document.delete({ where: { id: docId } });
+    });
+  });
+
+  describe("setRole clears required on demotion", () => {
+    it("REVIEWER(required)→VIEWER clears required", async () => {
+      const owner = await makeUser("dm-o");
+      const reviewer = await makeUser("dm-r");
+      const docId = await createDocument(owner.id, "Plan", "body");
+      await prisma.documentParticipant.create({ data: { documentId: docId, userId: reviewer.id, role: "REVIEWER", required: true } });
+      await setRole(docId, reviewer.id, "VIEWER");
+      const row = await prisma.documentParticipant.findUnique({ where: { documentId_userId: { documentId: docId, userId: reviewer.id } } });
+      expect(row?.role).toBe("VIEWER");
+      expect(row?.required).toBe(false);
+      await prisma.document.delete({ where: { id: docId } });
+    });
+  });
+
+  describe("shareWith required", () => {
+    it("creating a participant as required fires review_requested and NOT shared", async () => {
+      const owner = await makeUser("sw-o");
+      const target = await makeUser("sw-t");
+      const docId = await createDocument(owner.id, "Plan", "body");
+      const res = await shareWith(owner.id, docId, target.email, "REVIEWER", true);
+      expect(res).toEqual({ ok: true, userId: target.id });
+      const row = await prisma.documentParticipant.findUnique({ where: { documentId_userId: { documentId: docId, userId: target.id } } });
+      expect(row?.required).toBe(true);
+      expect(await prisma.notification.count({ where: { userId: target.id, documentId: docId, type: "review_requested" } })).toBe(1);
+      expect(await prisma.notification.count({ where: { userId: target.id, documentId: docId, type: "shared" } })).toBe(0);
+      await prisma.document.delete({ where: { id: docId } });
+    });
+
+    it("required is ignored for a VIEWER", async () => {
+      const owner = await makeUser("sw-o2");
+      const target = await makeUser("sw-t2");
+      const docId = await createDocument(owner.id, "Plan", "body");
+      await shareWith(owner.id, docId, target.email, "VIEWER", true);
+      const row = await prisma.documentParticipant.findUnique({ where: { documentId_userId: { documentId: docId, userId: target.id } } });
+      expect(row?.required).toBe(false);
+      await prisma.document.delete({ where: { id: docId } });
+    });
+  });
+
+  describe("listParticipants required", () => {
+    it("returns the required flag per row", async () => {
+      const owner = await makeUser("lp-o");
+      const reviewer = await makeUser("lp-r");
+      const docId = await createDocument(owner.id, "Plan", "body");
+      await prisma.documentParticipant.create({ data: { documentId: docId, userId: reviewer.id, role: "REVIEWER", required: true } });
+      const rows = await listParticipants(docId);
+      expect(rows.find((r) => r.userId === reviewer.id)?.required).toBe(true);
+      expect(rows.find((r) => r.userId === owner.id)?.required).toBe(false);
       await prisma.document.delete({ where: { id: docId } });
     });
   });

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { DocumentRole, Visibility } from "@/lib/enums";
-import { notifyShared } from "@/lib/notifications";
+import { notifyShared, notifyReviewRequested } from "@/lib/notifications";
 import { recomputeStateAndDispatch } from "@/lib/reviews";
 
 export interface ParticipantRow {
@@ -9,6 +9,7 @@ export interface ParticipantRow {
   email: string;
   role: "OWNER" | DocumentRole;
   isOwner: boolean;
+  required: boolean;
 }
 
 /**
@@ -26,15 +27,15 @@ export async function listParticipants(documentId: string): Promise<ParticipantR
 
   const parts = await prisma.documentParticipant.findMany({
     where: { documentId },
-    select: { userId: true, role: true, user: { select: { name: true, email: true } } },
+    select: { userId: true, role: true, required: true, user: { select: { name: true, email: true } } },
   });
 
   const rows: ParticipantRow[] = [
-    { userId: doc.ownerId, name: doc.owner.name, email: doc.owner.email, role: "OWNER", isOwner: true },
+    { userId: doc.ownerId, name: doc.owner.name, email: doc.owner.email, role: "OWNER", isOwner: true, required: false },
   ];
   for (const p of parts) {
     if (p.userId === doc.ownerId) continue;
-    rows.push({ userId: p.userId, name: p.user.name, email: p.user.email, role: p.role as DocumentRole, isOwner: false });
+    rows.push({ userId: p.userId, name: p.user.name, email: p.user.email, role: p.role as DocumentRole, isOwner: false, required: p.required });
   }
   return rows;
 }
@@ -58,10 +59,13 @@ export async function shareWith(
   documentId: string,
   email: string,
   role: DocumentRole,
+  required = false,
 ): Promise<ShareResult> {
   const target = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() }, select: { id: true } });
   if (!target) return { error: "no_account" };
   if (target.id === ownerId) return { error: "cannot_share_owner" };
+
+  const requiredFlag = role === "REVIEWER" ? required : false;
 
   const existing = await prisma.documentParticipant.findUnique({
     where: { documentId_userId: { documentId, userId: target.id } },
@@ -69,10 +73,14 @@ export async function shareWith(
   });
   await prisma.documentParticipant.upsert({
     where: { documentId_userId: { documentId, userId: target.id } },
-    create: { documentId, userId: target.id, role },
-    update: { role },
+    create: { documentId, userId: target.id, role, required: requiredFlag },
+    update: { role, required: requiredFlag },
   });
-  if (!existing) await notifyShared(documentId, target.id, ownerId).catch(() => {});
+  if (!existing) {
+    if (requiredFlag) await notifyReviewRequested(documentId, target.id, ownerId).catch(() => {});
+    else await notifyShared(documentId, target.id, ownerId).catch(() => {});
+  }
+  if (requiredFlag) await recomputeStateAndDispatch(ownerId, documentId).catch(() => {});
   return { ok: true, userId: target.id };
 }
 
@@ -89,8 +97,39 @@ export async function setRole(documentId: string, userId: string, role: Document
   if (!existing) return { error: "not_participant" };
   await prisma.documentParticipant.update({
     where: { documentId_userId: { documentId, userId } },
-    data: { role },
+    data: { role, required: role === "REVIEWER" ? undefined : false },
   });
+  if (role !== "REVIEWER") await recomputeStateAndDispatch(userId, documentId).catch(() => {});
+  return { ok: true };
+}
+
+type SetRequiredResult = { ok: true } | { error: "not_participant" | "cannot_change_owner" | "not_reviewer" };
+
+/**
+ * Owner marks/unmarks a participant as a required reviewer. Only non-owner
+ * REVIEWERs qualify. On a false→true transition, notify. Always recompute
+ * state — either direction can flip APPROVED <-> OPEN.
+ */
+export async function setRequired(
+  actorId: string,
+  documentId: string,
+  userId: string,
+  required: boolean,
+): Promise<SetRequiredResult> {
+  const doc = await prisma.document.findUnique({ where: { id: documentId }, select: { ownerId: true } });
+  if (doc?.ownerId === userId) return { error: "cannot_change_owner" };
+  const existing = await prisma.documentParticipant.findUnique({
+    where: { documentId_userId: { documentId, userId } },
+    select: { role: true, required: true },
+  });
+  if (!existing) return { error: "not_participant" };
+  if (existing.role !== "REVIEWER") return { error: "not_reviewer" };
+  await prisma.documentParticipant.update({
+    where: { documentId_userId: { documentId, userId } },
+    data: { required },
+  });
+  if (required && !existing.required) await notifyReviewRequested(documentId, userId, actorId).catch(() => {});
+  await recomputeStateAndDispatch(actorId, documentId).catch(() => {});
   return { ok: true };
 }
 
