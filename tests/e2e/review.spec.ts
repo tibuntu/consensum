@@ -7,7 +7,7 @@ async function register(page: Page, name: string): Promise<void> {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
 }
 
 test("create, annotate, comment, request changes", async ({ browser }) => {
@@ -21,7 +21,7 @@ test("create, annotate, comment, request changes", async ({ browser }) => {
   await page.getByLabel("title").fill("Infra Plan");
   await page.getByLabel("markdown").fill("The cloud setup needs review before launch.");
   await page.getByRole("button", { name: "Create document" }).click();
-  await expect(page).toHaveURL(/\/app\/documents\//);
+  await expect(page).toHaveURL(/\/documents\//);
   const url = page.url();
 
   // select the phrase "cloud setup" in the rendered body

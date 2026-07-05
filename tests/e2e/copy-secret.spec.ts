@@ -7,7 +7,7 @@ async function register(page: Page): Promise<void> {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
 }
 
 // The one-time API token and webhook signing secret are shown exactly once and
@@ -16,7 +16,7 @@ async function register(page: Page): Promise<void> {
 test("API token reveal has a working copy button", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await register(page);
-  await page.goto("/app/settings/tokens");
+  await page.goto("/settings/tokens");
   await page.getByLabel("token label").fill("ci");
   await page.getByRole("button", { name: "Create token" }).click();
 
@@ -36,7 +36,7 @@ test("API token reveal has a working copy button", async ({ page, context }) => 
 test("webhook secret reveal has a working copy button", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await register(page);
-  await page.goto("/app/settings/webhooks");
+  await page.goto("/settings/webhooks");
   await page.getByLabel("webhook url").fill("http://127.0.0.1:9991/consensum");
   await page.getByRole("button", { name: "Create webhook" }).click();
 

@@ -7,22 +7,22 @@ test("nav reaches settings and inbox", async ({ page }) => {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
 
   await page.getByRole("link", { name: "Settings" }).click();
-  await expect(page).toHaveURL(/\/app\/settings\/notifications/);
+  await expect(page).toHaveURL(/\/settings\/notifications/);
   await expect(page.getByTestId("pref-comment-email")).toBeVisible();
 
   // Settings sub-nav reaches API tokens.
   await page.getByRole("link", { name: "API tokens" }).click();
-  await expect(page).toHaveURL(/\/app\/settings\/tokens/);
+  await expect(page).toHaveURL(/\/settings\/tokens/);
   await expect(page.getByLabel("token label")).toBeVisible();
 
   await page.getByRole("link", { name: "Documents" }).click();
-  await expect(page).toHaveURL(/\/app$/);
+  await expect(page).toHaveURL(/\/$/);
 
   await page.getByTestId("inbox-link").click();
-  await expect(page).toHaveURL(/\/app\/inbox/);
+  await expect(page).toHaveURL(/\/inbox/);
 });
 
 test("landing page shows for logged-out visitors", async ({ page }) => {

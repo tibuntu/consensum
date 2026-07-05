@@ -238,7 +238,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
   async function handleDelete() {
     setDeleting(true);
     const res = await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
-    if (res.ok) { router.push("/app"); return; }
+    if (res.ok) { router.push("/"); return; }
     setDeleting(false);
     setConfirmingDelete(false);
   }
@@ -794,7 +794,7 @@ export default function DocumentView({ doc, isOwner, editEnabled, currentUserId,
               <Button variant="secondary" size="sm" onClick={() => { setDraft(markdown); setMode("edit"); }}>Edit</Button>
             )}
             <Link
-              href={`/app/documents/${doc.id}/history`}
+              href={`/documents/${doc.id}/history`}
               data-testid="history-link"
               className="inline-flex items-center rounded-[var(--radius-app)] px-2.5 py-1 text-sm font-medium text-foreground hover:bg-primary-subtle"
             >

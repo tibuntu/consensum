@@ -9,8 +9,8 @@ it("single comment, single actor", () => {
   const out = renderActivityEmail({ recipientName: "Bo", docTitle: "Plan A", docId: "doc1", events: [ev("comment", "Al")] });
   expect(out.subject).toContain("Plan A");
   expect(out.subject.toLowerCase()).toContain("comment");
-  expect(out.html).toContain("https://q.example/app/documents/doc1");
-  expect(out.text).toContain("https://q.example/app/documents/doc1");
+  expect(out.html).toContain("https://q.example/documents/doc1");
+  expect(out.text).toContain("https://q.example/documents/doc1");
 });
 
 it("multiple events and actors", () => {

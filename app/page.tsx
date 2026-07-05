@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { getSession } from "@/lib/session";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -24,9 +22,9 @@ const STEPS = [
   },
 ];
 
-export default async function Index() {
-  const session = await getSession();
-  if (session) redirect("/app");
+// Signed-in users never see this page: proxy.ts rewrites "/" to the documents
+// dashboard when a session cookie is present.
+export default function Index() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-border bg-surface/80 backdrop-blur">

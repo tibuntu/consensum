@@ -7,7 +7,7 @@ async function register(page: Page, name: string): Promise<void> {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
 }
 
 test("copy plan button writes the raw markdown to the clipboard", async ({ browser }) => {
@@ -20,7 +20,7 @@ test("copy plan button writes the raw markdown to the clipboard", async ({ brows
   await page.getByLabel("title").fill("Copyable Plan");
   await page.getByLabel("markdown").fill(planBody);
   await page.getByRole("button", { name: "Create document" }).click();
-  await expect(page).toHaveURL(/\/app\/documents\//);
+  await expect(page).toHaveURL(/\/documents\//);
 
   const copyButton = page.getByTestId("copy-plan");
   await expect(copyButton).toHaveText("Copy");

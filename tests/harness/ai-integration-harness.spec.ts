@@ -34,12 +34,12 @@ async function register(page: Page): Promise<string> {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
   return email;
 }
 
 async function mintToken(page: Page, opts: { dropWrite?: boolean } = {}): Promise<string> {
-  await page.goto("/app/settings/tokens");
+  await page.goto("/settings/tokens");
   await page.getByLabel("token label").fill(opts.dropWrite ? "readonly" : "agent");
   if (opts.dropWrite) await page.getByLabel("plans:write").uncheck();
   await page.getByRole("button", { name: "Create token" }).click();

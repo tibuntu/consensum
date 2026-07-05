@@ -27,7 +27,7 @@ export default function InboxList() {
             <li key={n.id} data-testid="notification">
               <Card className={`transition-colors hover:bg-primary-subtle ${n.read ? "" : "border-l-4 border-l-primary"}`}>
                 <Link
-                  href={`/app/documents/${n.documentId}`}
+                  href={`/documents/${n.documentId}`}
                   onClick={() => markRead(n.id)}
                   className={`flex items-center justify-between gap-4 p-3 ${n.read ? "text-muted" : "font-medium text-foreground"}`}
                 >

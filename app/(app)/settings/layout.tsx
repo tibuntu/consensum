@@ -3,9 +3,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/app/settings/notifications", label: "Notifications" },
-  { href: "/app/settings/tokens", label: "API tokens" },
-  { href: "/app/settings/webhooks", label: "Webhooks" },
+  { href: "/settings/notifications", label: "Notifications" },
+  { href: "/settings/tokens", label: "API tokens" },
+  { href: "/settings/webhooks", label: "Webhooks" },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

@@ -7,7 +7,7 @@ async function register(page: Page, name: string): Promise<void> {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
 }
 
 async function countEventSources(context: BrowserContext): Promise<void> {
@@ -33,11 +33,11 @@ test("review session lifecycle across two participants", async ({ browser }) => 
   const pageB = await ctxB.newPage();
 
   await register(pageA, "Ada");
-  await pageA.goto("/app");
+  await pageA.goto("/");
   await pageA.getByLabel("title").fill("Session demo");
   await pageA.getByLabel("markdown").fill("# Hello\n\nReview me together.");
   await pageA.getByRole("button", { name: "Create document" }).click();
-  await expect(pageA).toHaveURL(/\/app\/documents\/[^/]+$/);
+  await expect(pageA).toHaveURL(/\/documents\/[^/]+$/);
   const docUrl = pageA.url();
 
   await register(pageB, "Grace");
@@ -77,11 +77,11 @@ test("session auto-ends when the leader disconnects", async ({ browser }) => {
   const pageB = await ctxB.newPage();
 
   await register(pageA, "Ada");
-  await pageA.goto("/app");
+  await pageA.goto("/");
   await pageA.getByLabel("title").fill("Leader drop");
   await pageA.getByLabel("markdown").fill("# Drop test");
   await pageA.getByRole("button", { name: "Create document" }).click();
-  await expect(pageA).toHaveURL(/\/app\/documents\/[^/]+$/);
+  await expect(pageA).toHaveURL(/\/documents\/[^/]+$/);
   const docUrl = pageA.url();
 
   await register(pageB, "Grace");

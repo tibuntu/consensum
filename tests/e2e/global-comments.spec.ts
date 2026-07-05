@@ -7,7 +7,7 @@ async function register(page: Page, name: string): Promise<void> {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
 }
 
 test("add, display, and resolve a general (document-scoped) comment", async ({ page }) => {
@@ -16,7 +16,7 @@ test("add, display, and resolve a general (document-scoped) comment", async ({ p
   await page.getByLabel("title").fill("Infra Plan");
   await page.getByLabel("markdown").fill("The cloud setup needs review before launch.");
   await page.getByRole("button", { name: "Create document" }).click();
-  await expect(page).toHaveURL(/\/app\/documents\//);
+  await expect(page).toHaveURL(/\/documents\//);
 
   // Composer is available without selecting text.
   await page.getByTestId("add-general-comment").click();

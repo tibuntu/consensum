@@ -7,7 +7,7 @@ async function register(page: Page, name: string): Promise<void> {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
 }
 
 test("inbox names who acted on the document", async ({ browser }) => {
@@ -17,7 +17,7 @@ test("inbox names who acted on the document", async ({ browser }) => {
   await A.getByLabel("title").fill("Notify Plan");
   await A.getByLabel("markdown").fill("Shared content needing review.");
   await A.getByRole("button", { name: "Create document" }).click();
-  await expect(A).toHaveURL(/\/app\/documents\//);
+  await expect(A).toHaveURL(/\/documents\//);
   const url = A.url();
 
   const ctxB = await browser.newContext();
@@ -29,7 +29,7 @@ test("inbox names who acted on the document", async ({ browser }) => {
   await B.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(B.getByTestId("thread")).toContainText("a question from Blair");
 
-  await A.goto("/app/inbox");
+  await A.goto("/inbox");
   await expect(A.getByTestId("notification").first()).toContainText("Blair commented");
 
   await ctxA.close();

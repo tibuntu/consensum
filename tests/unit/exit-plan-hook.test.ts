@@ -51,7 +51,7 @@ describe("hook fingerprint() — stable across our own revision, changes on re-r
 
 describe("hook buildDigest()", () => {
   it("surfaces the must-resolve blocker count and marks the blocker", () => {
-    const d = buildDigest(changes(), "http://x/app/documents/1");
+    const d = buildDigest(changes(), "http://x/documents/1");
     expect(d).toContain("must-resolve blockers: 1");
     expect(d).toContain("(MUST RESOLVE)");
     expect(d).toContain("rollback undefined");

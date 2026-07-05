@@ -7,7 +7,7 @@ async function register(page: Page): Promise<string> {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
   return email;
 }
 
@@ -28,7 +28,7 @@ test("edit re-anchors (moved) and resets approval", async ({ browser }) => {
   await page.getByLabel("title").fill("Versioned Doc");
   await page.getByLabel("markdown").fill("The quick brown fox jumps over the lazy dog.");
   await page.getByRole("button", { name: "Create document" }).click();
-  await expect(page).toHaveURL(/\/app\/documents\//);
+  await expect(page).toHaveURL(/\/documents\//);
   const url = page.url();
 
   await page.getByTestId("doc-body").getByText("brown fox").first().selectText();
@@ -65,7 +65,7 @@ test("comments propagate live between two clients", async ({ browser }) => {
   await pageA.getByLabel("title").fill("Live Doc");
   await pageA.getByLabel("markdown").fill("Shared content for live updates.");
   await pageA.getByRole("button", { name: "Create document" }).click();
-  await expect(pageA).toHaveURL(/\/app\/documents\//);
+  await expect(pageA).toHaveURL(/\/documents\//);
   const url = pageA.url();
 
   const ctxB = await browser.newContext();

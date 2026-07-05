@@ -7,7 +7,7 @@ async function register(page: Page, name: string): Promise<void> {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
 }
 
 test("register inputs carry validation + autocomplete attributes", async ({ page }) => {
@@ -22,14 +22,14 @@ test("register inputs carry validation + autocomplete attributes", async ({ page
 
 test("notification settings confirm a successful save", async ({ page }) => {
   await register(page, "Sage");
-  await page.goto("/app/settings/notifications");
+  await page.goto("/settings/notifications");
   await page.getByTestId("pref-comment-email").click();
   await expect(page.getByRole("status")).toContainText("Saved");
 });
 
 test("settings sub-nav marks the active tab", async ({ page }) => {
   await register(page, "Nadia");
-  await page.goto("/app/settings/notifications");
+  await page.goto("/settings/notifications");
   await expect(page.getByRole("link", { name: "Notifications" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("link", { name: "API tokens" })).not.toHaveAttribute("aria-current", "page");
 });

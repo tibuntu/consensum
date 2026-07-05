@@ -7,15 +7,15 @@ async function register(page: Page): Promise<void> {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
 }
 
 async function createDoc(page: Page, title: string, markdown: string): Promise<string> {
-  await page.goto("/app");
+  await page.goto("/");
   await page.getByLabel("title").fill(title);
   await page.getByLabel("markdown").fill(markdown);
   await page.getByRole("button", { name: "Create document" }).click();
-  await expect(page).toHaveURL(/\/app\/documents\//);
+  await expect(page).toHaveURL(/\/documents\//);
   return page.url();
 }
 
@@ -25,7 +25,7 @@ test("suggestion: propose → owner accept → new version, resolved, approval d
   const pageA = await ctxA.newPage();
   await register(pageA);
   const urlA = await createDoc(pageA, "Cloud Plan", "The cloud setup needs review.");
-  const idA = urlA.split("/app/documents/")[1];
+  const idA = urlA.split("/documents/")[1];
 
   // Reviewer B opens A's doc by URL (link-grant auto-join). Owners can't review
   // their own document (M4-P1), so B (a non-owner participant) approves it.

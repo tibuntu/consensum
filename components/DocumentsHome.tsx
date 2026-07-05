@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { getSession } from "@/lib/session";
 import { listDocuments } from "@/lib/documents";
 import NewDocumentForm from "@/components/NewDocumentForm";
 import { Card } from "@/components/ui/Card";
@@ -15,10 +13,8 @@ const STATE_LABELS: Record<string, string> = {
   CLOSED: "Closed",
 };
 
-export default async function Home() {
-  const session = await getSession();
-  if (!session) redirect("/login");
-  const documents = await listDocuments(session.user.id);
+export async function DocumentsHome({ userId }: { userId: string }) {
+  const documents = await listDocuments(userId);
 
   return (
     <div className="flex flex-col gap-8">
@@ -31,7 +27,7 @@ export default async function Home() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {documents.map((doc) => (
-              <Link key={doc.id} href={`/app/documents/${doc.id}`}>
+              <Link key={doc.id} href={`/documents/${doc.id}`}>
                 <Card className="flex h-full flex-col gap-2 p-4 transition-colors hover:bg-primary-subtle">
                   <div className="flex items-start justify-between gap-3">
                     <span className="font-medium text-foreground">{doc.title}</span>

@@ -7,15 +7,15 @@ async function register(page: Page): Promise<void> {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
 }
 
 async function createDoc(page: Page, title: string, markdown: string): Promise<string> {
-  await page.goto("/app");
+  await page.goto("/");
   await page.getByLabel("title").fill(title);
   await page.getByLabel("markdown").fill(markdown);
   await page.getByRole("button", { name: "Create document" }).click();
-  await expect(page).toHaveURL(/\/app\/documents\//);
+  await expect(page).toHaveURL(/\/documents\//);
   return page.url();
 }
 
@@ -32,7 +32,7 @@ test("versions API: participant 200, unauthenticated 401, absent doc 404", async
   const pageA = await ctxA.newPage();
   await register(pageA);
   const url = await createDoc(pageA, "Audited Plan", "The cloud setup needs review.");
-  const id = url.split("/app/documents/")[1];
+  const id = url.split("/documents/")[1];
 
   // Owner (participant) gets the version list.
   const ok = await pageA.request.get(`/api/documents/${id}/versions`);

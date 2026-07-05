@@ -7,13 +7,13 @@ async function register(page: Page): Promise<string> {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
   return email;
 }
 
 test("machine API: token → push plan → feedback", async ({ page, request }) => {
   await register(page);
-  await page.goto("/app/settings/tokens");
+  await page.goto("/settings/tokens");
   await page.getByLabel("token label").fill("ci");
   await page.getByRole("button", { name: "Create token" }).click();
   const token = await page.getByTestId("new-token").inputValue();
@@ -25,7 +25,7 @@ test("machine API: token → push plan → feedback", async ({ page, request }) 
   });
   expect(post.status()).toBe(201);
   const { id, reviewUrl } = await post.json();
-  expect(reviewUrl).toContain(`/app/documents/${id}`);
+  expect(reviewUrl).toContain(`/documents/${id}`);
 
   const fb = await request.get(`/api/plans/${id}/feedback`, { headers: { Authorization: `Bearer ${token}` } });
   expect(fb.status()).toBe(200);
@@ -43,7 +43,7 @@ test("notifications: comment notifies the plan owner", async ({ browser }) => {
   await pageA.getByLabel("title").fill("Notify Plan");
   await pageA.getByLabel("markdown").fill("Shared content needing review.");
   await pageA.getByRole("button", { name: "Create document" }).click();
-  await expect(pageA).toHaveURL(/\/app\/documents\//);
+  await expect(pageA).toHaveURL(/\/documents\//);
   const url = pageA.url();
 
   // Reviewer B comments on it.
@@ -57,7 +57,7 @@ test("notifications: comment notifies the plan owner", async ({ browser }) => {
   await expect(pageB.getByTestId("thread")).toContainText("a question from B");
 
   // A sees an inbox notification.
-  await pageA.goto("/app/inbox");
+  await pageA.goto("/inbox");
   await expect(pageA.getByTestId("notification").first()).toContainText("Notify Plan");
 
   await ctxA.close();

@@ -7,9 +7,9 @@ test("per-type notification prefs persist", async ({ page }) => {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
 
-  await page.goto("/app/settings/notifications");
+  await page.goto("/settings/notifications");
 
   const commentEmail = page.getByTestId("pref-comment-email");
   await expect(commentEmail).toBeChecked(); // default on

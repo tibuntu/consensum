@@ -7,7 +7,7 @@ async function register(page: Page, name: string): Promise<void> {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
 }
 
 async function countEventSources(context: BrowserContext): Promise<void> {
@@ -42,11 +42,11 @@ test("follower tracks the leader, detaches on manual scroll, and resumes", async
   const pageB = await ctxB.newPage();
 
   await register(pageA, "Ada");
-  await pageA.goto("/app");
+  await pageA.goto("/");
   await pageA.getByLabel("title").fill("Follow demo");
   await pageA.getByLabel("markdown").fill(TALL_MARKDOWN);
   await pageA.getByRole("button", { name: "Create document" }).click();
-  await expect(pageA).toHaveURL(/\/app\/documents\/[^/]+$/);
+  await expect(pageA).toHaveURL(/\/documents\/[^/]+$/);
   const docUrl = pageA.url();
 
   await register(pageB, "Grace");

@@ -24,7 +24,7 @@ export default function RegisterPage() {
     try {
       const { error } = await signUp.email({ email, password, name });
       if (error) { setError(error.message ?? "Sign up failed"); return; }
-      router.push("/app");
+      router.push("/");
     } finally {
       setSubmitting(false);
     }

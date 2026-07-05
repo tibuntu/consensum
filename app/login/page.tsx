@@ -23,7 +23,7 @@ function LoginForm() {
     try {
       const { error } = await signIn.email({ email, password });
       if (error) { setError(error.message ?? "Login failed"); return; }
-      router.push("/app");
+      router.push("/");
     } finally {
       setSubmitting(false);
     }
@@ -36,7 +36,7 @@ function LoginForm() {
     try {
       await signIn.oauth2({
         providerId: "oidc",
-        callbackURL: "/app",
+        callbackURL: "/",
         errorCallbackURL: "/login?error=sso",
       });
     } catch {

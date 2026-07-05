@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const headerKey = req.headers.get("idempotency-key")?.trim();
   const idempotencyKey = headerKey || (typeof body.idempotencyKey === "string" ? body.idempotencyKey.trim() : "") || undefined;
   const base = baseUrl();
-  const url = (planId: string) => `${base}/app/documents/${planId}`;
+  const url = (planId: string) => `${base}/documents/${planId}`;
 
   // Idempotent create: a repeated key returns the original plan (200), never a duplicate.
   if (idempotencyKey) {

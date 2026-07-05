@@ -7,7 +7,7 @@ async function register(page: Page, name: string) {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
 }
 
 test("approval threshold gates approval", async ({ browser }) => {
@@ -20,12 +20,12 @@ test("approval threshold gates approval", async ({ browser }) => {
   await register(reviewer, "Remy");
 
   // Owner creates a doc requiring 2 approvals.
-  await owner.goto("/app");
+  await owner.goto("/");
   await owner.getByLabel("title").fill("Consensum demo");
   await owner.getByLabel("markdown").fill("# Plan\n\nReview this.");
   await owner.getByLabel("required approvals").fill("2");
   await owner.getByRole("button", { name: "Create document" }).click();
-  await expect(owner).toHaveURL(/\/app\/documents\//);
+  await expect(owner).toHaveURL(/\/documents\//);
   const url = owner.url();
   await expect(owner.getByTestId("approval-progress")).toHaveText("0 of 2 approvals");
 

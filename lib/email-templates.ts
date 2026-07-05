@@ -25,7 +25,7 @@ function countsPhrase(events: ActivityEvent[]): string {
 }
 
 export function renderActivityEmail(input: RenderInput): { subject: string; html: string; text: string } {
-  const url = `${baseUrl().replace(/\/$/, "")}/app/documents/${input.docId}`;
+  const url = `${baseUrl().replace(/\/$/, "")}/documents/${input.docId}`;
   const counts = countsPhrase(input.events);
   const who = actorsPhrase(input.events);
   const total = input.events.length;

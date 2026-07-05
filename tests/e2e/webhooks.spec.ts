@@ -9,7 +9,7 @@ async function register(page: Page): Promise<void> {
   await page.getByLabel("email").fill(email);
   await page.getByLabel("password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/$/);
 }
 
 interface Received { headers: Record<string, string | string[] | undefined>; body: string; }
@@ -39,7 +39,7 @@ test("signed webhook delivery on approval", async ({ browser }) => {
     await register(page);
 
     // Register the webhook via the settings UI.
-    await page.goto("/app/settings/webhooks");
+    await page.goto("/settings/webhooks");
     await page.getByLabel("webhook url").fill(`http://127.0.0.1:${port}/sink`);
     await page.getByLabel("decision.changed").check();
     await page.getByRole("button", { name: "Create webhook" }).click();
@@ -47,11 +47,11 @@ test("signed webhook delivery on approval", async ({ browser }) => {
     expect(secret.startsWith("whsec_")).toBe(true);
 
     // Create a plan → reviewer B approves it → triggers decision.changed.
-    await page.goto("/app");
+    await page.goto("/");
     await page.getByLabel("title").fill("Webhook Plan");
     await page.getByLabel("markdown").fill("Content to approve.");
     await page.getByRole("button", { name: "Create document" }).click();
-    await expect(page).toHaveURL(/\/app\/documents\//);
+    await expect(page).toHaveURL(/\/documents\//);
     const url = page.url();
 
     // Reviewer B joins via link-grant and approves.

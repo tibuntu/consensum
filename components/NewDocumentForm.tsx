@@ -29,7 +29,7 @@ export default function NewDocumentForm() {
         return;
       }
       const { id } = await res.json();
-      router.push(`/app/documents/${id}`);
+      router.push(`/documents/${id}`);
     } finally {
       setSubmitting(false);
     }
