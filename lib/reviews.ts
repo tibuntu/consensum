@@ -5,23 +5,35 @@ import { publish } from "@/lib/events";
 import { notifyParticipants } from "@/lib/notifications";
 import { dispatch } from "@/lib/webhooks";
 
+/** Open must-resolve blockers: BLOCKER-severity threads still OPEN, any anchor
+ *  state — the exact definition of the feedback payload's rollup.mustResolve. */
+async function countOpenBlockers(documentId: string): Promise<number> {
+  return prisma.annotation.count({ where: { documentId, severity: "BLOCKER", threadStatus: "OPEN" } });
+}
+
 /**
- * Recompute the document's state from its current reviews + requiredApprovals,
- * persist it, and publish the SSE state change. Returns prev + new state so the
- * caller can decide whether to dispatch decision.changed. Shared by submitReview
- * and setRequiredApprovals.
+ * Recompute the document's state from its current reviews + requiredApprovals
+ * (and, when the document opted in, the blocker gate), persist it, and publish
+ * the SSE state change. Returns prev + new state so the caller can decide
+ * whether to dispatch decision.changed. Shared by submitReview,
+ * setRequiredApprovals, recomputeStateForBlockerGate, and
+ * setRequireBlockerResolution.
  */
 async function recomputeState(documentId: string): Promise<{ state: string; prevState: string }> {
   const doc = await prisma.document.findUnique({
     where: { id: documentId },
-    select: { requiredApprovals: true, state: true },
+    select: { requiredApprovals: true, requireBlockerResolution: true, state: true },
   });
   if (!doc) throw new Error("document not found");
   const prevState = doc.state;
   const reviews = await prisma.review.findMany({ where: { documentId } });
+  const gate = doc.requireBlockerResolution
+    ? { requireBlockerResolution: true, openBlockers: await countOpenBlockers(documentId) }
+    : undefined;
   const state = computeDocumentState(
     reviews.map((r) => ({ verdict: r.verdict as ReviewVerdict, dismissed: r.dismissed })),
     doc.requiredApprovals,
+    gate,
   );
   await prisma.document.update({ where: { id: documentId }, data: { state } });
   publish(documentId, { type: "review.updated", state });
@@ -52,6 +64,32 @@ export async function submitReview(userId: string, documentId: string, verdict: 
  */
 export async function setRequiredApprovals(userId: string, documentId: string, n: number): Promise<string> {
   await prisma.document.update({ where: { id: documentId }, data: { requiredApprovals: n } });
+  const { state, prevState } = await recomputeState(documentId);
+  if (state !== prevState) {
+    await dispatch(documentId, "decision.changed", { decision: state.toLowerCase() }, userId).catch(() => {});
+  }
+  return state;
+}
+
+/**
+ * Blocker-gate recompute for annotation-side mutations (thread resolve/reopen,
+ * BLOCKER created, suggestion applied). No-op unless the document opted into
+ * requireBlockerResolution — without the gate, annotations can't change state.
+ * Mirrors submitReview's decision.changed dispatch on a flip.
+ */
+export async function recomputeStateForBlockerGate(userId: string, documentId: string): Promise<void> {
+  const doc = await prisma.document.findUnique({ where: { id: documentId }, select: { requireBlockerResolution: true } });
+  if (!doc?.requireBlockerResolution) return;
+  const { state, prevState } = await recomputeState(documentId);
+  if (state !== prevState) {
+    await dispatch(documentId, "decision.changed", { decision: state.toLowerCase() }, userId).catch(() => {});
+  }
+}
+
+/** Owner toggles the blocker gate. Caller MUST have authorized owner. Recomputes
+ *  state (toggling can immediately flip APPROVED ↔ CHANGES_REQUESTED). */
+export async function setRequireBlockerResolution(userId: string, documentId: string, enabled: boolean): Promise<string> {
+  await prisma.document.update({ where: { id: documentId }, data: { requireBlockerResolution: enabled } });
   const { state, prevState } = await recomputeState(documentId);
   if (state !== prevState) {
     await dispatch(documentId, "decision.changed", { decision: state.toLowerCase() }, userId).catch(() => {});

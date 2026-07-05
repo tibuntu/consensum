@@ -86,11 +86,17 @@ export async function createVersion(userId: string, documentId: string, baseVers
     // Any content change dismisses all active approvals.
     await tx.review.updateMany({ where: { documentId, verdict: "APPROVE", dismissed: false }, data: { dismissed: true } });
 
-    // Recompute state.
+    // Recompute state (with gate inputs when the document opted in — content
+    // changes can orphan or otherwise leave blockers OPEN; the count is
+    // anchor-state-independent so pre/post re-anchor ordering doesn't matter).
     const reviews = await tx.review.findMany({ where: { documentId } });
+    const openBlockers = doc.requireBlockerResolution
+      ? await tx.annotation.count({ where: { documentId, severity: "BLOCKER", threadStatus: "OPEN" } })
+      : 0;
     const state = computeDocumentState(
       reviews.map((r) => ({ verdict: r.verdict as ReviewVerdict, dismissed: r.dismissed })),
-      doc.requiredApprovals
+      doc.requiredApprovals,
+      doc.requireBlockerResolution ? { requireBlockerResolution: true, openBlockers } : undefined,
     );
     await tx.document.update({ where: { id: documentId }, data: { state } });
     return { version, state };

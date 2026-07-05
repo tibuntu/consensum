@@ -6,6 +6,7 @@ import type { AnnotationKind, AnnotationScope, Severity, ThreadStatus, Resolutio
 import { publish } from "@/lib/events";
 import { notifyParticipants } from "@/lib/notifications";
 import { dispatch } from "@/lib/webhooks";
+import { recomputeStateForBlockerGate } from "@/lib/reviews";
 
 export interface CreateAnnotationInput {
   quote?: Quote;
@@ -52,6 +53,7 @@ export async function createAnnotation(userId: string, documentId: string, input
   publish(documentId, { type: "annotation.created", annotation });
   await notifyParticipants(documentId, userId, "comment").catch(() => {});
   await dispatch(documentId, "comment.created", { annotationId: annotation.id }, userId).catch(() => {});
+  if (input.severity === "BLOCKER") await recomputeStateForBlockerGate(userId, documentId).catch(() => {});
   return annotation;
 }
 
@@ -75,6 +77,7 @@ export async function setThreadStatus(userId: string, annotationId: string, stat
   });
   publish(annotation.documentId, { type: "annotation.updated", annotationId, threadStatus: status });
   await notifyParticipants(annotation.documentId, userId, "resolve").catch(() => {});
+  if (annotation.severity === "BLOCKER") await recomputeStateForBlockerGate(userId, annotation.documentId).catch(() => {});
   return annotation;
 }
 
@@ -130,6 +133,7 @@ export async function applySuggestion(userId: string, annotationId: string, base
     data: { appliedInVersionId: appliedVersionId, threadStatus: "RESOLVED", resolution: "FIXED" },
   });
   publish(annotation.documentId, { type: "annotation.updated", annotationId, threadStatus: "RESOLVED" });
+  if (annotation.severity === "BLOCKER") await recomputeStateForBlockerGate(userId, annotation.documentId).catch(() => {});
 
   return { version: { id: appliedVersionId, versionNumber: appliedVersionNumber }, annotation: updated };
 }
