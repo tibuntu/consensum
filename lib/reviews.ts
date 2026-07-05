@@ -26,13 +26,19 @@ async function recomputeState(documentId: string): Promise<{ state: string; prev
   if (!doc) throw new Error("document not found");
   const prevState = doc.state;
   const reviews = await prisma.review.findMany({ where: { documentId } });
+  const requiredParts = await prisma.documentParticipant.findMany({
+    where: { documentId, required: true },
+    select: { userId: true },
+  });
+  const requiredReviewerIds = requiredParts.map((p) => p.userId);
   const gate = doc.requireBlockerResolution
     ? { requireBlockerResolution: true, openBlockers: await countOpenBlockers(documentId) }
     : undefined;
   const state = computeDocumentState(
-    reviews.map((r) => ({ verdict: r.verdict as ReviewVerdict, dismissed: r.dismissed })),
+    reviews.map((r) => ({ verdict: r.verdict as ReviewVerdict, dismissed: r.dismissed, reviewerId: r.reviewerId })),
     doc.requiredApprovals,
     gate,
+    requiredReviewerIds,
   );
   await prisma.document.update({ where: { id: documentId }, data: { state } });
   publish(documentId, { type: "review.updated", state });
