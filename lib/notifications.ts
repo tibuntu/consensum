@@ -4,7 +4,7 @@ import { publish, type ClientNotification } from "@/lib/events";
 import { parsePrefs, isEnabled } from "@/lib/notification-prefs";
 import type { NotificationType } from "@/lib/enums";
 
-const EMAILABLE = new Set(["comment", "review", "version"]);
+const EMAILABLE = new Set(["comment", "review", "version", "review_requested"]);
 
 export async function notifyParticipants(documentId: string, actorId: string, type: string) {
   const participants = await prisma.documentParticipant.findMany({
@@ -75,6 +75,41 @@ export async function notifyShared(documentId: string, recipientId: string, acto
     createdAt: row.createdAt.toISOString(),
   };
   publish(`user-${recipientId}`, { type: "notification.created", notification: payload });
+}
+
+/** Notify a single participant they've been made a required reviewer. In-app +
+ *  desktop + email (respects the recipient's prefs). Fired on a false→true
+ *  required transition, and in place of `shared` when a new participant is
+ *  created already-required. */
+export async function notifyReviewRequested(documentId: string, recipientId: string, actorId: string) {
+  const [doc, actor, recipient] = await Promise.all([
+    prisma.document.findUnique({ where: { id: documentId }, select: { title: true } }),
+    prisma.user.findUnique({ where: { id: actorId }, select: { name: true, email: true } }),
+    prisma.user.findUnique({ where: { id: recipientId }, select: { notificationPrefs: true } }),
+  ]);
+  const prefs = parsePrefs(recipient?.notificationPrefs);
+  const actorName = actor?.name?.trim() || actor?.email || "Someone";
+
+  if (isEnabled(prefs, "review_requested" as NotificationType, "inApp")) {
+    const row = await prisma.notification.create({
+      data: { userId: recipientId, documentId, actorId, type: "review_requested" },
+    });
+    const payload: ClientNotification = {
+      id: row.id,
+      type: row.type,
+      documentId,
+      documentTitle: doc?.title ?? "",
+      actorId: row.actorId,
+      actorName,
+      read: row.read,
+      createdAt: row.createdAt.toISOString(),
+    };
+    publish(`user-${recipientId}`, { type: "notification.created", notification: payload });
+  }
+
+  if (isEnabled(prefs, "review_requested" as NotificationType, "email")) {
+    enqueueEmailEvent(recipientId, documentId, "review_requested" as "comment" | "review" | "version", actorName);
+  }
 }
 
 export async function listNotifications(userId: string) {

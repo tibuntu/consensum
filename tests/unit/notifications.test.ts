@@ -4,7 +4,7 @@ import { createDocument } from "@/lib/documents";
 import { createAnnotation } from "@/lib/annotations";
 import { submitReview } from "@/lib/reviews";
 import { buildQuote } from "@/lib/anchoring";
-import { notifyParticipants, listNotifications, unreadCount, markAllRead } from "@/lib/notifications";
+import { notifyParticipants, notifyReviewRequested, listNotifications, unreadCount, markAllRead } from "@/lib/notifications";
 
 vi.mock("@/lib/email-digest", () => ({ enqueueEmailEvent: vi.fn() }));
 
@@ -91,6 +91,20 @@ describe("notifications", () => {
 
     await notifyParticipants(docId, actor.id, "resolve");
     expect(enqueueEmailEvent).not.toHaveBeenCalled();
+
+    await prisma.document.delete({ where: { id: docId } });
+  });
+
+  it("notifyReviewRequested creates a review_requested notification for the recipient", async () => {
+    const owner = await makeUser();
+    const target = await makeUser();
+    const docId = await createDocument(owner.id, "Plan", "body");
+    await prisma.documentParticipant.create({ data: { documentId: docId, userId: target.id, role: "REVIEWER" } });
+
+    await notifyReviewRequested(docId, target.id, owner.id);
+
+    const rows = await prisma.notification.findMany({ where: { userId: target.id, documentId: docId, type: "review_requested" } });
+    expect(rows).toHaveLength(1);
 
     await prisma.document.delete({ where: { id: docId } });
   });

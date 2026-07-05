@@ -1,12 +1,13 @@
 import { baseUrl } from "@/lib/config";
 
-export interface ActivityEvent { type: "comment" | "review" | "version"; actorName: string; }
+export interface ActivityEvent { type: "comment" | "review" | "version" | "review_requested"; actorName: string; }
 export interface RenderInput { recipientName: string; docTitle: string; docId: string; events: ActivityEvent[]; }
 
 const NOUN: Record<ActivityEvent["type"], [string, string]> = {
   comment: ["comment", "comments"],
   review: ["decision", "decisions"],
   version: ["new version", "new versions"],
+  review_requested: ["review request", "review requests"],
 };
 
 function actorsPhrase(events: ActivityEvent[]): string {
