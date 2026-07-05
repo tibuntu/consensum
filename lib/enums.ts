@@ -24,6 +24,12 @@ export type Resolution = (typeof RESOLUTIONS)[number];
 export const REVIEW_VERDICTS = ["APPROVE", "REQUEST_CHANGES", "COMMENT"] as const;
 export type ReviewVerdict = (typeof REVIEW_VERDICTS)[number];
 
+export const VISIBILITIES = ["PRIVATE", "LINK"] as const;
+export type Visibility = (typeof VISIBILITIES)[number];
+
+export const DOCUMENT_ROLES = ["VIEWER", "REVIEWER"] as const;
+export type DocumentRole = (typeof DOCUMENT_ROLES)[number];
+
 export const SEVERITIES = ["BLOCKER", "MAJOR", "MINOR", "NIT"] as const;
 export type Severity = (typeof SEVERITIES)[number];
 

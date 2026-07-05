@@ -97,6 +97,7 @@ model Document {
   state             String           @default("DRAFT")
   requiredApprovals Int              @default(1)
   requireBlockerResolution Boolean @default(false)  // opt-in: no APPROVED while a BLOCKER thread is OPEN
+  visibility        String           @default("PRIVATE")  // PRIVATE | LINK (see lib/enums.ts VISIBILITIES)
   source            String           @default("WEB")
   agentContext      String?
   idempotencyKey    String?                            // client-supplied key for idempotent create
@@ -218,6 +219,7 @@ model DocumentParticipant {
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       String   @default("REVIEWER")  // VIEWER | REVIEWER (see lib/enums.ts DOCUMENT_ROLES)
   createdAt  DateTime @default(now())
 
   @@unique([documentId, userId])
