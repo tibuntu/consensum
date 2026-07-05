@@ -16,8 +16,7 @@ async function countOpenBlockers(documentId: string): Promise<number> {
  * (and, when the document opted in, the blocker gate), persist it, and publish
  * the SSE state change. Returns prev + new state so the caller can decide
  * whether to dispatch decision.changed. Shared by submitReview,
- * setRequiredApprovals, recomputeStateForBlockerGate, and
- * setRequireBlockerResolution.
+ * updateReviewSettings, and recomputeStateForBlockerGate.
  */
 async function recomputeState(documentId: string): Promise<{ state: string; prevState: string }> {
   const doc = await prisma.document.findUnique({
@@ -58,17 +57,34 @@ export async function submitReview(userId: string, documentId: string, verdict: 
 }
 
 /**
- * Owner sets the approval threshold. Caller MUST have authorized owner + validated n (1–10).
- * Updates requiredApprovals, recomputes state, publishes review.updated, and dispatches
- * decision.changed on a flip. Does NOT notify participants (no new review occurred).
+ * Owner updates review settings in one shot. Single document.update with the
+ * merged fields, single recompute, single decision.changed dispatch on a flip —
+ * a combined PATCH must not emit intermediate states to SSE/webhook consumers.
+ * Caller MUST have authorized owner + validated fields.
  */
-export async function setRequiredApprovals(userId: string, documentId: string, n: number): Promise<string> {
-  await prisma.document.update({ where: { id: documentId }, data: { requiredApprovals: n } });
+export async function updateReviewSettings(
+  userId: string,
+  documentId: string,
+  patch: { requiredApprovals?: number; requireBlockerResolution?: boolean },
+): Promise<string> {
+  const data: { requiredApprovals?: number; requireBlockerResolution?: boolean } = {};
+  if (patch.requiredApprovals !== undefined) data.requiredApprovals = patch.requiredApprovals;
+  if (patch.requireBlockerResolution !== undefined) data.requireBlockerResolution = patch.requireBlockerResolution;
+  await prisma.document.update({ where: { id: documentId }, data });
   const { state, prevState } = await recomputeState(documentId);
   if (state !== prevState) {
     await dispatch(documentId, "decision.changed", { decision: state.toLowerCase() }, userId).catch(() => {});
   }
   return state;
+}
+
+/**
+ * Owner sets the approval threshold. Caller MUST have authorized owner + validated n (1–10).
+ * Recomputes state, publishes review.updated, dispatches decision.changed on a flip.
+ * Does NOT notify participants (no new review occurred).
+ */
+export async function setRequiredApprovals(userId: string, documentId: string, n: number): Promise<string> {
+  return updateReviewSettings(userId, documentId, { requiredApprovals: n });
 }
 
 /**
@@ -89,10 +105,5 @@ export async function recomputeStateForBlockerGate(userId: string, documentId: s
 /** Owner toggles the blocker gate. Caller MUST have authorized owner. Recomputes
  *  state (toggling can immediately flip APPROVED ↔ CHANGES_REQUESTED). */
 export async function setRequireBlockerResolution(userId: string, documentId: string, enabled: boolean): Promise<string> {
-  await prisma.document.update({ where: { id: documentId }, data: { requireBlockerResolution: enabled } });
-  const { state, prevState } = await recomputeState(documentId);
-  if (state !== prevState) {
-    await dispatch(documentId, "decision.changed", { decision: state.toLowerCase() }, userId).catch(() => {});
-  }
-  return state;
+  return updateReviewSettings(userId, documentId, { requireBlockerResolution: enabled });
 }

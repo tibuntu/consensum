@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/api";
 import { isOwner } from "@/lib/authz";
 import { parseRequiredApprovals } from "@/lib/approvals";
-import { setRequiredApprovals, setRequireBlockerResolution } from "@/lib/reviews";
+import { updateReviewSettings } from "@/lib/reviews";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const authd = await requireApiUser(req);
@@ -24,12 +24,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (hasGate && typeof body.requireBlockerResolution !== "boolean") {
     return NextResponse.json({ error: "requireBlockerResolution must be a boolean" }, { status: 400 });
   }
-  let state = "";
-  if (n !== null) state = await setRequiredApprovals(authd.user.id, id, n);
-  if (hasGate) state = await setRequireBlockerResolution(authd.user.id, id, body.requireBlockerResolution);
+  const gate = hasGate ? (body.requireBlockerResolution as boolean) : undefined;
+  const state = await updateReviewSettings(authd.user.id, id, {
+    ...(n !== null ? { requiredApprovals: n } : {}),
+    ...(gate !== undefined ? { requireBlockerResolution: gate } : {}),
+  });
   return NextResponse.json({
     ...(n !== null ? { requiredApprovals: n } : {}),
-    ...(hasGate ? { requireBlockerResolution: body.requireBlockerResolution as boolean } : {}),
+    ...(gate !== undefined ? { requireBlockerResolution: gate } : {}),
     state,
   });
 }
