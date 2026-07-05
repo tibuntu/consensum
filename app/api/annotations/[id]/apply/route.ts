@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api";
-import { isParticipant, isOwner, documentIdForAnnotation } from "@/lib/authz";
+import { resolveAccess, documentIdForAnnotation } from "@/lib/authz";
 import { applySuggestion, OrphanedAnchorError } from "@/lib/annotations";
 import { ConcurrencyError } from "@/lib/versions";
 
@@ -11,8 +11,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const documentId = await documentIdForAnnotation(id);
   if (!documentId) return NextResponse.json({ error: "not found" }, { status: 404 });
-  if (!(await isParticipant(user.id, documentId))) return NextResponse.json({ error: "not found" }, { status: 404 });
-  if (!(await isOwner(user.id, documentId))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const access = await resolveAccess(user.id, documentId);
+  if (!access) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!access.canManage) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const body = await req.json().catch(() => null);
   if (!body || typeof body.baseVersionNumber !== "number") {

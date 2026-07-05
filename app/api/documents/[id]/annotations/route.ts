@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api";
 import { createAnnotation } from "@/lib/annotations";
 import { ANNOTATION_KINDS, type AnnotationKind, type AnnotationScope, SEVERITIES, type Severity } from "@/lib/enums";
-import { isParticipant } from "@/lib/authz";
+import { resolveAccess } from "@/lib/authz";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { id } = await params;
-  if (!(await isParticipant(user.id, id))) return NextResponse.json({ error: "not found" }, { status: 404 });
+  const access = await resolveAccess(user.id, id);
+  if (!access) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!access.canReview) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => null);
   if (!body || typeof body.body !== "string") {
     return NextResponse.json({ error: "body required" }, { status: 400 });

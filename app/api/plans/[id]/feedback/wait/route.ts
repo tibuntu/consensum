@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/api";
-import { isOwner } from "@/lib/authz";
+import { resolveAccess } from "@/lib/authz";
 import { clampTimeout, waitForFeedbackChange } from "@/lib/feedback-wait";
 
 const DEFAULT_TIMEOUT_MS = 30000;
@@ -10,7 +10,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const authd = await requireApiUser(req);
   if (!authd.ok) return authd.response;
   const { id } = await params;
-  if (!(await isOwner(authd.user.id, id))) return NextResponse.json({ error: "not found" }, { status: 404, headers: authd.headers });
+  const access = await resolveAccess(authd.user.id, id);
+  if (!access?.canManage) return NextResponse.json({ error: "not found" }, { status: 404, headers: authd.headers });
   if (!authd.scopes.includes("feedback:read")) return NextResponse.json({ error: "insufficient scope" }, { status: 403, headers: authd.headers });
 
   const envMax = Number(process.env.FEEDBACK_WAIT_MAX_MS);

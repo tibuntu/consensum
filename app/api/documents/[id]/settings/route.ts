@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api";
-import { isParticipant, isOwner } from "@/lib/authz";
+import { resolveAccess } from "@/lib/authz";
 import { parseRequiredApprovals } from "@/lib/approvals";
 import { updateReviewSettings } from "@/lib/reviews";
 
@@ -8,8 +8,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { id } = await params;
-  if (!(await isParticipant(user.id, id))) return NextResponse.json({ error: "not found" }, { status: 404 });
-  if (!(await isOwner(user.id, id))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const access = await resolveAccess(user.id, id);
+  if (!access) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!access.canManage) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => null);
   const hasApprovals = body?.requiredApprovals !== undefined;
   const hasGate = body?.requireBlockerResolution !== undefined;

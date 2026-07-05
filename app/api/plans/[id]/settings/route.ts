@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/api";
-import { isOwner } from "@/lib/authz";
+import { resolveAccess } from "@/lib/authz";
 import { parseRequiredApprovals } from "@/lib/approvals";
 import { updateReviewSettings } from "@/lib/reviews";
 
@@ -8,7 +8,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const authd = await requireApiUser(req);
   if (!authd.ok) return authd.response;
   const { id } = await params;
-  if (!(await isOwner(authd.user.id, id))) return NextResponse.json({ error: "not found" }, { status: 404, headers: authd.headers });
+  const access = await resolveAccess(authd.user.id, id);
+  if (!access?.canManage) return NextResponse.json({ error: "not found" }, { status: 404, headers: authd.headers });
   if (!authd.scopes.includes("plans:write")) return NextResponse.json({ error: "insufficient scope" }, { status: 403, headers: authd.headers });
   const body = await req.json().catch(() => null);
   const hasApprovals = body?.requiredApprovals !== undefined;

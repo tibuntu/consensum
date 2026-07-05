@@ -2,16 +2,17 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api";
 import { setThreadStatus } from "@/lib/annotations";
 import { THREAD_STATUSES, type ThreadStatus, RESOLUTIONS, type Resolution } from "@/lib/enums";
-import { documentIdForAnnotation, isParticipant } from "@/lib/authz";
+import { documentIdForAnnotation, resolveAccess } from "@/lib/authz";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { id } = await params;
   const documentId = await documentIdForAnnotation(id);
-  if (!documentId || !(await isParticipant(user.id, documentId))) {
-    return NextResponse.json({ error: "not found" }, { status: 404 });
-  }
+  if (!documentId) return NextResponse.json({ error: "not found" }, { status: 404 });
+  const access = await resolveAccess(user.id, documentId);
+  if (!access) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!access.canReview) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const body = await req.json().catch(() => null);
   if (!body || !THREAD_STATUSES.includes(body.threadStatus as ThreadStatus)) {
     return NextResponse.json({ error: "valid threadStatus required" }, { status: 400 });

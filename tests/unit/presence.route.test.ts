@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/api", () => ({ requireUser: vi.fn() }));
-vi.mock("@/lib/authz", () => ({ isParticipant: vi.fn() }));
+vi.mock("@/lib/authz", () => ({ resolveAccess: vi.fn() }));
 vi.mock("@/lib/presence", () => ({ heartbeat: vi.fn(), leave: vi.fn() }));
 
 import { POST } from "@/app/api/documents/[id]/presence/route";
@@ -29,14 +29,14 @@ describe("POST /api/documents/[id]/presence", () => {
 
   it("404 when not a participant", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(false);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce(null);
     const res = await POST(req(), ctx);
     expect(res.status).toBe(404);
   });
 
   it("heartbeats and returns 204 for a participant", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
     const res = await POST(req(), ctx);
     expect(res.status).toBe(204);
     expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "Ada" }, null, null, null);
@@ -45,7 +45,7 @@ describe("POST /api/documents/[id]/presence", () => {
 
   it("leaves when body says leaving:true", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
     const res = await POST(req({ leaving: true }), ctx);
     expect(res.status).toBe(204);
     expect(presence.leave).toHaveBeenCalledWith("doc1", "u1");
@@ -54,14 +54,14 @@ describe("POST /api/documents/[id]/presence", () => {
 
   it("falls back to email then 'Someone' for a blank name", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "", email: "a@b.co" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
     await POST(req(), ctx);
     expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "a@b.co" }, null, null, null);
   });
 
   it("passes a valid selection through to heartbeat", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
     const res = await POST(req({ selection: { start: 2, end: 7, versionNumber: 3 } }), ctx);
     expect(res.status).toBe(204);
     expect(presence.heartbeat).toHaveBeenCalledWith(
@@ -75,7 +75,7 @@ describe("POST /api/documents/[id]/presence", () => {
 
   it("treats selection:null as clearing", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
     const res = await POST(req({ selection: null }), ctx);
     expect(res.status).toBe(204);
     expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "Ada" }, null, null, null);
@@ -90,7 +90,7 @@ describe("POST /api/documents/[id]/presence", () => {
     "nonsense", // wrong type
   ])("rejects malformed selection %j with 400", async (selection) => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
     const res = await POST(req({ selection }), ctx);
     expect(res.status).toBe(400);
     expect(presence.heartbeat).not.toHaveBeenCalled();
@@ -98,7 +98,7 @@ describe("POST /api/documents/[id]/presence", () => {
 
   it("returns 204 and heartbeats with null when the body is not parseable JSON", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
     const res = await POST(
       new Request("http://test/api/documents/doc1/presence", {
         method: "POST",
@@ -113,7 +113,7 @@ describe("POST /api/documents/[id]/presence", () => {
 
   it("rejects selections beyond the sanity cap with 400", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
     const res = await POST(req({ selection: { start: 0, end: 10_000_001, versionNumber: 1 } }), ctx);
     expect(res.status).toBe(400);
     expect(presence.heartbeat).not.toHaveBeenCalled();
@@ -121,7 +121,7 @@ describe("POST /api/documents/[id]/presence", () => {
 
   it("passes a valid cursor through to heartbeat", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
     const res = await POST(req({ cursor: { x: 0.25, y: 0.75 } }), ctx);
     expect(res.status).toBe(204);
     expect(presence.heartbeat).toHaveBeenCalledWith(
@@ -135,7 +135,7 @@ describe("POST /api/documents/[id]/presence", () => {
 
   it("passes selection and cursor together", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
     const res = await POST(
       req({ selection: { start: 2, end: 7, versionNumber: 3 }, cursor: { x: 0, y: 1 } }),
       ctx,
@@ -152,7 +152,7 @@ describe("POST /api/documents/[id]/presence", () => {
 
   it("treats cursor:null as clearing", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
     const res = await POST(req({ cursor: null }), ctx);
     expect(res.status).toBe(204);
     expect(presence.heartbeat).toHaveBeenCalledWith("doc1", { userId: "u1", name: "Ada" }, null, null, null);
@@ -170,7 +170,7 @@ describe("POST /api/documents/[id]/presence", () => {
     "nonsense",
   ])("rejects malformed cursor %j with 400", async (cursor) => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "Ada" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
     const res = await POST(req({ cursor }), ctx);
     expect(res.status).toBe(400);
     expect(presence.heartbeat).not.toHaveBeenCalled();
@@ -181,7 +181,7 @@ describe("scroll validation (P5)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(api.requireUser).mockResolvedValue({ id: "u1", name: "Ada" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValue(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValue({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
   });
 
   it("forwards a valid scroll as the 5th heartbeat arg", async () => {

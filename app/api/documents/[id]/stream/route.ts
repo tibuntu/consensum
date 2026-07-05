@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/api";
 import { subscribe, type DocEvent } from "@/lib/events";
-import { isParticipant } from "@/lib/authz";
+import { resolveAccess } from "@/lib/authz";
 import { roster } from "@/lib/presence";
 import { getSession } from "@/lib/review-session";
 
@@ -8,7 +8,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const user = await requireUser();
   if (!user) return new Response("unauthorized", { status: 401 });
   const { id } = await params;
-  if (!(await isParticipant(user.id, id))) return new Response("not found", { status: 404 });
+  const access = await resolveAccess(user.id, id);
+  if (!access) return new Response("not found", { status: 404 });
 
   const encoder = new TextEncoder();
   let unsubscribe: () => void = () => {};

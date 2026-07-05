@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/api", () => ({ requireUser: vi.fn() }));
-vi.mock("@/lib/authz", () => ({ isParticipant: vi.fn() }));
+vi.mock("@/lib/authz", () => ({ resolveAccess: vi.fn() }));
 vi.mock("@/lib/review-session", () => ({
   startSession: vi.fn(), joinSession: vi.fn(), leaveSession: vi.fn(), endSession: vi.fn(),
 }));
@@ -24,7 +24,7 @@ const fakeSession = { sessionId: "s1", documentId: "doc1", leaderId: "u1", leade
 
 function auth(ok = true) {
   vi.mocked(api.requireUser).mockResolvedValueOnce(user as never);
-  vi.mocked(authz.isParticipant).mockResolvedValueOnce(ok);
+  vi.mocked(authz.resolveAccess).mockResolvedValueOnce(ok ? { role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" } : null);
 }
 
 describe("POST /api/documents/[id]/session", () => {
@@ -93,7 +93,7 @@ describe("POST /api/documents/[id]/session", () => {
 
   it("falls back to email for a blank name", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "", email: "a@b.co" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
     vi.mocked(session.startSession).mockReturnValueOnce(fakeSession as never);
     await POST(req({ action: "start" }), ctx);
     expect(session.startSession).toHaveBeenCalledWith("doc1", { userId: "u1", name: "a@b.co" });

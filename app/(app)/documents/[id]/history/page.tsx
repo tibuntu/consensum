@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { ensureParticipant } from "@/lib/authz";
+import { resolveAccess } from "@/lib/authz";
 import { listVersions, getVersionMarkdown } from "@/lib/versions";
 import { diffMarkdown } from "@/lib/diff";
 import { VersionHistory } from "@/components/VersionHistory";
@@ -11,7 +11,8 @@ export default async function HistoryPage({
   const session = await getSession();
   if (!session) redirect("/login");
   const { id } = await params;
-  if (!(await ensureParticipant(session.user.id, id))) notFound();
+  const access = await resolveAccess(session.user.id, id);
+  if (!access) notFound();
 
   const versions = await listVersions(id); // newest-first
   if (versions.length === 0) notFound();

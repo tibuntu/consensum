@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api";
 import { getDocumentDetail, deleteDocument } from "@/lib/documents";
 import { createVersion, ConcurrencyError } from "@/lib/versions";
-import { ensureParticipant, isParticipant, isOwner } from "@/lib/authz";
+import { resolveAccess } from "@/lib/authz";
 import { isEditUiEnabled } from "@/lib/config";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { id } = await params;
-  if (!(await ensureParticipant(user.id, id))) return NextResponse.json({ error: "not found" }, { status: 404 });
+  const access = await resolveAccess(user.id, id);
+  if (!access) return NextResponse.json({ error: "not found" }, { status: 404 });
   const doc = await getDocumentDetail(id);
   if (!doc) return NextResponse.json({ error: "not found" }, { status: 404 });
   return NextResponse.json({ document: doc });
@@ -21,8 +22,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   // Non-participants must not learn the doc exists (404); a participant who is
   // not the owner may read but not edit (403). Mirrors design decision D4.
-  if (!(await isParticipant(user.id, id))) return NextResponse.json({ error: "not found" }, { status: 404 });
-  if (!(await isOwner(user.id, id))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const access = await resolveAccess(user.id, id);
+  if (!access) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!access.canManage) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!isEditUiEnabled()) {
     return NextResponse.json({ error: "editing is disabled on this instance (EDIT_UI_ENABLED=false)" }, { status: 403 });
   }
@@ -45,8 +47,9 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   // Same ladder as PATCH: non-participants get 404 (no existence leak), a
   // participant who is not the owner may read but not delete (403).
-  if (!(await isParticipant(user.id, id))) return NextResponse.json({ error: "not found" }, { status: 404 });
-  if (!(await isOwner(user.id, id))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const access = await resolveAccess(user.id, id);
+  if (!access) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!access.canManage) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   await deleteDocument(id);
   return NextResponse.json({ ok: true });
 }

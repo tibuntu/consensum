@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api";
-import { isParticipant } from "@/lib/authz";
+import { resolveAccess } from "@/lib/authz";
 import { heartbeat, leave, type PresenceSelection, type PresenceCursor, type PresenceScroll } from "@/lib/presence";
 
 // Far beyond any realistic document length / version count, but keeps absurd
@@ -43,7 +43,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { id } = await params;
-  if (!(await isParticipant(user.id, id))) return NextResponse.json({ error: "not found" }, { status: 404 });
+  const access = await resolveAccess(user.id, id);
+  if (!access) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const body = await req.json().catch(() => null);
   if (body?.leaving === true) {

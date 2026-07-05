@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/api";
 import { getPlanFeedback } from "@/lib/feedback";
-import { isOwner } from "@/lib/authz";
+import { resolveAccess } from "@/lib/authz";
 
 function csv(v: string | null): string[] | undefined {
   if (!v) return undefined;
@@ -13,7 +13,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const authd = await requireApiUser(req);
   if (!authd.ok) return authd.response;
   const { id } = await params;
-  if (!(await isOwner(authd.user.id, id))) return NextResponse.json({ error: "not found" }, { status: 404, headers: authd.headers });
+  const access = await resolveAccess(authd.user.id, id);
+  if (!access?.canManage) return NextResponse.json({ error: "not found" }, { status: 404, headers: authd.headers });
   if (!authd.scopes.includes("feedback:read")) return NextResponse.json({ error: "insufficient scope" }, { status: 403, headers: authd.headers });
   const url = new URL(req.url);
   const include = csv(url.searchParams.get("include"));

@@ -6,7 +6,7 @@ vi.mock("@/lib/api", () => ({ requireUser: vi.fn() }));
 import { prisma } from "@/lib/db";
 import * as api from "@/lib/api";
 import { createDocument } from "@/lib/documents";
-import { isOwner, isParticipant } from "@/lib/authz";
+import { resolveAccess } from "@/lib/authz";
 
 let userSeq = 0;
 async function makeUser(email: string) {
@@ -35,11 +35,12 @@ describe("owner verdict block", () => {
     await prisma.user.deleteMany();
   });
 
-  it("owner is a participant of their own document", async () => {
+  it("owner has full access to their own document", async () => {
     const owner = await makeUser("owner@example.com");
     const id = await createDocument(owner.id, "Plan", "# hi");
-    expect(await isParticipant(owner.id, id)).toBe(true);
-    expect(await isOwner(owner.id, id)).toBe(true);
+    const access = await resolveAccess(owner.id, id);
+    expect(access?.role).toBe("OWNER");
+    expect(access?.canManage).toBe(true);
   });
 
   it("owner verdict is rejected with 403", async () => {

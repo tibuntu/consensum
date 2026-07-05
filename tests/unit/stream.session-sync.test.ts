@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/api", () => ({ requireUser: vi.fn() }));
-vi.mock("@/lib/authz", () => ({ isParticipant: vi.fn() }));
+vi.mock("@/lib/authz", () => ({ resolveAccess: vi.fn() }));
 
 import { GET } from "@/app/api/documents/[id]/stream/route";
 import * as api from "@/lib/api";
@@ -24,7 +24,7 @@ describe("GET /api/documents/[id]/stream session snapshot", () => {
 
   it("replays an active session as session.started on connect", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "viewer" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
     startSession("stream-sess-1", { userId: "lead", name: "Ada" });
 
     const res = await GET(new Request("http://test"), ctx);
@@ -36,7 +36,7 @@ describe("GET /api/documents/[id]/stream session snapshot", () => {
 
   it("emits no session.started when no session is active", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "viewer" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
     const res = await GET(new Request("http://test"), { params: Promise.resolve({ id: "stream-sess-2" }) });
     const buf = await firstChunks(res, 2);
     expect(buf).not.toContain("session.started");

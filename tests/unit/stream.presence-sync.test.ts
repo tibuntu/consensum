@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/api", () => ({ requireUser: vi.fn() }));
-vi.mock("@/lib/authz", () => ({ isParticipant: vi.fn() }));
+vi.mock("@/lib/authz", () => ({ resolveAccess: vi.fn() }));
 
 import { GET } from "@/app/api/documents/[id]/stream/route";
 import * as api from "@/lib/api";
@@ -15,7 +15,7 @@ describe("GET /api/documents/[id]/stream presence.sync", () => {
 
   it("sends a presence.sync snapshot of the current roster on connect", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "viewer" } as never);
-    vi.mocked(authz.isParticipant).mockResolvedValueOnce(true);
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
     heartbeat("stream-doc-1", { userId: "u1", name: "Ada" });
 
     const res = await GET(new Request("http://test"), ctx);
