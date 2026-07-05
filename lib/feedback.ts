@@ -28,6 +28,7 @@ interface DetailVersion { versionNumber: number; createdAt?: Date | string; crea
 export interface FeedbackDetail {
   state: string;
   requiredApprovals?: number;
+  requireBlockerResolution?: boolean;
   agentContext?: string | null;
   currentVersion?: { versionNumber: number } | null;
   versions?: DetailVersion[];
@@ -164,11 +165,20 @@ export function consolidateFeedback(detail: FeedbackDetail) {
       byVersion[v] = (byVersion[v] ?? 0) + 1;
     }
   }
+  const mustResolveCount = threads.filter((t) => t.mustResolve).length;
+  // True only when the opt-in gate is the sole thing standing between the plan
+  // and APPROVED: threshold met, nobody requesting changes, blockers open.
+  const approvalGated =
+    (detail.requireBlockerResolution ?? false) &&
+    mustResolveCount > 0 &&
+    reviewersRequestingChanges === 0 &&
+    approvals >= requiredApprovals;
   const rollup = {
     blocking: threads.filter((t) => t.severity === "BLOCKER").length,
     // Open blockers an autonomous consumer must clear before proceeding. The
     // agent gate is `mustResolve === 0 && decision === "approved"`.
-    mustResolve: threads.filter((t) => t.mustResolve).length,
+    mustResolve: mustResolveCount,
+    approvalGated,
     unresolved: threads.filter((t) => t.threadStatus === "OPEN").length,
     total: threads.length,
     // ≥2 ⇒ multiple humans want changes (possibly conflicting); reviewerSplit ⇒
@@ -190,6 +200,9 @@ export function consolidateFeedback(detail: FeedbackDetail) {
   const inline = ordered.filter((t) => t.scope !== "document");
   const lines: string[] = [`# Review feedback — decision: ${decision}`, ""];
   lines.push(`Approvals: ${approvals} of ${requiredApprovals}`, "");
+  if (approvalGated) {
+    lines.push(`Approval is gated on ${mustResolveCount} unresolved BLOCKER thread(s) (MUST RESOLVE) — approval lands when they are resolved.`, "");
+  }
   for (const t of general) {
     const sev = t.severity ? `[${t.severity}] ` : "";
     const tags = t.threadStatus === "RESOLVED" ? " [resolved]" : "";

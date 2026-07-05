@@ -467,3 +467,46 @@ describe("document-scoped (general) threads", () => {
     expect(filterThreads(r.threads, { exclude: ["orphaned"] })).toHaveLength(1);
   });
 });
+
+describe("approvalGated rollup", () => {
+  const blockerThread = {
+    anchorExact: null, kind: "COMMENT", scope: "DOCUMENT", status: "ACTIVE",
+    threadStatus: "OPEN", severity: "BLOCKER", comments: [{ body: "must fix" }],
+  };
+  const approval = { verdict: "APPROVE", dismissed: false };
+
+  it("gate on + threshold met + open blocker → approvalGated true + digest line", () => {
+    const out = consolidateFeedback({
+      state: "CHANGES_REQUESTED", requiredApprovals: 1, requireBlockerResolution: true,
+      annotations: [blockerThread], reviews: [approval],
+    } as never);
+    expect(out.rollup.approvalGated).toBe(true);
+    expect(out.decision).toBe("changes_requested");
+    expect(out.markdown).toContain("Approval is gated on 1 unresolved BLOCKER");
+  });
+
+  it("gate off → approvalGated false even with open blockers", () => {
+    const out = consolidateFeedback({
+      state: "APPROVED", requiredApprovals: 1, requireBlockerResolution: false,
+      annotations: [blockerThread], reviews: [approval],
+    } as never);
+    expect(out.rollup.approvalGated).toBe(false);
+    expect(out.markdown).not.toContain("Approval is gated");
+  });
+
+  it("gate on but a reviewer requests changes → approvalGated false (changes are the reason, not the gate)", () => {
+    const out = consolidateFeedback({
+      state: "CHANGES_REQUESTED", requiredApprovals: 1, requireBlockerResolution: true,
+      annotations: [blockerThread], reviews: [approval, { verdict: "REQUEST_CHANGES", dismissed: false }],
+    } as never);
+    expect(out.rollup.approvalGated).toBe(false);
+  });
+
+  it("gate on + blockers open but threshold not met → approvalGated false", () => {
+    const out = consolidateFeedback({
+      state: "OPEN", requiredApprovals: 2, requireBlockerResolution: true,
+      annotations: [blockerThread], reviews: [approval],
+    } as never);
+    expect(out.rollup.approvalGated).toBe(false);
+  });
+});
