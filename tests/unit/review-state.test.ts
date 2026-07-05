@@ -60,3 +60,31 @@ describe("blocker gate", () => {
     expect(computeDocumentState([approve, reject], 1, { requireBlockerResolution: true, openBlockers: 0 })).toBe("CHANGES_REQUESTED");
   });
 });
+
+describe("required reviewers", () => {
+  const appr = (reviewerId: string) => ({ verdict: "APPROVE" as const, dismissed: false, reviewerId });
+  const rej = (reviewerId: string) => ({ verdict: "REQUEST_CHANGES" as const, dismissed: false, reviewerId });
+
+  it("threshold met by a non-required reviewer but required reviewer hasn't approved → OPEN", () => {
+    expect(computeDocumentState([appr("other")], 1, undefined, ["req"])).toBe("OPEN");
+  });
+  it("required reviewer approves and threshold met → APPROVED", () => {
+    expect(computeDocumentState([appr("req")], 1, undefined, ["req"])).toBe("APPROVED");
+  });
+  it("required reviewer requests changes → CHANGES_REQUESTED (short-circuit)", () => {
+    expect(computeDocumentState([rej("req")], 1, undefined, ["req"])).toBe("CHANGES_REQUESTED");
+  });
+  it("requiredApprovals is a floor: 2 required approved but threshold 3 → OPEN", () => {
+    expect(computeDocumentState([appr("a"), appr("b")], 3, undefined, ["a", "b"])).toBe("OPEN");
+  });
+  it("threshold 1 with 3 required → needs all three", () => {
+    expect(computeDocumentState([appr("a"), appr("b")], 1, undefined, ["a", "b", "c"])).toBe("OPEN");
+    expect(computeDocumentState([appr("a"), appr("b"), appr("c")], 1, undefined, ["a", "b", "c"])).toBe("APPROVED");
+  });
+  it("blocker gate still wins over a satisfied required set", () => {
+    expect(computeDocumentState([appr("req")], 1, { requireBlockerResolution: true, openBlockers: 1 }, ["req"])).toBe("CHANGES_REQUESTED");
+  });
+  it("empty required set behaves like today", () => {
+    expect(computeDocumentState([appr("x")], 1, undefined, [])).toBe("APPROVED");
+  });
+});
