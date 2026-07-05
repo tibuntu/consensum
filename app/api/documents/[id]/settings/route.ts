@@ -3,6 +3,8 @@ import { requireUser } from "@/lib/api";
 import { resolveAccess } from "@/lib/authz";
 import { parseRequiredApprovals } from "@/lib/approvals";
 import { updateReviewSettings } from "@/lib/reviews";
+import { setVisibility } from "@/lib/sharing";
+import { VISIBILITIES, type Visibility } from "@/lib/enums";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -14,8 +16,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const body = await req.json().catch(() => null);
   const hasApprovals = body?.requiredApprovals !== undefined;
   const hasGate = body?.requireBlockerResolution !== undefined;
-  if (!body || (!hasApprovals && !hasGate)) {
-    return NextResponse.json({ error: "requiredApprovals or requireBlockerResolution required" }, { status: 400 });
+  const hasVisibility = body?.visibility !== undefined;
+  if (!body || (!hasApprovals && !hasGate && !hasVisibility)) {
+    return NextResponse.json(
+      { error: "requiredApprovals, requireBlockerResolution, or visibility required" },
+      { status: 400 },
+    );
   }
   let n: number | null = null;
   if (hasApprovals) {
@@ -25,15 +31,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (hasGate && typeof body.requireBlockerResolution !== "boolean") {
     return NextResponse.json({ error: "requireBlockerResolution must be a boolean" }, { status: 400 });
   }
+  if (hasVisibility && !VISIBILITIES.includes(body.visibility as Visibility)) {
+    return NextResponse.json({ error: "visibility must be PRIVATE or LINK" }, { status: 400 });
+  }
   const gate = hasGate ? (body.requireBlockerResolution as boolean) : undefined;
-  const state = await updateReviewSettings(user.id, id, {
-    ...(n !== null ? { requiredApprovals: n } : {}),
-    ...(gate !== undefined ? { requireBlockerResolution: gate } : {}),
-  });
+  // Visibility is orthogonal to the approval/blocker-gate settings and never
+  // changes review outcomes, so it must not trigger a state recompute.
+  const state =
+    hasApprovals || hasGate
+      ? await updateReviewSettings(user.id, id, {
+          ...(n !== null ? { requiredApprovals: n } : {}),
+          ...(gate !== undefined ? { requireBlockerResolution: gate } : {}),
+        })
+      : undefined;
+  if (hasVisibility) await setVisibility(id, body.visibility as Visibility);
   return NextResponse.json({
     ok: true,
     ...(n !== null ? { requiredApprovals: n } : {}),
     ...(gate !== undefined ? { requireBlockerResolution: gate } : {}),
-    state,
+    ...(hasVisibility ? { visibility: body.visibility } : {}),
+    ...(state !== undefined ? { state } : {}),
   });
 }
