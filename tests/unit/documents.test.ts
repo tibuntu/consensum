@@ -1,13 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { prisma } from "@/lib/db";
-import { createDocument, getDocumentDetail, listDocuments, findPlanByIdempotencyKey } from "@/lib/documents";
+import { createDocument, getDocumentDetail, listDocuments, listReviewQueue, findPlanByIdempotencyKey } from "@/lib/documents";
+import { submitReview } from "@/lib/reviews";
 import { createAnnotation } from "@/lib/annotations";
 import { buildQuote } from "@/lib/anchoring";
 
-async function makeUser() {
+async function makeUser(label = "") {
   const now = new Date();
+  const id = `u-${label}-${Date.now()}-${Math.round(Math.random()*1e6)}`;
   return prisma.user.create({
-    data: { id: `u-${Date.now()}-${Math.round(Math.random()*1e6)}`, name: "U", email: `u-${Date.now()}-${Math.round(Math.random()*1e6)}@ex.com`, emailVerified: false, createdAt: now, updatedAt: now },
+    data: { id, name: "U", email: `${id}@ex.com`, emailVerified: false, createdAt: now, updatedAt: now },
   });
 }
 
@@ -90,5 +92,37 @@ describe("documents service", () => {
     const id = await createDocument(u.id, "T", "body", { idempotencyKey: "k-dup" });
     await expect(createDocument(u.id, "T2", "body2", { idempotencyKey: "k-dup" })).rejects.toMatchObject({ code: "P2002" });
     await prisma.document.delete({ where: { id } });
+  });
+});
+
+describe("listReviewQueue", () => {
+  it("splits blocking (required) from open reviews and excludes owned + already-voted docs", async () => {
+    const me = await makeUser("q-me");
+    const owner = await makeUser("q-own");
+
+    // A: I'm required, haven't voted → blocking
+    const a = await createDocument(owner.id, "A", "body");
+    await prisma.documentParticipant.create({ data: { documentId: a, userId: me.id, role: "REVIEWER", required: true } });
+
+    // B: I'm a plain reviewer on an OPEN doc, haven't voted → open reviews
+    const b = await createDocument(owner.id, "B", "body");
+    await prisma.documentParticipant.create({ data: { documentId: b, userId: me.id, role: "REVIEWER" } });
+
+    // C: I'm required but already approved → neither
+    const c = await createDocument(owner.id, "C", "body");
+    await prisma.documentParticipant.create({ data: { documentId: c, userId: me.id, role: "REVIEWER", required: true } });
+    await submitReview(me.id, c, "APPROVE");
+
+    // D: I own it → excluded even though I'm a participant
+    const d = await createDocument(me.id, "D", "body");
+
+    const { blocking, openReviews } = await listReviewQueue(me.id);
+    const ids = (rows: { id: string }[]) => rows.map((r) => r.id);
+    expect(ids(blocking)).toContain(a);
+    expect(ids(blocking)).not.toContain(c);
+    expect(ids(openReviews)).toContain(b);
+    expect(ids(blocking).concat(ids(openReviews))).not.toContain(d);
+
+    for (const id of [a, b, c, d]) await prisma.document.delete({ where: { id } });
   });
 });

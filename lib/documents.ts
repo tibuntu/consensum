@@ -62,6 +62,52 @@ export async function listDocuments(userId: string) {
   });
 }
 
+const DECISIVE = ["APPROVE", "REQUEST_CHANGES"];
+const QUEUE_SELECT = {
+  id: true,
+  title: true,
+  state: true,
+  updatedAt: true,
+  owner: { select: { name: true, email: true } },
+} as const;
+
+/**
+ * The caller's review queue, split into two tiers and excluding docs they own:
+ * - blocking: they're a required reviewer on a non-CLOSED doc with no decisive
+ *   verdict (their approval is what's holding it back).
+ * - openReviews: they're a non-required reviewer on an OPEN/CHANGES_REQUESTED doc
+ *   with no decisive verdict.
+ * "Decisive" = a non-dismissed APPROVE or REQUEST_CHANGES by the caller.
+ */
+export async function listReviewQueue(userId: string) {
+  const noDecisiveVerdict = {
+    reviews: { none: { reviewerId: userId, dismissed: false, verdict: { in: DECISIVE } } },
+  };
+  const [blocking, openReviews] = await Promise.all([
+    prisma.document.findMany({
+      where: {
+        ownerId: { not: userId },
+        state: { not: "CLOSED" },
+        participants: { some: { userId, required: true } },
+        ...noDecisiveVerdict,
+      },
+      orderBy: { updatedAt: "desc" },
+      select: QUEUE_SELECT,
+    }),
+    prisma.document.findMany({
+      where: {
+        ownerId: { not: userId },
+        state: { in: ["OPEN", "CHANGES_REQUESTED"] },
+        participants: { some: { userId, role: "REVIEWER", required: false } },
+        ...noDecisiveVerdict,
+      },
+      orderBy: { updatedAt: "desc" },
+      select: QUEUE_SELECT,
+    }),
+  ]);
+  return { blocking, openReviews };
+}
+
 export async function getDocumentDetail(id: string) {
   const doc = await prisma.document.findUnique({
     where: { id },
