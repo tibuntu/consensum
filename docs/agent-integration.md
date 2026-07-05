@@ -74,6 +74,7 @@ Bearer token, owner-scoped:
 | `PATCH /api/plans/[id]` | Post a revised version (optimistic-locked on `baseVersionNumber`). Scope `plans:write`. |
 | `GET /api/plans/[id]/feedback` | Structured feedback (`schemaVersion`, threads with severity/category/scope — `scope: "document"` marks whole-plan general comments with `quote: null`, reviews, rollups, markdown). Supports `?include=` / `?exclude=` (`blocking`, `unresolved`, `resolved`, `orphaned`). Scope `feedback:read`. |
 | `GET /api/plans/[id]/feedback/wait?timeoutMs=` | Long-poll: blocks until the decision/state changes or the (clamped) timeout, then returns the same body with a `timedOut` flag. Scope `feedback:read`. |
+| `PATCH /api/plans/[id]/settings` | Update review settings (`requiredApprovals`, `requireBlockerResolution`); returns the fields changed plus the resulting `state`. Scope `plans:write`. |
 
 For CI or headless agents that can't hold a connection open, register an
 [outbound webhook](operations.md#outbound-webhooks) instead of long-polling.
@@ -84,8 +85,8 @@ Set `requireBlockerResolution: true` on `POST /api/plans` (or via
 `PATCH /api/plans/{id}/settings`) and the server refuses to enter `APPROVED`
 while any BLOCKER-severity thread is still OPEN — the decision stays
 `changes_requested` even when the approval threshold is met. The feedback
-payload then reports `rollup.approvalGated: true` and the digest names the
-blocking threads; resolving the last one flips the state and wakes
+payload then reports `rollup.approvalGated: true` and the digest states how
+many blocking threads remain; resolving the last one flips the state and wakes
 `GET /api/plans/{id}/feedback/wait`. Default off: without the flag, severity
 stays advisory and `rollup.mustResolve` is the agent-side gate.
 

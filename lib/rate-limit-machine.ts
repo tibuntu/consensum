@@ -51,7 +51,7 @@ export async function checkMachineRateLimit(
     return { allowed: true, limit, remaining: Math.max(0, limit - inWindow - 1), resetAt: Math.ceil((windowStart + WINDOW_MS) / 1000), retryAfterSec: 0 };
   } catch (e) {
     console.error("machine rate-limit check failed (failing open)", e);
-    return { allowed: true, limit, remaining: limit, resetAt: Math.ceil((now + WINDOW_MS) / 1000), retryAfterSec: 0 };
+    return { allowed: true, limit, remaining: Math.max(0, limit - 1), resetAt: Math.ceil((now + WINDOW_MS) / 1000), retryAfterSec: 0 };
   }
 }
 

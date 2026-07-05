@@ -53,7 +53,7 @@ export async function createAnnotation(userId: string, documentId: string, input
   publish(documentId, { type: "annotation.created", annotation });
   await notifyParticipants(documentId, userId, "comment").catch(() => {});
   await dispatch(documentId, "comment.created", { annotationId: annotation.id }, userId).catch(() => {});
-  if (input.severity === "BLOCKER") await recomputeStateForBlockerGate(userId, documentId).catch(() => {});
+  if (input.severity === "BLOCKER") await recomputeStateForBlockerGate(userId, documentId).catch((e) => console.error("blocker-gate recompute failed", e));
   return annotation;
 }
 
@@ -77,7 +77,7 @@ export async function setThreadStatus(userId: string, annotationId: string, stat
   });
   publish(annotation.documentId, { type: "annotation.updated", annotationId, threadStatus: status });
   await notifyParticipants(annotation.documentId, userId, "resolve").catch(() => {});
-  if (annotation.severity === "BLOCKER") await recomputeStateForBlockerGate(userId, annotation.documentId).catch(() => {});
+  if (annotation.severity === "BLOCKER") await recomputeStateForBlockerGate(userId, annotation.documentId).catch((e) => console.error("blocker-gate recompute failed", e));
   return annotation;
 }
 
@@ -133,7 +133,7 @@ export async function applySuggestion(userId: string, annotationId: string, base
     data: { appliedInVersionId: appliedVersionId, threadStatus: "RESOLVED", resolution: "FIXED" },
   });
   publish(annotation.documentId, { type: "annotation.updated", annotationId, threadStatus: "RESOLVED" });
-  if (annotation.severity === "BLOCKER") await recomputeStateForBlockerGate(userId, annotation.documentId).catch(() => {});
+  if (annotation.severity === "BLOCKER") await recomputeStateForBlockerGate(userId, annotation.documentId).catch((e) => console.error("blocker-gate recompute failed", e));
 
   return { version: { id: appliedVersionId, versionNumber: appliedVersionNumber }, annotation: updated };
 }
