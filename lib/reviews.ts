@@ -107,3 +107,17 @@ export async function recomputeStateForBlockerGate(userId: string, documentId: s
 export async function setRequireBlockerResolution(userId: string, documentId: string, enabled: boolean): Promise<string> {
   return updateReviewSettings(userId, documentId, { requireBlockerResolution: enabled });
 }
+
+/**
+ * Recompute + persist document state and dispatch decision.changed on a flip.
+ * Used after a participant removal dismisses that user's reviews (lib/sharing.ts),
+ * where the removal itself isn't a review event but can still change the outcome.
+ * Unlike recomputeStateForBlockerGate, always recomputes (no gate-only guard).
+ */
+export async function recomputeStateAndDispatch(actorId: string, documentId: string): Promise<string> {
+  const { state, prevState } = await recomputeState(documentId);
+  if (state !== prevState) {
+    await dispatch(documentId, "decision.changed", { decision: state.toLowerCase() }, actorId).catch(() => {});
+  }
+  return state;
+}
