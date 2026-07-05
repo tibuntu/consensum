@@ -121,7 +121,7 @@ export default function DocumentView({
   currentUserName,
   canReview,
   canManage,
-  visibility,
+  visibility: visibilityProp,
 }: {
   doc: ClientDocument;
   isOwner: boolean;
@@ -165,6 +165,7 @@ export default function DocumentView({
   const [generalBody, setGeneralBody] = useState("");
   const [generalSeverity, setGeneralSeverity] = useState("");
   const [shareOpen, setShareOpen] = useState(false);
+  const [visibility, setVisibility] = useState(visibilityProp);
 
   const postSessionAction = useCallback(
     (action: SessionAction) => {
@@ -800,7 +801,7 @@ export default function DocumentView({
         </div>
       )}
       {shareOpen && (
-        <ShareDialog documentId={doc.id} visibility={visibility} onClose={() => setShareOpen(false)} />
+        <ShareDialog documentId={doc.id} visibility={visibility} onVisibilityChange={setVisibility} onClose={() => setShareOpen(false)} />
       )}
       <div className="min-w-0 flex-1">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
@@ -928,7 +929,7 @@ export default function DocumentView({
             <div data-testid="reviewers" className="flex flex-col gap-1 border-t border-border pt-2">
               <span className="text-xs font-medium text-muted">Reviewers</span>
               {reviews.length === 0 ? (
-                <p className="text-xs text-muted">No reviews yet. Anyone who opens this document can approve or request changes.</p>
+                <p className="text-xs text-muted">No reviews yet. Reviewers you share this document with can approve or request changes.</p>
               ) : (
                 <ul className="flex flex-col gap-1">
                   {reviews.map((r, i) => {

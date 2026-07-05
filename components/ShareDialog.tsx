@@ -16,10 +16,12 @@ interface Participant {
 export default function ShareDialog({
   documentId,
   visibility: initialVisibility,
+  onVisibilityChange,
   onClose,
 }: {
   documentId: string;
   visibility: string;
+  onVisibilityChange?: (v: string) => void;
   onClose: () => void;
 }) {
   const [visibility, setVisibility] = useState(initialVisibility);
@@ -59,7 +61,9 @@ export default function ShareDialog({
     if (!res || !res.ok) {
       setVisibility(previous);
       setManageError("Couldn't change visibility. Please try again.");
+      return;
     }
+    onVisibilityChange?.(next);
   }
 
   async function invite() {

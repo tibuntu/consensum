@@ -76,10 +76,12 @@ export async function shareWith(
   return { ok: true, userId: target.id };
 }
 
-type SetRoleResult = { ok: true } | { error: "not_participant" };
+type SetRoleResult = { ok: true } | { error: "not_participant" } | { error: "cannot_change_owner" };
 
 /** Owner updates an existing participant's role. Target must already be a participant. */
 export async function setRole(documentId: string, userId: string, role: DocumentRole): Promise<SetRoleResult> {
+  const doc = await prisma.document.findUnique({ where: { id: documentId }, select: { ownerId: true } });
+  if (doc?.ownerId === userId) return { error: "cannot_change_owner" };
   const existing = await prisma.documentParticipant.findUnique({
     where: { documentId_userId: { documentId, userId } },
     select: { id: true },

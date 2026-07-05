@@ -138,6 +138,16 @@ describe("lib/sharing", () => {
 
       await prisma.document.delete({ where: { id: docId } });
     });
+
+    it("returns cannot_change_owner for the owner's id", async () => {
+      const owner = await makeUser("o6b");
+      const docId = await createDocument(owner.id, "Plan", "body");
+
+      const result = await setRole(docId, owner.id, "VIEWER");
+      expect(result).toEqual({ error: "cannot_change_owner" });
+
+      await prisma.document.delete({ where: { id: docId } });
+    });
   });
 
   describe("removeParticipant", () => {

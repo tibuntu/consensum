@@ -28,7 +28,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const role = body?.role as DocumentRole;
   if (!DOCUMENT_ROLES.includes(role)) return NextResponse.json({ error: "valid role required" }, { status: 400 });
   const res = await setRole(id, userId, role);
-  if ("error" in res) return NextResponse.json({ error: res.error }, { status: 404 });
+  if ("error" in res) {
+    const status = res.error === "cannot_change_owner" ? 400 : 404;
+    return NextResponse.json({ error: res.error }, { status });
+  }
   return NextResponse.json(res);
 }
 
