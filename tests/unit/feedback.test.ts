@@ -479,7 +479,7 @@ describe("approvalGated rollup", () => {
     const out = consolidateFeedback({
       state: "CHANGES_REQUESTED", requiredApprovals: 1, requireBlockerResolution: true,
       annotations: [blockerThread], reviews: [approval],
-    } as never);
+    } as unknown as FeedbackDetail);
     expect(out.rollup.approvalGated).toBe(true);
     expect(out.decision).toBe("changes_requested");
     expect(out.markdown).toContain("Approval is gated on 1 unresolved BLOCKER");
@@ -489,7 +489,7 @@ describe("approvalGated rollup", () => {
     const out = consolidateFeedback({
       state: "APPROVED", requiredApprovals: 1, requireBlockerResolution: false,
       annotations: [blockerThread], reviews: [approval],
-    } as never);
+    } as unknown as FeedbackDetail);
     expect(out.rollup.approvalGated).toBe(false);
     expect(out.markdown).not.toContain("Approval is gated");
   });
@@ -498,7 +498,7 @@ describe("approvalGated rollup", () => {
     const out = consolidateFeedback({
       state: "CHANGES_REQUESTED", requiredApprovals: 1, requireBlockerResolution: true,
       annotations: [blockerThread], reviews: [approval, { verdict: "REQUEST_CHANGES", dismissed: false }],
-    } as never);
+    } as unknown as FeedbackDetail);
     expect(out.rollup.approvalGated).toBe(false);
   });
 
@@ -506,7 +506,7 @@ describe("approvalGated rollup", () => {
     const out = consolidateFeedback({
       state: "OPEN", requiredApprovals: 2, requireBlockerResolution: true,
       annotations: [blockerThread], reviews: [approval],
-    } as never);
+    } as unknown as FeedbackDetail);
     expect(out.rollup.approvalGated).toBe(false);
   });
 });
