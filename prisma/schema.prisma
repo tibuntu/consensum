@@ -220,6 +220,7 @@ model DocumentParticipant {
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   role       String   @default("REVIEWER")  // VIEWER | REVIEWER (see lib/enums.ts DOCUMENT_ROLES)
+  required   Boolean  @default(false)        // owner-designated must-approve reviewer (M9)
   createdAt  DateTime @default(now())
 
   @@unique([documentId, userId])
