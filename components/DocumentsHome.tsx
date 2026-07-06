@@ -47,6 +47,10 @@ export async function DocumentsHome({ userId }: { userId: string }) {
     listDocuments(userId),
     listReviewQueue(userId),
   ]);
+  // A doc awaiting the caller's review is already surfaced in a queue section
+  // above — listing it again under "Documents" reads as a duplicate.
+  const queuedIds = new Set([...queue.blocking, ...queue.openReviews].map((d) => d.id));
+  const rest = documents.filter((d) => !queuedIds.has(d.id));
 
   return (
     <div className="flex flex-col gap-8">
@@ -72,13 +76,15 @@ export async function DocumentsHome({ userId }: { userId: string }) {
       )}
       <section className="flex flex-col gap-4">
         <h2 className="text-2xl font-semibold text-foreground">Documents</h2>
-        {documents.length === 0 ? (
+        {rest.length === 0 ? (
           <Card className="p-6 text-sm text-muted">
-            No documents yet — create one below.
+            {documents.length === 0
+              ? "No documents yet — create one below."
+              : "Nothing else — documents waiting on you are listed above."}
           </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {documents.map((doc) => (
+            {rest.map((doc) => (
               <DocCard key={doc.id} doc={doc} />
             ))}
           </div>

@@ -85,12 +85,14 @@ test("owner shares a PRIVATE document as reviewer: the reviewer sees it in their
 
   await shareWith(owner, reviewerEmail, "REVIEWER");
 
-  // Now it appears in the reviewer's documents list … The reviewer is a
-  // non-required REVIEWER on an OPEN doc, so the same title also shows under
-  // the home page's "Open reviews" queue section — `.first()` picks either
-  // match, both link to the same document.
+  // Now it appears on the reviewer's home page. The reviewer is a non-required
+  // REVIEWER on an OPEN doc, so it shows in the "Open reviews" queue section —
+  // and ONLY there: docs in a queue section are deduplicated out of the
+  // "Documents" list below.
   await reviewer.goto("/");
-  const docLink = reviewer.getByRole("link").filter({ hasText: "Confidential Rollout Plan" }).first();
+  const docLinks = reviewer.getByRole("link").filter({ hasText: "Confidential Rollout Plan" });
+  await expect(docLinks).toHaveCount(1);
+  const docLink = docLinks.first();
   await expect(docLink).toBeVisible();
 
   // … and the reviewer can open it.

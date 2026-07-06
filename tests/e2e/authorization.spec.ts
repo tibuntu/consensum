@@ -47,9 +47,9 @@ test("web: private-by-default, list isolation, owner-only edit, non-participant 
   expect(vis.ok()).toBeTruthy();
   await pageB.goto(urlA);
   await expect(pageB.getByTestId("doc-body")).toContainText("cloud setup");
-  // Now it appears in B's list. B is a non-required REVIEWER on an OPEN doc, so
-  // the same title also shows under the home page's "Open reviews" queue
-  // section — `.first()` picks either match, both link to the same document.
+  // Now it appears on B's home page. B is a non-required REVIEWER on an OPEN
+  // doc, so the title shows under the "Open reviews" queue section (queued docs
+  // are deduplicated out of the "Documents" list below).
   await pageB.goto("/");
   await expect(pageB.getByText("A Plan").first()).toBeVisible();
 
