@@ -4,6 +4,7 @@ import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { fenceTerminalArt } from "@/lib/terminal-art";
 import { Button } from "@/components/ui/Button";
 import { useResolvedDark } from "@/lib/use-resolved-dark";
 
@@ -68,7 +69,7 @@ export default function DocumentEditor({
           />
         </div>
         <div className="prose prose-violet max-w-none overflow-auto rounded-[var(--radius-app)] border border-border bg-surface p-3" style={{ maxHeight: "60vh" }}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{fenceTerminalArt(value)}</ReactMarkdown>
         </div>
       </div>
       {error && <p role="alert" className="text-sm text-[var(--state-changes)]">{error}</p>}

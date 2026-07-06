@@ -6,6 +6,7 @@ import ReactMarkdown, { type ExtraProps } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { buildQuote, type Quote } from "@/lib/anchoring";
 import { startsWithH1 } from "@/lib/markdown-heading";
+import { fenceTerminalArt } from "@/lib/terminal-art";
 import { applyHighlights, applyPresenceSelections, buildHighlightRanges, clearPresenceSelections } from "@/lib/highlight";
 import { applyPresenceEvent, remoteCursors, remoteSelections } from "@/lib/presence-client";
 import { applySessionEvent, isLeader, isInSession } from "@/lib/session-client";
@@ -102,7 +103,7 @@ const RenderedMarkdown = memo(function RenderedMarkdown({ markdown }: { markdown
     : undefined;
   return (
     <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-      {markdown}
+      {fenceTerminalArt(markdown)}
     </ReactMarkdown>
   );
 });
