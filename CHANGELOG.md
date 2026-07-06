@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.14.0](https://github.com/tibuntu/consensum/compare/v0.13.0...v0.14.0) (2026-07-06)
+
+
+### Features
+
+* **hook:** PostToolUse backstop so competing ExitPlanMode hooks can't bypass review ([84c442f](https://github.com/tibuntu/consensum/commit/84c442f1cb51203ec2126622ac48e468df6b62f1))
+* **viewer:** render pasted terminal box-drawing tables as monospace blocks ([639c102](https://github.com/tibuntu/consensum/commit/639c102f62362edb900009fa3e919a2298fb2672))
+
+
+### Bug Fixes
+
+* **home:** don't list documents twice when they're already in a review queue ([db6fcbc](https://github.com/tibuntu/consensum/commit/db6fcbc7a87830feafeb1662ec55951eadb75841))
+* **hook:** encode Idempotency-Key so non-Latin-1 plan titles don't fail closed ([0ab14ad](https://github.com/tibuntu/consensum/commit/0ab14ad68413854011e70afc1897b3a09370056c))
+
 ## [0.13.0](https://github.com/tibuntu/consensum/compare/v0.12.0...v0.13.0) (2026-07-05)
 
 
