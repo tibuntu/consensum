@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 // The hook's verdict logic, extracted to a side-effect-free module so it can be
 // exercised without the blocking I/O loop.
-import { decide, fingerprint, buildDigest, titleFromMarkdown, allowPayload, denyPayload } from "../../dist/claude/hooks/consensum-hook-core.mjs";
+import { decide, fingerprint, buildDigest, titleFromMarkdown, idempotencyKeyFor, allowPayload, denyPayload } from "../../dist/claude/hooks/consensum-hook-core.mjs";
 
 const approved = { decision: "approved", approvals: 1, reviews: [], threads: [] };
 const changes = (over: Record<string, unknown> = {}) => ({
@@ -62,6 +62,36 @@ describe("titleFromMarkdown", () => {
   it("uses the first heading, else 'Plan'", () => {
     expect(titleFromMarkdown("# Deploy Plan\n\nbody")).toBe("Deploy Plan");
     expect(titleFromMarkdown("no heading here")).toBe("Plan");
+  });
+});
+
+describe("idempotencyKeyFor — Idempotency-Key must be a Latin-1-safe header value", () => {
+  const sessionId = "0b8e2c1a-1234-4abc-9def-0123456789ab";
+
+  it("is ByteString-safe for titles with em dashes and arrows", () => {
+    const key = idempotencyKeyFor(sessionId, "# BIGBOB-2574 — Enable Grafana Log Patterns → prod\n\nbody");
+    for (let i = 0; i < key.length; i++) {
+      expect(key.charCodeAt(i)).toBeLessThanOrEqual(255);
+    }
+  });
+
+  it("is stable for identical input (the idempotency contract)", () => {
+    const md = "# Rollout — Phase 2\n\nbody";
+    expect(idempotencyKeyFor(sessionId, md)).toBe(idempotencyKeyFor(sessionId, md));
+  });
+
+  it("is scoped per session", () => {
+    const md = "# Same Plan\n\nbody";
+    expect(idempotencyKeyFor("session-a", md)).not.toBe(idempotencyKeyFor("session-b", md));
+  });
+
+  it("bounds the encoded title so the header stays small", () => {
+    const key = idempotencyKeyFor(sessionId, `# ${"🚀".repeat(1000)}\n\nbody`);
+    expect(key.length).toBeLessThanOrEqual(sessionId.length + 1 + 512);
+  });
+
+  it("falls back to the default title for heading-less markdown", () => {
+    expect(idempotencyKeyFor(sessionId, "no heading here")).toBe(`${sessionId}:Plan`);
   });
 });
 

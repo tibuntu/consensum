@@ -7,6 +7,16 @@ export function titleFromMarkdown(md) {
   return (m && m[1].trim()) || "Plan";
 }
 
+// HTTP header values must be ByteStrings (Latin-1) — fetch() throws on any
+// char > U+00FF, so a plan title with an em dash would fail the create closed.
+// Percent-encode the title portion (pure ASCII) and bound its length: a
+// MAX_PLAN_TITLE_CHARS title of astral-plane characters would otherwise encode
+// to ~12 KB, near Node's 16 KB header-block limit. The server treats the key
+// as opaque, so encoding/truncation only needs to be deterministic.
+export function idempotencyKeyFor(sessionId, markdown) {
+  return `${sessionId}:${encodeURIComponent(titleFromMarkdown(markdown)).slice(0, 512)}`;
+}
+
 // The exact PermissionRequest `hookSpecificOutput` shapes Claude Code expects.
 // Centralized here so a regression test pins the handshake contract;
 // the hook emits these verbatim.

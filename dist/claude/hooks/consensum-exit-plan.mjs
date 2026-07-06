@@ -23,7 +23,7 @@
 import { readFileSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { titleFromMarkdown, buildDigest, decide, allowPayload, denyPayload } from "./consensum-hook-core.mjs";
+import { titleFromMarkdown, idempotencyKeyFor, buildDigest, decide, allowPayload, denyPayload } from "./consensum-hook-core.mjs";
 
 const BASE = (process.env.CONSENSUM_BASE_URL || "http://localhost:3000").replace(/\/+$/, "");
 const TOKEN = process.env.CONSENSUM_API_TOKEN || "";
@@ -134,7 +134,7 @@ async function main() {
 
   if (!entry?.planId) {
     // Idempotency-Key makes a retried create return the same plan instead of a duplicate.
-    const idemKey = `${sessionId}:${titleFromMarkdown(plan)}`;
+    const idemKey = idempotencyKeyFor(sessionId, plan);
     const created = await api("POST", "/api/plans", { title: titleFromMarkdown(plan), markdown: plan }, { "Idempotency-Key": idemKey });
     if (created.status >= 400 || !created.json?.id) {
       // Fail CLOSED: the push failed, so the plan was not reviewed.
