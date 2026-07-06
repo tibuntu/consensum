@@ -48,7 +48,36 @@ State is scoped per Claude Code `session_id`, so a new session opens a new revie
 re-presented plan revises the same one. (Session state persists in a git-ignored
 `.consensum/`.) With no `CONSENSUM_API_TOKEN` set the hook **fails closed** — it blocks
 plan-mode exit rather than shipping an unreviewed plan. Set `CONSENSUM_SKIP=1` (or omit
-`--with-hook`) on projects that don't use Consensum review.
+`--with-hook`) on projects that don't use Consensum review; `CONSENSUM_SKIP=1` bypasses
+both hook events whether or not a token is set.
+
+### Coexisting with other ExitPlanMode hooks
+
+Claude Code runs **all** matching `PermissionRequest` hooks **in parallel**, and the merge
+rule for conflicting decisions is **undocumented** ([hooks
+reference](https://code.claude.com/docs/en/hooks)). In practice another hook's instant
+`allow` can win the race over Consensum's still-polling gate — observed with
+[plannotator](https://plannotator.ai) 0.22.0, whose "approve and continue" auto-mode
+allows `ExitPlanMode` immediately, starting implementation with zero review.
+
+That's why `--with-hook` registers the same script on a second event: a **`PostToolUse`
+backstop** that fires after plan mode actually exits, regardless of which hook allowed it.
+
+- If the Consensum gate already approved this **exact plan content** (a sha256 handshake
+  recorded in `.consensum/loop-state.json`), the backstop passes silently — no second
+  review, no extra server calls.
+- Otherwise (a competing hook won the race, or the content was rewritten on the way
+  through), it runs the same push-and-wait gate and, unless approved, emits
+  `{"decision": "block", "reason": …}` with the feedback digest and explicit
+  do-not-implement instructions, so the agent revises instead of implementing.
+
+The backstop is deliberately weaker than a permission deny — plan mode has already
+exited, so it prevents *silent* unreviewed implementation rather than re-creating the
+plan-mode loop. Whether Claude Code kills the losing parallel hook process is also
+undocumented; the design tolerates both outcomes (idempotent plan create, optimistic-lock
+re-sync on PATCH, atomic last-writer-wins state writes). Every fail-closed `deny` on the
+gate has a matching fail-closed `block` on the backstop (missing token, push failure,
+plan deleted mid-review, wait-window expiry, unexpected error).
 
 For plans pushed **outside** plan mode,
 [`/consensum-loop <id> [intervalMinutes]`](../dist/claude/commands/consensum-loop.md) does
@@ -61,8 +90,9 @@ the same wait-then-act loop on demand.
 > not-planned). The agent implements under whatever mode the session is already in.
 
 > **Compatibility:** the hook uses the same `ExitPlanMode` `PermissionRequest` handshake as
-> [plannotator](https://plannotator.ai); if your Claude Code version changes it, adjust
-> `allowDecision`/`denyDecision` in the hook script.
+> [plannotator](https://plannotator.ai), plus the documented top-level `PostToolUse` block
+> shape; if your Claude Code version changes either, adjust
+> `allowPayload`/`denyPayload`/`postBlockPayload` in `consensum-hook-core.mjs`.
 
 ## Machine API surface
 

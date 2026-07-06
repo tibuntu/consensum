@@ -1,7 +1,19 @@
 import { describe, it, expect } from "vitest";
 // The hook's verdict logic, extracted to a side-effect-free module so it can be
 // exercised without the blocking I/O loop.
-import { decide, fingerprint, buildDigest, titleFromMarkdown, idempotencyKeyFor, allowPayload, denyPayload } from "../../dist/claude/hooks/consensum-hook-core.mjs";
+import {
+  decide,
+  fingerprint,
+  buildDigest,
+  titleFromMarkdown,
+  idempotencyKeyFor,
+  allowPayload,
+  denyPayload,
+  postBlockPayload,
+  planHash,
+  approvedMatch,
+  pruneState,
+} from "../../dist/claude/hooks/consensum-hook-core.mjs";
 
 const approved = { decision: "approved", approvals: 1, reviews: [], threads: [] };
 const changes = (over: Record<string, unknown> = {}) => ({
@@ -101,6 +113,55 @@ describe("PermissionRequest payload shapes (handshake guard)", () => {
   });
   it("denyPayload carries the message on a deny handshake", () => {
     expect(denyPayload("revise this")).toEqual({ hookSpecificOutput: { hookEventName: "PermissionRequest", decision: { behavior: "deny", message: "revise this" } } });
+  });
+});
+
+describe("PostToolUse payload shape (handshake guard)", () => {
+  it("postBlockPayload is a top-level block decision, not hookSpecificOutput", () => {
+    expect(postBlockPayload("do not implement")).toEqual({ decision: "block", reason: "do not implement" });
+  });
+});
+
+describe("planHash / approvedMatch — the gate↔backstop approval handshake", () => {
+  const md = "# Plan\n\ndo the thing";
+
+  it("planHash is stable, hex, and content-sensitive", () => {
+    expect(planHash(md)).toBe(planHash(md));
+    expect(planHash(md)).toMatch(/^[0-9a-f]{64}$/);
+    expect(planHash(md)).not.toBe(planHash(md + "!"));
+  });
+
+  it("approvedMatch is true only for the exact approved content", () => {
+    const entry = { planId: "p1", approvedHash: planHash(md) };
+    expect(approvedMatch(entry, md)).toBe(true);
+    // Content drift — e.g. another hook rewrote the plan via updatedInput.
+    expect(approvedMatch(entry, md + " tweaked")).toBe(false);
+  });
+
+  it("approvedMatch is false without an approval record", () => {
+    expect(approvedMatch(undefined, md)).toBe(false);
+    expect(approvedMatch({ planId: "p1" }, md)).toBe(false);
+  });
+});
+
+describe("pruneState — bounded state file now that approvals are kept", () => {
+  const now = Date.parse("2026-07-06T12:00:00Z");
+  const iso = (daysAgo: number) => new Date(now - daysAgo * 24 * 60 * 60 * 1000).toISOString();
+
+  it("drops stale entries, keeps fresh and legacy (no updatedAt) ones", () => {
+    const pruned = pruneState(
+      {
+        stale: { planId: "a", updatedAt: iso(15) },
+        fresh: { planId: "b", updatedAt: iso(1) },
+        legacy: { planId: "c" },
+      },
+      now
+    );
+    expect(Object.keys(pruned).sort()).toEqual(["fresh", "legacy"]);
+  });
+
+  it("handles empty input", () => {
+    expect(pruneState({}, now)).toEqual({});
   });
 });
 

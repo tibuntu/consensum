@@ -105,26 +105,35 @@ JSON
     [ -f "$SETTINGS" ] || echo '{}' > "$SETTINGS"
     tmp="$(mktemp)"
     # Drop any prior Consensum ExitPlanMode entry (idempotent), then append ours.
+    # The same script is registered on BOTH events: PermissionRequest is the
+    # review gate; PostToolUse is the backstop that catches a competing hook
+    # (e.g. plannotator auto-approve) winning the parallel permission race.
     jq --argjson entry "$HOOK_ENTRY" '
+      def keep_others:
+        map(select(
+          (.matcher != "ExitPlanMode")
+          or ([.hooks[]?.command] | any(test("consensum-exit-plan")) | not)
+        ));
       .hooks = (.hooks // {})
-      | .hooks.PermissionRequest = (
-          ((.hooks.PermissionRequest // [])
-            | map(select(
-                (.matcher != "ExitPlanMode")
-                or ([.hooks[]?.command] | any(test("consensum-exit-plan")) | not)
-              )))
-          + [$entry]
-        )
+      | .hooks.PermissionRequest = (((.hooks.PermissionRequest // []) | keep_others) + [$entry])
+      | .hooks.PostToolUse       = (((.hooks.PostToolUse       // []) | keep_others) + [$entry])
     ' "$SETTINGS" > "$tmp" && mv "$tmp" "$SETTINGS"
-    info "registered PermissionRequest hook in .claude/settings.json"
+    info "registered PermissionRequest + PostToolUse hooks in .claude/settings.json"
   else
     warn "jq not found — could not auto-merge settings.json. Add this manually to $SETTINGS:"
     cat >&2 <<'JSON'
-  { "hooks": { "PermissionRequest": [
-    { "matcher": "ExitPlanMode", "hooks": [
-      { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/consensum-exit-plan.mjs\"", "timeout": 345600 }
-    ] }
-  ] } }
+  { "hooks": {
+    "PermissionRequest": [
+      { "matcher": "ExitPlanMode", "hooks": [
+        { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/consensum-exit-plan.mjs\"", "timeout": 345600 }
+      ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "ExitPlanMode", "hooks": [
+        { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/consensum-exit-plan.mjs\"", "timeout": 345600 }
+      ] }
+    ]
+  } }
 JSON
   fi
 fi

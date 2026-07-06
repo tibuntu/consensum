@@ -1,29 +1,59 @@
 #!/usr/bin/env node
 // Consensum auto-proceed hook for Claude Code's `ExitPlanMode` tool.
 //
-// Registered as a `PermissionRequest` hook (see .claude/settings.json). When the
-// agent finishes planning and calls ExitPlanMode, this script BLOCKS inside that
-// tool call: it pushes the plan to Consensum, waits for the team's verdict, then
-//   - APPROVED          -> returns `allow`  (Claude exits plan mode and implements)
-//   - CHANGES_REQUESTED -> returns `deny` + a feedback digest (Claude revises and
-//                          re-presents the plan, which re-fires this hook -> the loop)
+// Registered on TWO events (see .claude/settings.json), both handled by this
+// script, branched on the `hook_event_name` field of the stdin payload:
+//
+//   PermissionRequest (the gate) — when the agent calls ExitPlanMode, this
+//   script BLOCKS inside that tool call: it pushes the plan to Consensum,
+//   waits for the team's verdict, then
+//     - APPROVED          -> returns `allow` (Claude exits plan mode and implements)
+//     - CHANGES_REQUESTED -> returns `deny` + a feedback digest (Claude revises and
+//                            re-presents the plan, which re-fires this hook -> the loop)
+//
+//   PostToolUse (the backstop) — Claude Code runs all matching PermissionRequest
+//   hooks in parallel and the merge rule for conflicting decisions is
+//   undocumented, so another hook's instant `allow` (e.g. plannotator's
+//   "approve and continue" auto-mode) can win the race over our still-polling
+//   gate and start implementation with zero review. This event fires after
+//   plan mode actually exits, regardless of which hook allowed it. If the gate
+//   already approved this exact plan content (sha256 handshake via
+//   .consensum/loop-state.json), it passes silently; otherwise it runs the
+//   same push-and-wait gate and emits `{"decision":"block"}` so Claude revises
+//   instead of implementing.
 //
 // FAIL-CLOSED: if the hook is installed but cannot complete a review — no token,
-// push failure, plan vanished, or an unexpected error — it returns `deny` with a
-// clear, in-band message rather than silently proceeding with an un-reviewed plan.
-// To deliberately bypass review (e.g. Consensum not used on this project), set
-// CONSENSUM_SKIP=1 (or remove the hook). State is scoped per Claude Code
-// `session_id`, so a fresh session creates a new plan while a re-fired
-// ExitPlanMode in the same session PATCHes a new version of the same plan.
+// push failure, plan vanished, or an unexpected error — it refuses (deny/block)
+// with a clear, in-band message rather than silently proceeding with an
+// un-reviewed plan. To deliberately bypass review (e.g. Consensum not used on
+// this project), set CONSENSUM_SKIP=1 (or remove the hook). State is scoped per
+// Claude Code `session_id`, so a fresh session creates a new plan while a
+// re-fired ExitPlanMode in the same session PATCHes a new version of the same
+// plan. On approval the state entry records the approved content's hash (the
+// gate<->backstop handshake); presenting different content afterwards starts a
+// fresh review cycle. State writes are atomic (tmp+rename) and re-read before
+// writing, so a concurrently running sibling hook process can't tear the file.
 //
 // Verified against the format plannotator (plannotator.ai) uses for ExitPlanMode.
-// If a future Claude Code version changes the handshake, `allowDecision` /
-// `denyDecision` below are the only things to adjust.
+// If a future Claude Code version changes the handshake, `allowPayload` /
+// `denyPayload` / `postBlockPayload` in consensum-hook-core.mjs are the only
+// things to adjust.
 
-import { readFileSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, mkdirSync, writeFileSync, renameSync } from "node:fs";
+import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { titleFromMarkdown, idempotencyKeyFor, buildDigest, decide, allowPayload, denyPayload } from "./consensum-hook-core.mjs";
+import {
+  idempotencyKeyFor,
+  titleFromMarkdown,
+  buildDigest,
+  decide,
+  allowPayload,
+  denyPayload,
+  postBlockPayload,
+  planHash,
+  approvedMatch,
+  pruneState,
+} from "./consensum-hook-core.mjs";
 
 const BASE = (process.env.CONSENSUM_BASE_URL || "http://localhost:3000").replace(/\/+$/, "");
 const TOKEN = process.env.CONSENSUM_API_TOKEN || "";
@@ -40,6 +70,12 @@ function emit(obj) {
 }
 const allowDecision = () => emit(allowPayload());
 const denyDecision = (message) => emit(denyPayload(message));
+// PostToolUse pass: exit 0 with no output is the documented no-op.
+const passDecision = () => process.exit(0);
+// A PostToolUse block cannot force Claude back into plan mode, so the reason
+// itself must carry the do-not-implement instruction.
+const blockDecision = (message) =>
+  emit(postBlockPayload(`Do NOT implement this plan — it has not passed Consensum review. ${message}`));
 
 function readStdin() {
   try {
@@ -61,10 +97,17 @@ function loadState(cwd) {
     return {};
   }
 }
-function saveState(cwd, all) {
-  const dir = join(cwd || process.cwd(), ".consensum");
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  writeFileSync(stateFile(cwd), JSON.stringify(all, null, 2));
+// Re-read before mutating (tolerates a concurrently running sibling hook,
+// last-writer-wins), prune stale sessions, and write atomically so a killed
+// process can't leave torn JSON behind.
+function updateState(cwd, mutate) {
+  const all = loadState(cwd);
+  mutate(all);
+  const pruned = pruneState(all, Date.now());
+  const file = stateFile(cwd);
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(`${file}.tmp`, JSON.stringify(pruned, null, 2));
+  renameSync(`${file}.tmp`, file);
 }
 
 // ---- Consensum machine API ---------------------------------------------------
@@ -86,28 +129,9 @@ async function api(method, path, body, extraHeaders) {
   return { status: res.status, json };
 }
 
-// ---- main --------------------------------------------------------------------
+// ---- the push-and-wait gate (shared by both events) ---------------------------
 
-async function main() {
-  const input = readStdin();
-  const cwd = input.cwd || process.cwd();
-  const sessionId = input.session_id || "default";
-  const plan = input.tool_input?.plan;
-
-  if (!plan) allowDecision(); // nothing to review
-  if (!TOKEN) {
-    if (SKIP) allowDecision(); // deliberate opt-out
-    // Fail CLOSED: the hook is installed but misconfigured. Don't ship un-reviewed.
-    denyDecision(
-      "Consensum review is enabled (the ExitPlanMode hook is installed) but CONSENSUM_API_TOKEN is not set, " +
-        "so the plan cannot be submitted for review. Set CONSENSUM_API_TOKEN (and CONSENSUM_BASE_URL) and re-present " +
-        "the plan, or set CONSENSUM_SKIP=1 to deliberately bypass review for this session."
-    );
-  }
-
-  const all = loadState(cwd);
-  let entry = all[sessionId];
-
+async function runGate({ cwd, sessionId, plan, entry, proceed, refuse }) {
   // 1) Push a fresh plan, or PATCH a revision of the same session's plan.
   let reviewUrl;
   if (entry?.planId) {
@@ -138,7 +162,7 @@ async function main() {
     const created = await api("POST", "/api/plans", { title: titleFromMarkdown(plan), markdown: plan }, { "Idempotency-Key": idemKey });
     if (created.status >= 400 || !created.json?.id) {
       // Fail CLOSED: the push failed, so the plan was not reviewed.
-      denyDecision(
+      refuse(
         `Consensum push failed (HTTP ${created.status}). The plan was NOT submitted for review, so I won't proceed. ` +
           `Check CONSENSUM_BASE_URL/CONSENSUM_API_TOKEN, then re-present the plan to retry.`
       );
@@ -147,8 +171,9 @@ async function main() {
     reviewUrl = created.json.reviewUrl || `${BASE}/app/documents/${entry.planId}`;
     process.stderr.write(`[consensum] Plan posted for review: ${reviewUrl}\n`);
   }
-  all[sessionId] = entry;
-  saveState(cwd, all);
+  updateState(cwd, (all) => {
+    all[sessionId] = { ...entry, updatedAt: new Date().toISOString() };
+  });
 
   // 2) Block until the team renders a verdict on THIS revision.
   const deadline = Date.now() + MAX_MS;
@@ -160,7 +185,7 @@ async function main() {
     const pendingProbe = await api("GET", `/api/plans/${entry.planId}/feedback`);
     if (pendingProbe.status === 404) {
       // Fail CLOSED: the plan vanished mid-review (deleted / access revoked).
-      denyDecision(
+      refuse(
         `Consensum plan ${entry.planId} is no longer available (HTTP 404) — it may have been deleted or access revoked. ` +
           `I won't proceed without review; re-present the plan to start a fresh review.`
       );
@@ -174,16 +199,27 @@ async function main() {
 
     const verdict = decide(fb, entry.lastFingerprint);
     if (verdict.action === "allow") {
-      delete all[sessionId];
-      saveState(cwd, all);
-      allowDecision();
+      // Record WHAT was approved (not just that something was): the PostToolUse
+      // backstop passes only when it sees this exact content again.
+      const now = new Date().toISOString();
+      updateState(cwd, (all) => {
+        all[sessionId] = {
+          planId: entry.planId,
+          baseVersionNumber: entry.baseVersionNumber,
+          approvedHash: planHash(plan),
+          approvedAt: now,
+          updatedAt: now,
+        };
+      });
+      proceed();
     }
     if (verdict.action === "deny") {
       // New reviewer activity on the current version — relay it and let the agent revise.
       entry.lastFingerprint = verdict.fingerprint;
-      all[sessionId] = entry;
-      saveState(cwd, all);
-      denyDecision(buildDigest(fb, reviewUrl));
+      updateState(cwd, (all) => {
+        all[sessionId] = { ...entry, updatedAt: new Date().toISOString() };
+      });
+      refuse(buildDigest(fb, reviewUrl));
     }
     if (verdict.action === "wait") {
       // Stale: same verdict we already relayed; reviewer hasn't re-reviewed our
@@ -194,20 +230,57 @@ async function main() {
     // pending and timed out: loop re-arms the long-poll.
   }
 
-  denyDecision(`Plan still pending team review after the configured wait window. Re-enter plan mode and present it again when you're ready to retry. Review: ${reviewUrl}`);
+  refuse(`Plan still pending team review after the configured wait window. Re-enter plan mode and present it again when you're ready to retry. Review: ${reviewUrl}`);
+}
+
+// ---- main --------------------------------------------------------------------
+
+async function main(input = readStdin()) {
+  const isPost = input.hook_event_name === "PostToolUse";
+  const proceed = isPost ? passDecision : allowDecision;
+  const refuse = isPost ? blockDecision : denyDecision;
+
+  const cwd = input.cwd || process.cwd();
+  const sessionId = input.session_id || "default";
+  const plan = input.tool_input?.plan;
+
+  if (!plan) proceed(); // nothing to review
+  if (SKIP) proceed(); // deliberate opt-out — honored on both events, token or not
+  if (!TOKEN) {
+    // Fail CLOSED: the hook is installed but misconfigured. Don't ship un-reviewed.
+    refuse(
+      "Consensum review is enabled (the ExitPlanMode hook is installed) but CONSENSUM_API_TOKEN is not set, " +
+        "so the plan cannot be submitted for review. Set CONSENSUM_API_TOKEN (and CONSENSUM_BASE_URL) and re-present " +
+        "the plan, or set CONSENSUM_SKIP=1 to deliberately bypass review for this session."
+    );
+  }
+
+  let entry = loadState(cwd)[sessionId];
+
+  // Gate<->backstop handshake: the PermissionRequest path records the approved
+  // content's hash, so the PostToolUse backstop (and a re-fired gate) pass this
+  // exact content without a second review round-trip.
+  if (approvedMatch(entry, plan)) proceed();
+  // A leftover approval for DIFFERENT content means the previous cycle is done —
+  // start a fresh plan, preserving the old delete-on-approve semantics.
+  if (entry?.approvedHash) entry = undefined;
+
+  await runGate({ cwd, sessionId, plan, entry, proceed, refuse });
 }
 
 // Only run the blocking hook when executed directly (not when imported by a test).
 const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (isDirectRun) {
-  main().catch((err) => {
+  const input = readStdin();
+  main(input).catch((err) => {
     // FAIL CLOSED: on any unexpected failure, refuse to proceed with an
     // un-reviewed plan and surface the reason in-band to the agent.
     process.stderr.write(`[consensum] hook error: ${err?.stack || err}\n`);
-    denyDecision(
+    const message =
       `Consensum review hook hit an unexpected error (${err?.message || err}). ` +
-        `I won't proceed without review; re-present the plan to retry, or set CONSENSUM_SKIP=1 to bypass.`
-    );
+      `I won't proceed without review; re-present the plan to retry, or set CONSENSUM_SKIP=1 to bypass.`;
+    if (input.hook_event_name === "PostToolUse") blockDecision(message);
+    else denyDecision(message);
   });
 }
 

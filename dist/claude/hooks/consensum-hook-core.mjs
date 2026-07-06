@@ -1,6 +1,10 @@
 // Pure, side-effect-free helpers for the Consensum ExitPlanMode hook
-// (consensum-exit-plan.mjs). Extracted so the verdict logic, fingerprint, and
-// digest can be unit-tested without running the hook's I/O or blocking loop.
+// (consensum-exit-plan.mjs), which runs on two events: the PermissionRequest
+// gate and the PostToolUse backstop. Extracted so the verdict logic,
+// fingerprint, digest, and payload shapes can be unit-tested without running
+// the hook's I/O or blocking loop.
+
+import { createHash } from "node:crypto";
 
 export function titleFromMarkdown(md) {
   const m = (md || "").match(/^\s*#\s+(.+?)\s*$/m);
@@ -25,6 +29,39 @@ export function allowPayload() {
 }
 export function denyPayload(message) {
   return { hookSpecificOutput: { hookEventName: "PermissionRequest", decision: { behavior: "deny", message } } };
+}
+
+// PostToolUse's block handshake is a TOP-LEVEL decision, not hookSpecificOutput.
+// The reason is fed back to Claude after the tool already ran.
+export function postBlockPayload(reason) {
+  return { decision: "block", reason };
+}
+
+export function planHash(markdown) {
+  return createHash("sha256").update(markdown || "", "utf8").digest("hex");
+}
+
+// True iff this exact plan content was already approved for this session —
+// the handshake that lets the PostToolUse backstop pass without re-reviewing
+// what the PermissionRequest gate just approved. Hashing the FINAL tool_input
+// means a plan rewritten by another hook (updatedInput) will not match and
+// correctly goes through review.
+export function approvedMatch(entry, markdown) {
+  return !!entry?.approvedHash && entry.approvedHash === planHash(markdown);
+}
+
+// Drop state entries not touched within maxAgeMs. Approval records are kept
+// (instead of the old delete-on-approve) so the backstop can recognize them;
+// this prune is what stops the state file from growing forever. Entries
+// without updatedAt (written by older hook versions) are kept — they get
+// stamped on their next write.
+export function pruneState(all, nowMs, maxAgeMs = 14 * 24 * 60 * 60 * 1000) {
+  const kept = {};
+  for (const [sessionId, entry] of Object.entries(all || {})) {
+    const touched = entry?.updatedAt ? Date.parse(entry.updatedAt) : NaN;
+    if (Number.isNaN(touched) || nowMs - touched <= maxAgeMs) kept[sessionId] = entry;
+  }
+  return kept;
 }
 
 // A digest of reviewer ACTIVITY (not the plan version), so PATCHing a revision
