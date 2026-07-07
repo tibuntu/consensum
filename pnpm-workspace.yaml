@@ -4,7 +4,7 @@ overrides:
   # Force a single @codemirror/state: @codemirror/view@6.43 needs ^6.7 while the
   # @uiw/react-codemirror stack resolved 6.6, and two copies break CodeMirror's
   # singleton in the production bundle (the editor never mounts).
-  '@codemirror/state': 6.7.0
+  '@codemirror/state': 6.7.1
 # pnpm 11 replaced onlyBuiltDependencies/ignoredBuiltDependencies with a single
 # allowBuilds map (true = run build scripts, false = skip). strictDepBuilds is on
 # by default, so every dependency with a build script must be listed explicitly.
