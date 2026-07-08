@@ -19,6 +19,7 @@ model User {
   createdAt     DateTime
   updatedAt     DateTime
   role          String?   @default("member")
+  disabled      Boolean   @default(false)
   notificationPrefs Json?
   sessions      Session[]
   accounts      Account[]
@@ -272,4 +273,11 @@ model RateLimit {
   key         String?
   count       Int?
   lastRequest BigInt?
+}
+
+model RegistrationAllowlistEntry {
+  id        String   @id @default(cuid())
+  value     String   @unique
+  createdAt DateTime @default(now())
+  createdBy String
 }
