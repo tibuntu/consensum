@@ -19,6 +19,7 @@ export default defineConfig({
       // Registration is fail-closed (lib/registration.ts); the auth spec registers
       // @example.com users, so allow that domain.
       REGISTRATION_ALLOWLIST: "example.com",
+      ADMIN_EMAILS: "e2e-admin@example.com",
       WEBHOOK_ALLOW_INSECURE: "true",
       OUTBOX_POLL_MS: "500",
       // Presence: context.close() never delivers the pagehide beacon, so the
