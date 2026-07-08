@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.15.0](https://github.com/tibuntu/consensum/compare/v0.14.0...v0.15.0) (2026-07-08)
+
+
+### Features
+
+* **m11:** add User.disabled and RegistrationAllowlistEntry schema ([0edb002](https://github.com/tibuntu/consensum/commit/0edb00251fbe5910217248d4a3a02141ebda2b4e))
+* **m11:** admin API routes (users, allowlist) gated by requireAdmin ([4e11311](https://github.com/tibuntu/consensum/commit/4e113112f301fb3760460fb13acff09a26f5f6d2))
+* **m11:** admin gating (isAdmin/requireAdmin, ADMIN_EMAILS) ([f63775b](https://github.com/tibuntu/consensum/commit/f63775b07bbfab93abd489d09528227b9361892e))
+* **m11:** admin settings UI (users + allowlist) with conditional tab ([f90ef79](https://github.com/tibuntu/consensum/commit/f90ef79d360459b31049cf2606e935df59aca1e3))
+* **m11:** DB-backed allowlist union with admin actions ([9086e53](https://github.com/tibuntu/consensum/commit/9086e53dd1a14d6b2656f525e2d8902dc20cb03a))
+* **m11:** enforce deactivation on API tokens and new logins ([c48df30](https://github.com/tibuntu/consensum/commit/c48df30d00c7920b431bb3a5d844464942cbbbc7))
+* **m11:** user-management actions with self/env-admin guards ([6fdb7de](https://github.com/tibuntu/consensum/commit/6fdb7de69b6247e5f210d3a886ed8e86e4174f55))
+
+
+### Bug Fixes
+
+* **deps:** update codemirror to v6.7.1 ([bc1aa64](https://github.com/tibuntu/consensum/commit/bc1aa64c1c16546bed1138b5b876e1ba92acf284))
+* **deps:** update pnpm to v11.10.0 ([abd555a](https://github.com/tibuntu/consensum/commit/abd555a5bdea6511f18b77cc6d45264c262e2beb))
+* **m11:** add Postgres migration for User.disabled + RegistrationAllowlistEntry ([508cde7](https://github.com/tibuntu/consensum/commit/508cde735ac6f1a9b34f4d6c47dd59578d6db576))
+* **m11:** cast ProcessEnv stub via unknown to satisfy tsc ([9e06589](https://github.com/tibuntu/consensum/commit/9e06589596c31a779b5924aa25835536a182a1b3))
+* **m11:** dedup allowlist row when re-adding an existing entry ([7353365](https://github.com/tibuntu/consensum/commit/7353365d851ba13c826321df24f895a39fc57b9d))
+
 ## [0.14.0](https://github.com/tibuntu/consensum/compare/v0.13.0...v0.14.0) (2026-07-06)
 
 
