@@ -62,7 +62,7 @@ describe("setRole", () => {
   it("refuses to modify an env-admin", async () => {
     const actor = await makeUser("admin");
     const envAdmin = await makeUser("member", `envadmin-${Date.now()}@example.com`);
-    const res = await setRole(actor.id, envAdmin.id, "admin", { ADMIN_EMAILS: envAdmin.email } as NodeJS.ProcessEnv);
+    const res = await setRole(actor.id, envAdmin.id, "admin", { ADMIN_EMAILS: envAdmin.email } as unknown as NodeJS.ProcessEnv);
     expect(res).toEqual({ error: "cannot_modify_env_admin" });
   });
 });
