@@ -1,5 +1,6 @@
 import { requireUser } from "@/lib/api";
 import { prisma } from "@/lib/db";
+import { registrationAllowlist } from "@/lib/registration";
 
 /** Parse ADMIN_EMAILS into normalized exact-email entries (trim, lowercase, drop empties). */
 export function adminEmails(env: NodeJS.ProcessEnv = process.env): string[] {
@@ -67,4 +68,38 @@ export async function setDisabled(
   await prisma.user.update({ where: { id: targetId }, data: { disabled } });
   if (disabled) await prisma.session.deleteMany({ where: { userId: targetId } });
   return { ok: true };
+}
+
+/** Accept an exact email, a bare domain, or "*". Returns the normalized value or null. */
+export function normalizeAllowlistValue(raw: string): string | null {
+  const v = raw.trim().toLowerCase().replace(/^@/, "");
+  if (v === "*") return "*";
+  if (v.includes("@")) return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) ? v : null;
+  return /^[^@\s]+\.[^@\s]+$/.test(v) ? v : null; // bare domain
+}
+
+export async function listAllowlist(env: NodeJS.ProcessEnv = process.env) {
+  const db = await prisma.registrationAllowlistEntry.findMany({
+    select: { id: true, value: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+  });
+  return { env: registrationAllowlist(env), db };
+}
+
+export type AddAllowlistResult = { ok: true; id: string } | { error: "invalid" };
+
+export async function addAllowlistEntry(actorId: string, rawValue: string): Promise<AddAllowlistResult> {
+  const value = normalizeAllowlistValue(rawValue);
+  if (!value) return { error: "invalid" };
+  const row = await prisma.registrationAllowlistEntry.upsert({
+    where: { value },
+    create: { value, createdBy: actorId },
+    update: {},
+    select: { id: true },
+  });
+  return { ok: true, id: row.id };
+}
+
+export async function removeAllowlistEntry(id: string) {
+  await prisma.registrationAllowlistEntry.deleteMany({ where: { id } });
 }

@@ -1,14 +1,21 @@
 import { describe, it, expect } from "vitest";
 import { adminEmails, isAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
-import { listUsers, setRole, setDisabled } from "@/lib/admin";
+import {
+  listUsers,
+  setRole,
+  setDisabled,
+  normalizeAllowlistValue,
+  addAllowlistEntry,
+  removeAllowlistEntry,
+  listAllowlist,
+} from "@/lib/admin";
 
 let seq = 0;
-async function makeUser(role = "member", email?: string) {
-  const now = new Date();
+async function makeUser(role = "member", email?: string, createdAt = new Date()) {
   const id = `u-adm-${Date.now()}-${++seq}-${Math.round(Math.random() * 1e6)}`;
   return prisma.user.create({
-    data: { id, name: id, email: email ?? `${id}@example.com`, emailVerified: false, role, disabled: false, createdAt: now, updatedAt: now },
+    data: { id, name: id, email: email ?? `${id}@example.com`, emailVerified: false, role, disabled: false, createdAt, updatedAt: createdAt },
   });
 }
 
@@ -70,5 +77,48 @@ describe("setDisabled", () => {
     expect(await setDisabled(actor.id, target.id, true)).toEqual({ ok: true });
     expect((await prisma.user.findUnique({ where: { id: target.id } }))!.disabled).toBe(true);
     expect(await prisma.session.count({ where: { userId: target.id } })).toBe(0);
+  });
+});
+
+describe("listUsers", () => {
+  it("returns users newest first", async () => {
+    const base = Date.now();
+    const older = await makeUser("member", undefined, new Date(base));
+    const newer = await makeUser("member", undefined, new Date(base + 1000));
+    const users = await listUsers();
+    const iOlder = users.findIndex((u) => u.id === older.id);
+    const iNewer = users.findIndex((u) => u.id === newer.id);
+    expect(iNewer).toBeGreaterThanOrEqual(0);
+    expect(iOlder).toBeGreaterThan(iNewer); // newer appears before older
+  });
+});
+
+describe("normalizeAllowlistValue", () => {
+  it("accepts email, bare domain, and '*'", () => {
+    expect(normalizeAllowlistValue(" Alice@Corp.com ")).toBe("alice@corp.com");
+    expect(normalizeAllowlistValue("@Corp.com")).toBe("corp.com");
+    expect(normalizeAllowlistValue("*")).toBe("*");
+  });
+  it("rejects garbage", () => {
+    expect(normalizeAllowlistValue("nope")).toBeNull();
+    expect(normalizeAllowlistValue("a@b")).toBeNull();
+  });
+});
+
+describe("addAllowlistEntry / removeAllowlistEntry", () => {
+  it("adds a valid entry and removes it", async () => {
+    const actor = await makeUser("admin");
+    const value = `t-${Date.now()}-${Math.round(Math.random() * 1e6)}.com`;
+    const res = await addAllowlistEntry(actor.id, value);
+    expect("ok" in res && res.ok).toBe(true);
+    const listed = await listAllowlist({} as NodeJS.ProcessEnv);
+    expect(listed.db.some((e) => e.value === value)).toBe(true);
+    if ("ok" in res) await removeAllowlistEntry(res.id);
+    const after = await listAllowlist({} as NodeJS.ProcessEnv);
+    expect(after.db.some((e) => e.value === value)).toBe(false);
+  });
+  it("rejects an invalid entry", async () => {
+    const actor = await makeUser("admin");
+    expect(await addAllowlistEntry(actor.id, "nope")).toEqual({ error: "invalid" });
   });
 });
