@@ -24,7 +24,9 @@ export function AdminAllowlist({ env, initial }: { env: string[]; initial: Entry
       return;
     }
     const { id } = await res.json();
-    setEntries((p) => [{ id, value: value.trim().toLowerCase().replace(/^@/, "") }, ...p]);
+    // addAllowlistEntry upserts on the unique value, so re-adding an existing
+    // entry returns its current id — don't prepend a duplicate <li>/React key.
+    setEntries((p) => (p.some((x) => x.id === id) ? p : [{ id, value: value.trim().toLowerCase().replace(/^@/, "") }, ...p]));
     setValue("");
   }
   async function remove(id: string) {
