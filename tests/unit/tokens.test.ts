@@ -40,4 +40,14 @@ describe("tokens service", () => {
     const v = await verifyToken(`Bearer ${readOnly.token}`);
     expect(v?.scopes).toEqual(["feedback:read"]);
   });
+
+  it("rejects a token whose owner is disabled", async () => {
+    const now = new Date();
+    const id = `u-tok-disabled-${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+    await prisma.user.create({
+      data: { id, name: id, email: `${id}@example.com`, emailVerified: false, disabled: true, createdAt: now, updatedAt: now },
+    });
+    const { token } = await generateToken(id, "t");
+    expect(await verifyToken(`Bearer ${token}`)).toBeNull();
+  });
 });

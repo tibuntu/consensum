@@ -44,10 +44,23 @@ export const auth = betterAuth({
         // Also gates first-time OIDC users; this deploy is password-only so that's moot,
         // but a future OIDC operator must allowlist their IdP's email domain.
         before: async (user) => {
-          if (!isRegistrationAllowed(user.email)) {
+          if (!(await isRegistrationAllowed(user.email))) {
             throw new APIError("FORBIDDEN", {
               message: "Registration is by invitation only. Contact your administrator.",
             });
+          }
+        },
+      },
+    },
+    session: {
+      create: {
+        // A deactivated user must not be able to start a new session. Existing
+        // sessions are swept at deactivation time (lib/admin.setDisabled); this
+        // blocks fresh logins.
+        before: async (session) => {
+          const u = await prisma.user.findUnique({ where: { id: session.userId }, select: { disabled: true } });
+          if (u?.disabled) {
+            throw new APIError("FORBIDDEN", { message: "This account has been deactivated." });
           }
         },
       },

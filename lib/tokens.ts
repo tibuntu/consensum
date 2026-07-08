@@ -37,6 +37,7 @@ export async function verifyToken(authorization: string | null): Promise<Verifie
   const row = await prisma.apiToken.findUnique({ where: { tokenHash: hashToken(match[1]) }, include: { user: true } });
   if (!row) return null;
   if (row.expiresAt && row.expiresAt.getTime() <= Date.now()) return null;
+  if (row.user.disabled) return null;
   await prisma.apiToken.update({ where: { id: row.id }, data: { lastUsedAt: new Date() } });
   return { user: row.user, scopes: row.scopes.split(",").map((s) => s.trim()).filter(Boolean), tokenId: row.id };
 }
