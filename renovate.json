@@ -32,6 +32,12 @@
       "matchPackageNames": ["eslint"],
       "matchUpdateTypes": ["major"],
       "enabled": false
+    },
+    {
+      "description": "TypeScript 7 (native/Go compiler) is not yet supported by the toolchain: typescript-eslint peers on `typescript <6.1.0` (crashes with `Cannot read properties of undefined (reading 'Cjs')`) and Next.js does not detect TS 7 as an installed TypeScript, failing `next build`. Hold the major until typescript-eslint and Next support it.",
+      "matchPackageNames": ["typescript"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
     }
   ]
 }
