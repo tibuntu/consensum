@@ -29,6 +29,7 @@ model User {
   reviews          Review[]
   notifications    Notification[]
   documentParticipations DocumentParticipant[]
+  implementationLinks ImplementationLink[]
 }
 
 model Session {
@@ -111,6 +112,7 @@ model Document {
   reviews           Review[]
   notifications     Notification[]
   participants      DocumentParticipant[]
+  implementationLinks ImplementationLink[]
 
   @@unique([ownerId, idempotencyKey])
   @@index([ownerId])
@@ -226,6 +228,21 @@ model DocumentParticipant {
 
   @@unique([documentId, userId])
   @@index([userId])
+}
+
+model ImplementationLink {
+  id          String   @id @default(cuid())
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  url         String
+  label       String?
+  kind        String   @default("other") // pr | commit | branch | other (see lib/enums.ts LINK_KINDS)
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([documentId])
+  @@index([createdById])
 }
 
 model Webhook {
