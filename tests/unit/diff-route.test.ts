@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/api", () => ({ requireUser: vi.fn() }));
 
@@ -19,6 +19,10 @@ const ctx = (id: string) => ({ params: Promise.resolve({ id }) });
 const req = (qs: string) => new Request(`http://t/api/documents/x/diff${qs}`);
 
 describe("GET /api/documents/[id]/diff", () => {
+  beforeEach(() => {
+    vi.mocked(api.requireUser).mockReset();
+  });
+
   it("gates access and validates version params", async () => {
     const owner = await makeUser("own");
     const stranger = await makeUser("str");
@@ -37,6 +41,8 @@ describe("GET /api/documents/[id]/diff", () => {
     expect((await GET(req("?from=abc&to=2"), ctx(id))).status).toBe(400);
     expect((await GET(req("?from=1"), ctx(id))).status).toBe(400);
     expect((await GET(req("?from=1&to=99"), ctx(id))).status).toBe(404);
+
+    await prisma.document.delete({ where: { id } });
   });
 
   it("returns diff rows between two versions", async () => {
