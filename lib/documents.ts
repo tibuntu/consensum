@@ -77,35 +77,46 @@ const QUEUE_SELECT = {
  *   verdict (their approval is what's holding it back).
  * - openReviews: they're a non-required reviewer on an OPEN/CHANGES_REQUESTED doc
  *   with no decisive verdict.
- * "Decisive" = a non-dismissed APPROVE or REQUEST_CHANGES by the caller.
+ * "Decisive" = a non-dismissed APPROVE or REQUEST_CHANGES by the caller ON THE
+ * CURRENT VERSION (M12a): a verdict left on a superseded version no longer keeps
+ * the doc out of the queue — the reviewer is re-surfaced with `reReview: true`.
+ * `onVersion.currentFor` is non-null exactly when the reviewed version is still
+ * the document's current one.
  */
 export async function listReviewQueue(userId: string) {
-  const noDecisiveVerdict = {
-    reviews: { none: { reviewerId: userId, dismissed: false, verdict: { in: DECISIVE } } },
+  const myDecisive = { reviewerId: userId, dismissed: false, verdict: { in: DECISIVE } };
+  const noCurrentDecisiveVerdict = {
+    reviews: { none: { ...myDecisive, onVersion: { currentFor: { isNot: null } } } },
   };
+  // Any remaining non-dismissed decisive verdict on a queued doc is necessarily
+  // stale (a current-version one would have excluded the doc above) — surface
+  // it as the re-review hint.
+  const select = { ...QUEUE_SELECT, reviews: { where: myDecisive, select: { id: true } } };
   const [blocking, openReviews] = await Promise.all([
     prisma.document.findMany({
       where: {
         ownerId: { not: userId },
         state: { not: "CLOSED" },
         participants: { some: { userId, required: true } },
-        ...noDecisiveVerdict,
+        ...noCurrentDecisiveVerdict,
       },
       orderBy: { updatedAt: "desc" },
-      select: QUEUE_SELECT,
+      select,
     }),
     prisma.document.findMany({
       where: {
         ownerId: { not: userId },
         state: { in: ["OPEN", "CHANGES_REQUESTED"] },
         participants: { some: { userId, role: "REVIEWER", required: false } },
-        ...noDecisiveVerdict,
+        ...noCurrentDecisiveVerdict,
       },
       orderBy: { updatedAt: "desc" },
-      select: QUEUE_SELECT,
+      select,
     }),
   ]);
-  return { blocking, openReviews };
+  const withHint = <T extends { reviews: { id: string }[] }>(rows: T[]) =>
+    rows.map(({ reviews, ...rest }) => ({ ...rest, reReview: reviews.length > 0 }));
+  return { blocking: withHint(blocking), openReviews: withHint(openReviews) };
 }
 
 export async function getDocumentDetail(id: string) {

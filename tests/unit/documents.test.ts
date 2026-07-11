@@ -4,6 +4,7 @@ import { createDocument, getDocumentDetail, listDocuments, listReviewQueue, find
 import { submitReview } from "@/lib/reviews";
 import { createAnnotation } from "@/lib/annotations";
 import { buildQuote } from "@/lib/anchoring";
+import { createVersion } from "@/lib/versions";
 
 async function makeUser(label = "") {
   const now = new Date();
@@ -124,5 +125,49 @@ describe("listReviewQueue", () => {
     expect(ids(blocking).concat(ids(openReviews))).not.toContain(d);
 
     for (const id of [a, b, c, d]) await prisma.document.delete({ where: { id } });
+  });
+
+  it("re-queues a reviewer whose REQUEST_CHANGES is on a superseded version", async () => {
+    const me = await makeUser("q-stale");
+    const owner = await makeUser("q-stale-own");
+    const a = await createDocument(owner.id, "Stale", "v1 body");
+    await prisma.documentParticipant.create({ data: { documentId: a, userId: me.id, role: "REVIEWER" } });
+    await submitReview(me.id, a, "REQUEST_CHANGES");
+
+    // Decisive verdict on the current version → not queued.
+    let q = await listReviewQueue(me.id);
+    expect(q.openReviews.map((r) => r.id)).not.toContain(a);
+
+    await createVersion(owner.id, a, 1, "v2 body");
+
+    // Same verdict, now stale → re-queued with the re-review hint; state untouched.
+    q = await listReviewQueue(me.id);
+    const row = q.openReviews.find((r) => r.id === a);
+    expect(row).toBeTruthy();
+    expect(row?.reReview).toBe(true);
+    expect((await prisma.document.findUnique({ where: { id: a } }))?.state).toBe("CHANGES_REQUESTED");
+
+    await prisma.document.delete({ where: { id: a } });
+  });
+
+  it("stale REQUEST_CHANGES from a required reviewer lands in blocking; fresh docs get reReview false", async () => {
+    const me = await makeUser("q-req-stale");
+    const owner = await makeUser("q-req-own");
+    const a = await createDocument(owner.id, "ReqStale", "v1 body");
+    await prisma.documentParticipant.create({ data: { documentId: a, userId: me.id, role: "REVIEWER", required: true } });
+    await submitReview(me.id, a, "REQUEST_CHANGES");
+    await createVersion(owner.id, a, 1, "v2 body");
+
+    const q = await listReviewQueue(me.id);
+    expect(q.blocking.find((r) => r.id === a)?.reReview).toBe(true);
+
+    // A doc they never reviewed carries reReview: false.
+    const b = await createDocument(owner.id, "FreshB", "v1 body");
+    await prisma.documentParticipant.create({ data: { documentId: b, userId: me.id, role: "REVIEWER" } });
+    const q2 = await listReviewQueue(me.id);
+    expect(q2.openReviews.find((r) => r.id === b)?.reReview).toBe(false);
+
+    await prisma.document.delete({ where: { id: a } });
+    await prisma.document.delete({ where: { id: b } });
   });
 });
