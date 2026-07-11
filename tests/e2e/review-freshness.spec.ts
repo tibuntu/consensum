@@ -76,7 +76,11 @@ test("stale request-changes re-queues the reviewer and shows the since-your-revi
   await expect(reviewer.getByTestId("stale-diff")).toContainText("wolf");
 
   // Re-review clears the block; the doc approves (requiredApprovals default 1).
-  await review(reviewer, url, "Approve");
+  // Approve in place (no re-navigation) so the banner must clear via client state.
+  const approved = reviewer.waitForResponse((r) => r.url().includes("/reviews") && r.request().method() === "POST");
+  await reviewer.getByRole("button", { name: "Approve" }).click();
+  expect((await approved).ok()).toBeTruthy();
+  await expect(reviewer.getByTestId("stale-review-banner")).toBeHidden();
   await expect(owner.getByTestId("doc-state")).toHaveText("Approved", { timeout: 10_000 });
 
   await ownerCtx.close();

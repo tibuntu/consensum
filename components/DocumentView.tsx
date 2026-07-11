@@ -152,6 +152,7 @@ export default function DocumentView({
   const [markdown, setMarkdown] = useState(doc.markdown);
   const [draft, setDraft] = useState(doc.markdown);
   const [versionNumber, setVersionNumber] = useState(doc.versionNumber);
+  const [myReviewedVersion, setMyReviewedVersion] = useState(doc.myReviewedVersion);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [statusById, setStatusById] = useState<Record<string, string>>({});
@@ -728,6 +729,7 @@ export default function DocumentView({
     if (res.ok) {
       const { state } = await res.json();
       setDocState(state);
+      setMyReviewedVersion(versionNumber); // fresh verdict is on the current version — hides the stale banner
     }
   }
 
@@ -865,8 +867,8 @@ export default function DocumentView({
             )}
           </div>
         </div>
-        {mode === "review" && doc.myReviewedVersion != null && doc.myReviewedVersion < versionNumber && (
-          <StaleReviewBanner documentId={doc.id} reviewedVersion={doc.myReviewedVersion} currentVersion={versionNumber} />
+        {mode === "review" && myReviewedVersion != null && myReviewedVersion < versionNumber && (
+          <StaleReviewBanner key={`${myReviewedVersion}-${versionNumber}`} documentId={doc.id} reviewedVersion={myReviewedVersion} currentVersion={versionNumber} />
         )}
         {mode === "edit" ? (
           <DocumentEditor value={draft} onChange={setDraft} onSave={saveVersion} onCancel={() => { setDraft(markdown); setMode("review"); }} saving={saving} error={saveError} />
