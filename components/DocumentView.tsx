@@ -581,7 +581,15 @@ export default function DocumentView({
           onVersionNumber: r.onVersion?.versionNumber ?? null,
         }))
     );
-  }, [doc.id, versionNumber]);
+    // Same predicate as the server page: the caller's non-dismissed decisive
+    // verdict drives the stale-review banner. Keeps this tab in sync when a
+    // push dismisses an APPROVE or another tab re-reviews.
+    const mine = (document.reviews ?? []).find(
+      (r: { dismissed: boolean; reviewerId: string; verdict: string; onVersion?: { versionNumber: number } | null }) =>
+        !r.dismissed && r.reviewerId === currentUserId && (r.verdict === "APPROVE" || r.verdict === "REQUEST_CHANGES"),
+    );
+    setMyReviewedVersion(mine?.onVersion?.versionNumber ?? null);
+  }, [doc.id, versionNumber, currentUserId]);
 
   const applySuggestion = useCallback(async (annotationId: string) => {
     setApplyError(null);
