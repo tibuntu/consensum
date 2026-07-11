@@ -1,0 +1,60 @@
+"use client";
+import type { DiffRow } from "@/lib/diff";
+
+export function DiffLegend() {
+  return (
+    <div className="flex gap-4 text-xs text-muted">
+      <span><span className="font-mono font-semibold text-[var(--state-approved)]">+</span> Added</span>
+      <span><span className="font-mono font-semibold text-[var(--state-changes)]">−</span> Removed</span>
+    </div>
+  );
+}
+
+export function DiffRowsView({ rows, from, to, testId = "diff" }: {
+  rows: DiffRow[]; from: number; to: number; testId?: string;
+}) {
+  return (
+    <div data-testid={testId} className="max-h-[70vh] overflow-auto rounded-[var(--radius-app)] border border-border">
+      <div className="sticky top-0 z-10 grid grid-cols-1 border-b border-border bg-[var(--state-neutral-bg)] text-xs font-medium text-muted lg:grid-cols-2">
+        <span className="border-b border-border px-2 py-1 lg:border-b-0 lg:border-r">Old · v{from}</span>
+        <span className="px-2 py-1">New · v{to}</span>
+      </div>
+      {rows.map((r, i) => (
+        <div key={i} className="grid grid-cols-1 lg:grid-cols-2 font-mono text-xs">
+          <Side spans={r.oldSpans} text={r.oldText} number={r.oldNumber} side="old" kind={r.kind} />
+          <Side spans={r.newSpans} text={r.newText} number={r.newNumber} side="new" kind={r.kind} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Side({ spans, text, number, side, kind }: {
+  spans?: { value: string; added?: boolean; removed?: boolean }[]; text?: string; number?: number;
+  side: "old" | "new"; kind: DiffRow["kind"];
+}) {
+  const empty = (side === "old" && kind === "added") || (side === "new" && kind === "removed");
+  const marker = empty
+    ? ""
+    : side === "new" && (kind === "added" || kind === "changed")
+      ? "+"
+      : side === "old" && (kind === "removed" || kind === "changed")
+        ? "−"
+        : "";
+  const markerColor = marker === "+" ? "var(--state-approved)" : marker === "−" ? "var(--state-changes)" : undefined;
+  const bg = empty ? "" : kind === "removed" && side === "old" ? "bg-[var(--state-changes-bg)]"
+    : kind === "added" && side === "new" ? "bg-[var(--state-approved-bg)]"
+    : kind === "changed" ? (side === "old" ? "bg-[var(--state-changes-bg)]" : "bg-[var(--state-approved-bg)]") : "";
+  return (
+    <div className={`flex gap-2 border-b border-border px-2 py-0.5 ${bg}`}>
+      <span className="w-3 shrink-0 select-none text-center font-semibold" style={{ color: markerColor }}>
+        <span aria-hidden>{marker}</span>
+        {marker && <span className="sr-only">{marker === "+" ? "Added: " : "Removed: "}</span>}
+      </span>
+      <span className="w-8 shrink-0 select-none text-right text-muted">{number ?? ""}</span>
+      <pre className="whitespace-pre-wrap break-words">{spans ? spans.map((s, i) => (
+        <span key={i} className={s.added ? "bg-[var(--state-approved)] text-[var(--primary-fg)]" : s.removed ? "bg-[var(--state-changes)] text-[var(--primary-fg)] line-through" : ""}>{s.value}</span>
+      )) : (empty ? "" : text)}</pre>
+    </div>
+  );
+}

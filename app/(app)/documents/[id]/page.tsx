@@ -15,6 +15,12 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
   const doc = await getDocumentDetail(id);
   if (!doc) notFound();
 
+  // The caller's own decisive verdict, for the stale-review banner. APPROVE is
+  // dismissed on every push, so in practice this surfaces stale REQUEST_CHANGES.
+  const myReview = doc.reviews.find(
+    (r) => !r.dismissed && r.reviewerId === session.user.id && (r.verdict === "APPROVE" || r.verdict === "REQUEST_CHANGES"),
+  );
+
   const serializable: ClientDocument = {
     id: doc.id,
     title: doc.title,
@@ -31,6 +37,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
         verdict: r.verdict,
         onVersionNumber: r.onVersion?.versionNumber ?? null,
       })),
+    myReviewedVersion: myReview?.onVersion?.versionNumber ?? null,
     annotations: doc.annotations.map((a) => ({
       id: a.id,
       scope: a.scope,

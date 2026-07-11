@@ -19,6 +19,7 @@ type QueueRow = {
   state: string;
   updatedAt: Date;
   owner: { name: string | null; email: string } | null;
+  reReview?: boolean;
 };
 
 function DocCard({ doc, required }: { doc: QueueRow; required?: boolean }) {
@@ -28,6 +29,7 @@ function DocCard({ doc, required }: { doc: QueueRow; required?: boolean }) {
         <div className="flex items-start justify-between gap-3">
           <span className="font-medium text-foreground">{doc.title}</span>
           <div className="flex shrink-0 items-center gap-2">
+            {doc.reReview && <Badge tone="neutral" data-testid="re-review-hint">Changed since your review</Badge>}
             {required && <Badge tone="changes">Required</Badge>}
             <Badge tone={stateTone(doc.state)}>
               {STATE_LABELS[doc.state] ?? doc.state}

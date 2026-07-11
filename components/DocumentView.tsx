@@ -18,6 +18,7 @@ import { SEVERITIES, type SessionAction } from "@/lib/enums";
 import type { PresenceEntry, PresenceCursor, PresenceSelection, PresenceScroll, ReviewSession } from "@/lib/events";
 import CommentSidebar from "@/components/CommentSidebar";
 import DocumentEditor from "@/components/DocumentEditor";
+import StaleReviewBanner from "@/components/StaleReviewBanner";
 import ShareDialog from "@/components/ShareDialog";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
@@ -59,6 +60,7 @@ export interface ClientDocument {
   requireBlockerResolution: boolean;
   approvals: number;
   reviews: ClientReview[];
+  myReviewedVersion: number | null;
   annotations: ClientAnnotation[];
 }
 
@@ -863,6 +865,9 @@ export default function DocumentView({
             )}
           </div>
         </div>
+        {mode === "review" && doc.myReviewedVersion != null && doc.myReviewedVersion < versionNumber && (
+          <StaleReviewBanner documentId={doc.id} reviewedVersion={doc.myReviewedVersion} currentVersion={versionNumber} />
+        )}
         {mode === "edit" ? (
           <DocumentEditor value={draft} onChange={setDraft} onSave={saveVersion} onCancel={() => { setDraft(markdown); setMode("review"); }} saving={saving} error={saveError} />
         ) : (
