@@ -18,6 +18,8 @@ export function notificationLabel(type: string, actorName?: string | null): stri
       return who ? `${who} shared a document` : "Document shared with you";
     case "review_requested":
       return who ? `${who} requested your review` : "Your review was requested";
+    case "implementation":
+      return who ? `${who} linked an implementation` : "Implementation linked";
     default:
       return type;
   }

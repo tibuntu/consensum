@@ -39,13 +39,13 @@ export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
 export const SESSION_ACTIONS = ["start", "join", "leave", "end"] as const;
 export type SessionAction = (typeof SESSION_ACTIONS)[number];
 
-export const NOTIFICATION_TYPES = ["comment", "review", "version", "resolve", "shared", "review_requested"] as const;
+export const NOTIFICATION_TYPES = ["comment", "review", "version", "resolve", "shared", "review_requested", "implementation"] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 export const NOTIFICATION_CHANNELS = ["inApp", "email", "desktop"] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
 
-// Which channels exist per type. `resolve` and `shared` are never emailed.
+// Which channels exist per type. `resolve`, `shared`, and `implementation` are never emailed.
 export const NOTIFICATION_CELLS: Record<NotificationType, readonly NotificationChannel[]> = {
   comment: ["inApp", "email", "desktop"],
   review: ["inApp", "email", "desktop"],
@@ -53,4 +53,8 @@ export const NOTIFICATION_CELLS: Record<NotificationType, readonly NotificationC
   resolve: ["inApp", "desktop"],
   shared: ["inApp", "desktop"],
   review_requested: ["inApp", "email", "desktop"],
+  implementation: ["inApp", "desktop"],
 };
+
+export const LINK_KINDS = ["pr", "commit", "branch", "other"] as const;
+export type LinkKind = (typeof LINK_KINDS)[number];

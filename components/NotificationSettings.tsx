@@ -15,6 +15,7 @@ const TYPE_LABELS: Record<NotificationType, string> = {
   resolve: "Thread resolved",
   shared: "Document shared",
   review_requested: "Review requests",
+  implementation: "Implementation links",
 };
 const CHANNEL_LABELS: Record<NotificationChannel, string> = {
   inApp: "In-app",
