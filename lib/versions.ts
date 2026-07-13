@@ -30,6 +30,13 @@ export class ConcurrencyError extends Error {
   }
 }
 
+export class ArchivedError extends Error {
+  constructor(message = "document is archived") {
+    super(message);
+    this.name = "ArchivedError";
+  }
+}
+
 export interface ReanchorSummary {
   active: number;
   moved: number;
@@ -39,6 +46,7 @@ export interface ReanchorSummary {
 export async function createVersion(userId: string, documentId: string, baseVersionNumber: number, markdown: string) {
   const doc = await prisma.document.findUnique({ where: { id: documentId }, include: { currentVersion: true } });
   if (!doc?.currentVersion) throw new Error("document has no current version");
+  if (doc.archivedAt) throw new ArchivedError();
   if (doc.currentVersion.versionNumber !== baseVersionNumber) throw new ConcurrencyError();
   const prevState = doc.state;
 

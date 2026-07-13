@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api";
 import { getDocumentDetail, deleteDocument } from "@/lib/documents";
-import { createVersion, ConcurrencyError } from "@/lib/versions";
+import { createVersion, ConcurrencyError, ArchivedError } from "@/lib/versions";
 import { resolveAccess } from "@/lib/authz";
 import { isEditUiEnabled } from "@/lib/config";
 
@@ -37,6 +37,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json(result);
   } catch (e) {
     if (e instanceof ConcurrencyError) return NextResponse.json({ error: "stale version" }, { status: 409 });
+    if (e instanceof ArchivedError) return NextResponse.json({ error: "document is archived" }, { status: 409 });
     throw e;
   }
 }

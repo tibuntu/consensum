@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/api";
-import { createVersion, ConcurrencyError } from "@/lib/versions";
+import { createVersion, ConcurrencyError, ArchivedError } from "@/lib/versions";
 import { resolveAccess } from "@/lib/authz";
 import { maxPlanBytes } from "@/lib/config";
 
@@ -24,6 +24,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json(result, { headers: authd.headers });
   } catch (e) {
     if (e instanceof ConcurrencyError) return NextResponse.json({ error: "stale version" }, { status: 409, headers: authd.headers });
+    if (e instanceof ArchivedError) return NextResponse.json({ error: "document is archived" }, { status: 409, headers: authd.headers });
     throw e;
   }
 }
