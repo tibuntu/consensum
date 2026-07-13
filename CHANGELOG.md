@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.16.0](https://github.com/tibuntu/consensum/compare/v0.15.0...v0.16.0) (2026-07-13)
+
+
+### Features
+
+* **m12a:** stale-review banner with inline since-your-review diff and queue hint ([914a69b](https://github.com/tibuntu/consensum/commit/914a69b0a38ce7b3daf44b436db5705157773585))
+* **m12a:** version diff endpoint gated on view access ([6033932](https://github.com/tibuntu/consensum/commit/603393203d0540f4312c0e6cb5c24c065936c559))
+* **m12a:** version-aware review queue re-surfaces stale request-changes reviewers ([36a2664](https://github.com/tibuntu/consensum/commit/36a2664925d24629aeb9613045e6b3021a4ba813))
+* **m12b:** implementation links card on the document page ([4e1a292](https://github.com/tibuntu/consensum/commit/4e1a292d0537fb36ec321932c0542846e5696a8e))
+* **m12b:** implementation links service, notification type, and machine/web APIs ([1bea37f](https://github.com/tibuntu/consensum/commit/1bea37fa7d4cf7a4bd4e0d77287f031eda3d1021))
+* **m12b:** ImplementationLink schema with dual-DB migration ([f72f2e2](https://github.com/tibuntu/consensum/commit/f72f2e2b52f6bd8d2b6463d2e7eb61bef85daa6f))
+* **ui:** use full display width for app content ([5fd9666](https://github.com/tibuntu/consensum/commit/5fd9666316522cd357a7b8b7e913312f0fd35569))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @uiw/react-codemirror to v4.25.11 ([5823709](https://github.com/tibuntu/consensum/commit/5823709db30419845b1bc9065de39a54b5264d9b))
+* **deps:** update pnpm to v11.11.0 ([cb19571](https://github.com/tibuntu/consensum/commit/cb1957168919d97d84c87f673479c5b85b0f0198))
+* **m12a:** keep stale-review banner in sync with live review state ([2213382](https://github.com/tibuntu/consensum/commit/22133821ef9fedd6f0fd9edd0ac8f3b675600c57))
+* **m12a:** recompute stale-banner state on SSE refetch ([ff6c334](https://github.com/tibuntu/consensum/commit/ff6c334eb62d8523c32cdddff389ad7c288b2cc3))
+* **m12b:** normalize stored link URLs and trim labels before validation ([b02357d](https://github.com/tibuntu/consensum/commit/b02357d39b3eab802da6a52217b03dcacc27753b))
+* **m12b:** surface link-removal failures and refresh links on refetch ([49fc9f5](https://github.com/tibuntu/consensum/commit/49fc9f50dcfa011a04a5f614000ee450edc26a59))
+* **presence:** stop cursor/selection broadcasts when viewing alone ([433b25a](https://github.com/tibuntu/consensum/commit/433b25a471244e7a0f4e0b95d43fb749f36d72a9))
+* **ui:** prevent hydration mismatch in leading-H1 demotion ([7b2282e](https://github.com/tibuntu/consensum/commit/7b2282e3923b27ee93809fc75bd816d029236e6b))
+
 ## [0.15.0](https://github.com/tibuntu/consensum/compare/v0.14.0...v0.15.0) (2026-07-08)
 
 
