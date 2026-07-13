@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import ReactMarkdown, { type ExtraProps } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { buildQuote, type Quote } from "@/lib/anchoring";
-import { startsWithH1 } from "@/lib/markdown-heading";
+import { leadingH1Line } from "@/lib/markdown-heading";
 import { fenceTerminalArt } from "@/lib/terminal-art";
 import { applyHighlights, applyPresenceSelections, buildHighlightRanges, clearPresenceSelections } from "@/lib/highlight";
 import { applyPresenceEvent, remoteCursors, remoteSelections } from "@/lib/presence-client";
@@ -87,15 +87,15 @@ const RenderedMarkdown = memo(function RenderedMarkdown({ markdown }: { markdown
   // <h1>{doc.title}</h1> as a duplicate top heading. Demote ONLY that first H1 to a
   // de-emphasized non-h1 element so the page title stays the canonical heading.
   // Mid-document H1s and docs that don't open with an H1 are untouched.
-  const demoteLeadingH1 = startsWithH1(markdown);
-  let h1Seen = 0;
-  const components = demoteLeadingH1
+  // Match the leading H1 by its source position, not a render-order counter: a
+  // mutable counter incremented during render can diverge between SSR and
+  // hydration (streaming/concurrent rendering), causing a hydration mismatch.
+  const leadingLine = leadingH1Line(markdown);
+  const components = leadingLine != null
     ? {
-        // Destructure `node` out so react-markdown's hast node isn't spread onto the DOM.
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        h1({ children, node: _node, ...props }: React.ComponentPropsWithoutRef<"h1"> & ExtraProps) {
-          h1Seen += 1;
-          if (h1Seen === 1) {
+        // `node` is used for its position and deliberately NOT spread onto the DOM.
+        h1({ children, node, ...props }: React.ComponentPropsWithoutRef<"h1"> & ExtraProps) {
+          if (node?.position?.start.line === leadingLine) {
             return (
               <p
                 {...props}
