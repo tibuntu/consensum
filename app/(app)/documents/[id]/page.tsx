@@ -53,6 +53,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
       appliedInVersionNumber: a.appliedInVersion?.versionNumber ?? null,
       comments: a.comments.map((c) => ({ id: c.id, body: c.body, author: c.author })),
     })),
+    links: doc.implementationLinks.map((l) => ({ id: l.id, url: l.url, label: l.label, kind: l.kind })),
   };
 
   const isOwner = doc.ownerId === session.user.id;

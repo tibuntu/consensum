@@ -50,6 +50,12 @@ export interface ClientReview {
   verdict: string;
   onVersionNumber: number | null;
 }
+export interface ClientLink {
+  id: string;
+  url: string;
+  label: string | null;
+  kind: string;
+}
 export interface ClientDocument {
   id: string;
   title: string;
@@ -62,6 +68,7 @@ export interface ClientDocument {
   reviews: ClientReview[];
   myReviewedVersion: number | null;
   annotations: ClientAnnotation[];
+  links: ClientLink[];
 }
 
 const STATE_LABELS: Record<string, string> = {
@@ -170,6 +177,34 @@ export default function DocumentView({
   const [generalSeverity, setGeneralSeverity] = useState("");
   const [shareOpen, setShareOpen] = useState(false);
   const [visibility, setVisibility] = useState(visibilityProp);
+  const [links, setLinks] = useState(doc.links);
+  const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [newLinkLabel, setNewLinkLabel] = useState("");
+  const [newLinkKind, setNewLinkKind] = useState("pr");
+  const [linkError, setLinkError] = useState<string | null>(null);
+
+  const submitLink = async () => {
+    setLinkError(null);
+    const res = await fetch(`/api/documents/${doc.id}/links`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url: newLinkUrl, label: newLinkLabel || undefined, kind: newLinkKind }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setLinkError(data?.error ?? "failed");
+      return;
+    }
+    const { link } = await res.json();
+    setLinks((ls) => [...ls, link]);
+    setNewLinkUrl("");
+    setNewLinkLabel("");
+  };
+
+  const deleteLink = async (linkId: string) => {
+    const res = await fetch(`/api/documents/${doc.id}/links/${linkId}`, { method: "DELETE" });
+    if (res.ok) setLinks((ls) => ls.filter((l) => l.id !== linkId));
+  };
 
   const postSessionAction = useCallback(
     (action: SessionAction) => {
@@ -981,6 +1016,78 @@ export default function DocumentView({
             </div>
           )}
         </Card>
+
+        {(links.length > 0 || canManage) && (
+          <Card className="flex flex-col gap-2 p-3" data-testid="implementation-links">
+            <span className="text-xs font-medium text-muted">Implementation</span>
+            {links.length === 0 ? (
+              <p className="text-xs text-muted">No implementation linked yet.</p>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {links.map((l) => (
+                  <li key={l.id} data-testid="implementation-link" className="flex items-center justify-between gap-2 text-sm">
+                    <a href={l.url} target="_blank" rel="noopener noreferrer" className="min-w-0 truncate text-primary hover:underline">
+                      {l.label || l.url}
+                    </a>
+                    <span className="flex shrink-0 items-center gap-1">
+                      <Badge tone="neutral">{l.kind}</Badge>
+                      {canManage && (
+                        <button
+                          type="button"
+                          aria-label={`remove link ${l.label || l.url}`}
+                          className="text-xs text-muted hover:text-[var(--danger)]"
+                          onClick={() => void deleteLink(l.id)}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {canManage && (
+              <form className="flex flex-col gap-1.5" onSubmit={(e) => { e.preventDefault(); void submitLink(); }}>
+                <input
+                  aria-label="link url"
+                  data-testid="add-link-url"
+                  type="url"
+                  required
+                  placeholder="https://…"
+                  value={newLinkUrl}
+                  onChange={(e) => setNewLinkUrl(e.target.value)}
+                  className="rounded-[var(--radius-app)] border border-border bg-surface px-1.5 py-0.5 text-sm text-foreground"
+                />
+                <div className="flex gap-1.5">
+                  <input
+                    aria-label="link label"
+                    data-testid="add-link-label"
+                    placeholder="Label (optional)"
+                    value={newLinkLabel}
+                    onChange={(e) => setNewLinkLabel(e.target.value)}
+                    className="min-w-0 flex-1 rounded-[var(--radius-app)] border border-border bg-surface px-1.5 py-0.5 text-sm text-foreground"
+                  />
+                  <select
+                    aria-label="link kind"
+                    data-testid="add-link-kind"
+                    value={newLinkKind}
+                    onChange={(e) => setNewLinkKind(e.target.value)}
+                    className="rounded-[var(--radius-app)] border border-border bg-surface px-1.5 py-0.5 text-sm text-foreground"
+                  >
+                    <option value="pr">PR</option>
+                    <option value="commit">Commit</option>
+                    <option value="branch">Branch</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <Button variant="secondary" size="sm" type="submit" data-testid="add-link-submit">
+                    Add
+                  </Button>
+                </div>
+                {linkError && <p className="text-xs text-[var(--danger)]">{linkError}</p>}
+              </form>
+            )}
+          </Card>
+        )}
 
         {canReview && (
         <Card className="flex flex-col gap-2 p-3">

@@ -139,6 +139,7 @@ export async function getDocumentDetail(id: string) {
         },
       },
       reviews: { include: { reviewer: { select: { name: true, email: true } }, onVersion: { select: { versionNumber: true } } } },
+      implementationLinks: { orderBy: { createdAt: "asc" } },
     },
   });
   return doc;
