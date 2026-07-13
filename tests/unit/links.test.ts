@@ -21,6 +21,12 @@ describe("links service", () => {
     expect(await addLink(owner.id, id, { url: `https://example.com/${"a".repeat(2048)}` })).toEqual({ error: "url_too_long" });
     expect(await addLink(owner.id, id, { url: "https://example.com/pr/1", label: "x".repeat(201) })).toEqual({ error: "label_too_long" });
     expect(await addLink(owner.id, id, { url: "https://example.com/pr/1", kind: "issue" })).toEqual({ error: "invalid_kind" });
+
+    // Trailing whitespace is accepted and the stored URL is WHATWG-normalized.
+    const c = await addLink(owner.id, id, { url: "https://example.com/pr/3  " });
+    expect("link" in c).toBe(true);
+    expect("link" in c && c.link.url).toBe("https://example.com/pr/3");
+
     await prisma.document.delete({ where: { id } });
   });
 
