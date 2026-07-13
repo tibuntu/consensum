@@ -9,6 +9,7 @@ export interface Access {
   canReview: boolean;
   canManage: boolean;
   visibility: Visibility;
+  archived: boolean;
 }
 
 /**
@@ -19,17 +20,22 @@ export interface Access {
  * participant row is auto-joined as REVIEWER (this is the successor to the old
  * ensureParticipant link-grant). In PRIVATE mode a caller with no row returns
  * null with no side effect.
+ *
+ * On an archived document canReview is forced false for everyone (owner
+ * included); canView/canManage are unaffected — the owner needs canManage to
+ * unarchive via the settings route.
  */
 export async function resolveAccess(userId: string, documentId: string): Promise<Access | null> {
   const doc = await prisma.document.findUnique({
     where: { id: documentId },
-    select: { ownerId: true, visibility: true },
+    select: { ownerId: true, visibility: true, archivedAt: true },
   });
   if (!doc) return null;
   const visibility = doc.visibility as Visibility;
+  const archived = doc.archivedAt !== null;
 
   if (doc.ownerId === userId) {
-    return { role: "OWNER", canView: true, canReview: true, canManage: true, visibility };
+    return { role: "OWNER", canView: true, canReview: !archived, canManage: true, visibility, archived };
   }
 
   const part = await prisma.documentParticipant.findUnique({
@@ -51,9 +57,10 @@ export async function resolveAccess(userId: string, documentId: string): Promise
   return {
     role,
     canView: true,
-    canReview: role === "REVIEWER",
+    canReview: role === "REVIEWER" && !archived,
     canManage: false,
     visibility,
+    archived,
   };
 }
 
