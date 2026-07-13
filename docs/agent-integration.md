@@ -129,3 +129,16 @@ push → wait → pull cycle). Responses carry `X-RateLimit-Limit`,
 exceeded budget returns `429` with `Retry-After` (seconds). Agents should
 honor `Retry-After` before retrying. A long-poll on `feedback/wait` counts
 once, at request start.
+
+### Link the implementation
+
+Once an approved plan is implemented, attach the resulting artifact so reviewers can navigate from plan to code:
+
+```bash
+curl -s -X POST "$CONSENSUM_BASE_URL/api/plans/<id>/links" \
+  -H "Authorization: Bearer $CONSENSUM_API_TOKEN" \
+  -H 'content-type: application/json' \
+  -d '{"url":"https://github.com/acme/repo/pull/42","label":"PR #42","kind":"pr"}'
+```
+
+Requires the `plans:write` scope. `label` is optional; `kind` is one of `pr | commit | branch | other` (default `other`). Returns `201 {link}`. Links appear in an "Implementation" section on the document page, and participants get an in-app notification. `/consensum-loop` does this automatically after implementing.

@@ -23,7 +23,15 @@ Loop until the decision is terminal **and acted upon**:
      curl -s "$CONSENSUM_BASE_URL/api/plans/<id>/feedback" -H "Authorization: Bearer $CONSENSUM_API_TOKEN"
      ```
 
-2. **On `decision == "approved"`:** first check the binding gate — fetch `feedback` and confirm `rollup.mustResolve == 0` (no OPEN blockers remain). If clear, announce it and **proceed to implement the plan now**, in the current session, honoring whatever permission mode the session is already in (do not attempt to escalate permissions); stop looping. If `rollup.mustResolve > 0` (the team approved with open blockers still on the board), do **not** implement — surface those blocker threads to the user, and keep looping / hold for an explicit go-ahead. Severity is advisory; `mustResolve` is the binding signal.
+2. **On `decision == "approved"`:** first check the binding gate — fetch `feedback` and confirm `rollup.mustResolve == 0` (no OPEN blockers remain). If clear, announce it and **proceed to implement the plan now**, in the current session, honoring whatever permission mode the session is already in (do not attempt to escalate permissions); stop looping. After implementing, close the loop: post where the implementation lives back to the plan so reviewers can find it —
+   ```
+   curl -s -X POST "$CONSENSUM_BASE_URL/api/plans/<id>/links" -H "Authorization: Bearer $CONSENSUM_API_TOKEN" \
+     -H 'content-type: application/json' \
+     -d '{"url":"<PR, branch, or commit URL>","label":"<short label, e.g. PR #42>","kind":"pr"}'
+   ```
+   (`kind` ∈ `pr | commit | branch | other`; omit for `other`. Skip this only when no shareable URL exists, e.g. purely local work.)
+
+   If `rollup.mustResolve > 0` (the team approved with open blockers still on the board), do **not** implement — surface those blocker threads to the user, and keep looping / hold for an explicit go-ahead. Severity is advisory; `mustResolve` is the binding signal.
 
 3. **On `decision == "changes_requested"`:** pull the actionable threads —
    ```
