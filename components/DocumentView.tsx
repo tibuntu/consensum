@@ -230,6 +230,15 @@ export default function DocumentView({
     versionRef.current = versionNumber;
   }, [versionNumber]);
 
+  // Cursor/selection broadcasts only matter when someone else is on the doc to
+  // see them. Alone, every mouse move would still POST at ~10Hz for no audience,
+  // so the high-frequency sends check this first. The 10s heartbeat below stays
+  // unconditional — that is what puts you in other viewers' rosters.
+  const othersPresentRef = useRef(false);
+  useEffect(() => {
+    othersPresentRef.current = roster.some((p) => p.userId !== currentUserId);
+  }, [roster, currentUserId]);
+
   // One presence channel for heartbeats AND selection/cursor updates: every POST
   // states the full selection+cursor truth (object sets, null clears).
   const sendPresence = useCallback(() => {
@@ -333,8 +342,12 @@ export default function DocumentView({
       const end = start + selectedText.length;
       const containerText = container.textContent ?? "";
       setSelection({ quote: buildQuote(containerText, start, end), startOffset: start, endOffset: end });
-      selectionRef.current = { start, end, versionNumber: versionRef.current };
-      queueSelectionSend();
+      // Broadcast the selection only when co-viewers can see it; the local
+      // `setSelection` above still drives this user's comment composer when alone.
+      if (othersPresentRef.current) {
+        selectionRef.current = { start, end, versionNumber: versionRef.current };
+        queueSelectionSend();
+      }
     }
     document.addEventListener("selectionchange", onSelectionChange);
     return () => document.removeEventListener("selectionchange", onSelectionChange);
@@ -377,6 +390,7 @@ export default function DocumentView({
     const throttle = cursorThrottleRef.current;
     const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
     const onMove = (e: MouseEvent) => {
+      if (!othersPresentRef.current) return; // no one else here to see the cursor
       const rect = container.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
       cursorRef.current = {
