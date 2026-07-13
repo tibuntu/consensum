@@ -160,8 +160,13 @@ jobs:
     # main from a merged PR). `result != 'failure'` covers success + skipped while
     # still blocking on a genuine test failure.
     needs: [lint-test-build, e2e, test-postgres]
+    # Skip the (expensive, multi-arch) image build on release-please PRs: they only
+    # bump the changelog/version and carry no code change, so there's nothing new to
+    # build or scan. `head_ref` is empty for push/tag events, so main pushes and the
+    # release tag (which builds+pushes the semver image) are unaffected.
     if: >-
       !cancelled() &&
+      !startsWith(github.head_ref, 'release-please--') &&
       needs.lint-test-build.result != 'failure' &&
       needs.e2e.result != 'failure' &&
       needs.test-postgres.result != 'failure'
