@@ -202,8 +202,10 @@ export default function DocumentView({
   };
 
   const deleteLink = async (linkId: string) => {
+    setLinkError(null);
     const res = await fetch(`/api/documents/${doc.id}/links/${linkId}`, { method: "DELETE" });
     if (res.ok) setLinks((ls) => ls.filter((l) => l.id !== linkId));
+    else setLinkError((await res.json().catch(() => null))?.error ?? "failed");
   };
 
   const postSessionAction = useCallback(
@@ -615,6 +617,11 @@ export default function DocumentView({
           verdict: r.verdict,
           onVersionNumber: r.onVersion?.versionNumber ?? null,
         }))
+    );
+    // No dedicated SSE event for links (deliberate) — they refresh on reload or
+    // any other refetch-triggering event (accepted staleness).
+    setLinks(
+      (document.implementationLinks ?? []).map((l: ClientLink) => ({ id: l.id, url: l.url, label: l.label, kind: l.kind }))
     );
     // Same predicate as the server page: the caller's non-dismissed decisive
     // verdict drives the stale-review banner. Keeps this tab in sync when a
