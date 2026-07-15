@@ -34,5 +34,5 @@ test("card disappears once a document exists", async ({ page }) => {
 
   await page.goto("/");
   await expect(page.getByTestId("getting-started")).toHaveCount(0);
-  await expect(page.getByText("First Plan")).toBeVisible();
+  await expect(page.getByRole("link", { name: "First Plan" })).toBeVisible();
 });
