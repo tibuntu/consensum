@@ -15,7 +15,7 @@ describe("GET /api/documents/[id]/stream presence.sync", () => {
 
   it("sends a presence.sync snapshot of the current roster on connect", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "viewer" } as never);
-    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK", archived: false });
     heartbeat("stream-doc-1", { userId: "u1", name: "Ada" });
 
     const res = await GET(new Request("http://test"), ctx);
