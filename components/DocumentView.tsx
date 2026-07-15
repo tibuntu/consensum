@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import ReactMarkdown, { type ExtraProps } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { buildQuote, type Quote } from "@/lib/anchoring";
-import { leadingH1Line } from "@/lib/markdown-heading";
+import { leadingH1Line, leadingH1Text } from "@/lib/markdown-heading";
 import { fenceTerminalArt } from "@/lib/terminal-art";
 import { applyHighlights, applyPresenceSelections, buildHighlightRanges, clearPresenceSelections } from "@/lib/highlight";
 import { applyPresenceEvent, remoteCursors, remoteSelections } from "@/lib/presence-client";
@@ -82,15 +82,18 @@ const STATE_LABELS: Record<string, string> = {
 // Memoized so React never reconciles the rendered-markdown subtree after mount.
 // `markdown` is constant for a v1 document (no in-app editing in part 1), which
 // makes it safe for the highlight helper to mutate that DOM directly.
-const RenderedMarkdown = memo(function RenderedMarkdown({ markdown }: { markdown: string }) {
-  // When the body opens with `# Title`, that leading H1 stacks under the page-level
-  // <h1>{doc.title}</h1> as a duplicate top heading. Demote ONLY that first H1 to a
-  // de-emphasized non-h1 element so the page title stays the canonical heading.
-  // Mid-document H1s and docs that don't open with an H1 are untouched.
+const RenderedMarkdown = memo(function RenderedMarkdown({ markdown, title }: { markdown: string; title: string }) {
+  // When the body opens with `# Title` REPEATING the document title, that leading
+  // H1 stacks under the page-level <h1>{doc.title}</h1> as a duplicate top heading.
+  // Demote ONLY that first H1 to a de-emphasized non-h1 element so the page title
+  // stays the canonical heading. A body that opens with a different H1 is real
+  // content and keeps its rank; mid-document H1s are untouched.
   // Match the leading H1 by its source position, not a render-order counter: a
   // mutable counter incremented during render can diverge between SSR and
   // hydration (streaming/concurrent rendering), causing a hydration mismatch.
-  const leadingLine = leadingH1Line(markdown);
+  const normalize = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
+  const duplicatesTitle = normalize(leadingH1Text(markdown) ?? "") === normalize(title);
+  const leadingLine = duplicatesTitle ? leadingH1Line(markdown) : null;
   const components = leadingLine != null
     ? {
         // `node` is used for its position and deliberately NOT spread onto the DOM.
@@ -976,7 +979,7 @@ export default function DocumentView({
             onClick={onContainerClick}
             className="prose prose-violet min-h-[50vh] max-w-none rounded-[var(--radius-app)] border border-border bg-surface p-6 relative"
           >
-            <RenderedMarkdown key={versionNumber} markdown={markdown} />
+            <RenderedMarkdown key={versionNumber} markdown={markdown} title={doc.title} />
             <PresenceCursors cursors={remoteCursors(roster, currentUserId)} />
           </div>
         )}
@@ -989,17 +992,26 @@ export default function DocumentView({
             <Badge tone={stateTone(docState)} data-testid="doc-state">
               {STATE_LABELS[docState] ?? docState}
             </Badge>
-            {!isOwner && canReview && (
-              <div className="flex gap-2">
-                <Button variant="primary" size="sm" onClick={() => submitReview("APPROVE")}>
-                  Approve
-                </Button>
-                <Button variant="danger" size="sm" onClick={() => submitReview("REQUEST_CHANGES")}>
-                  Request changes
-                </Button>
-              </div>
-            )}
           </div>
+          {/* Verdicts on their own row so a long state badge never crowds them into
+              wrapping. Request changes is a normal review outcome, not a destructive
+              action — state-changes tone instead of the danger variant. */}
+          {!isOwner && canReview && (
+            <div className="flex gap-2">
+              <Button variant="primary" size="sm" className="flex-1" onClick={() => submitReview("APPROVE")}>
+                Approve
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1 hover:bg-[var(--state-changes-bg)]"
+                style={{ color: "var(--state-changes)" }}
+                onClick={() => submitReview("REQUEST_CHANGES")}
+              >
+                Request changes
+              </Button>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2 text-sm text-muted">
             <span data-testid="approval-progress">{reviews.filter((r) => r.verdict === "APPROVE").length} of {requiredApprovals} approvals</span>
             {isOwner && (

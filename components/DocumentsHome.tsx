@@ -116,10 +116,10 @@ export async function DocumentsHome({
               key={t}
               href={homeHref(activeTag === t ? undefined : t, showArchived)}
               data-testid={`tag-chip-${t}`}
-              className={`inline-flex items-center rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wider ${
+              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wider transition-colors ${
                 activeTag === t
-                  ? "bg-[var(--state-open-bg)] text-[var(--state-open)]"
-                  : "bg-[var(--state-neutral-bg)] text-[var(--state-neutral)] hover:text-foreground"
+                  ? "border-primary bg-primary-subtle text-primary"
+                  : "border-border bg-surface text-muted hover:border-primary/40 hover:bg-primary-subtle hover:text-foreground"
               }`}
             >
               {t}
@@ -128,8 +128,13 @@ export async function DocumentsHome({
           <Link
             href={homeHref(activeTag, !showArchived)}
             data-testid="toggle-archived"
-            className="ml-auto text-sm text-muted hover:text-foreground"
+            className={`ml-auto inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+              showArchived
+                ? "border-primary bg-primary-subtle text-primary"
+                : "border-border bg-surface text-muted hover:border-primary/40 hover:text-foreground"
+            }`}
           >
+            {showArchived && <span aria-hidden>✓</span>}
             {showArchived ? "Hide archived" : "Show archived"}
           </Link>
         </div>

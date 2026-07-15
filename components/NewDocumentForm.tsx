@@ -67,7 +67,7 @@ export default function NewDocumentForm() {
           max={10}
           value={requiredApprovals}
           onChange={(e) => setRequiredApprovals(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
-          className="w-24"
+          className="max-w-24"
         />
       </label>
       {error && (
