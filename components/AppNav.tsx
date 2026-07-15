@@ -6,9 +6,11 @@ import { ThemeToggle } from "./ThemeToggle";
 import { useNotifications } from "@/components/NotificationProvider";
 
 const LINKS = [
-  { href: "/", label: "Documents", testid: undefined as string | undefined },
-  { href: "/inbox", label: "Inbox", testid: "inbox-link" },
-  { href: "/settings/notifications", label: "Settings", testid: "settings-link" },
+  { href: "/", match: "/", label: "Documents", testid: undefined as string | undefined },
+  { href: "/inbox", match: "/inbox", label: "Inbox", testid: "inbox-link" },
+  // Lands on API tokens (the page that onboards an agent); `match` keeps the
+  // tab highlighted across every /settings/* sub-page.
+  { href: "/settings/tokens", match: "/settings", label: "Settings", testid: "settings-link" },
 ];
 
 export function AppNav({ email }: { email: string }) {
@@ -21,7 +23,7 @@ export function AppNav({ email }: { email: string }) {
           <Link href="/" className="font-mono font-semibold text-foreground">◆ Consensum</Link>
           <nav className="flex items-center gap-1 text-sm">
             {LINKS.map((l) => {
-              const active = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
+              const active = l.match === "/" ? pathname === "/" : pathname.startsWith(l.match);
               return (
                 <Link
                   key={l.href}

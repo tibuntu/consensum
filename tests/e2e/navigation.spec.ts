@@ -10,13 +10,16 @@ test("nav reaches settings and inbox", async ({ page }) => {
   await expect(page).toHaveURL(/\/$/);
 
   await page.getByRole("link", { name: "Settings" }).click();
-  await expect(page).toHaveURL(/\/settings\/notifications/);
-  await expect(page.getByTestId("pref-comment-email")).toBeVisible();
-
-  // Settings sub-nav reaches API tokens.
-  await page.getByRole("link", { name: "API tokens" }).click();
   await expect(page).toHaveURL(/\/settings\/tokens/);
   await expect(page.getByLabel("token label")).toBeVisible();
+  // Top-level Settings tab stays highlighted on settings sub-pages.
+  await expect(page.getByTestId("settings-link")).toHaveClass(/text-primary/);
+
+  // Settings sub-nav reaches notification preferences.
+  await page.getByTestId("settings-subnav").getByRole("link", { name: "Notifications" }).click();
+  await expect(page).toHaveURL(/\/settings\/notifications/);
+  await expect(page.getByTestId("pref-comment-email")).toBeVisible();
+  await expect(page.getByTestId("settings-link")).toHaveClass(/text-primary/);
 
   await page.getByRole("link", { name: "Documents" }).click();
   await expect(page).toHaveURL(/\/$/);

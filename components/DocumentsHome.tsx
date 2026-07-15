@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { listDocuments, listReviewQueue } from "@/lib/documents";
+import { listDocuments, listReviewQueue, countVisibleDocuments } from "@/lib/documents";
 import NewDocumentForm from "@/components/NewDocumentForm";
 import { Card } from "@/components/ui/Card";
 import { Badge, stateTone } from "@/components/ui/Badge";
 import { relativeTime } from "@/lib/time";
+import { baseUrl } from "@/lib/config";
+import { CliSetupBlock } from "@/components/CliSetupBlock";
 
 const STATE_LABELS: Record<string, string> = {
   DRAFT: "Draft",
@@ -85,6 +87,8 @@ export async function DocumentsHome({
   // filtered list would hide every other chip once one filter is active.
   const allTags = [...new Set(rest.flatMap((d) => d.tags.map((t) => t.tag.name)))].sort();
   const shown = activeTag ? rest.filter((d) => d.tags.some((t) => t.tag.name === activeTag)) : rest;
+  const showGettingStarted =
+    documents.length === 0 && !activeTag && (await countVisibleDocuments(userId)) === 0;
 
   return (
     <div className="flex flex-col gap-8">
@@ -139,25 +143,35 @@ export async function DocumentsHome({
           </Link>
         </div>
         {shown.length === 0 ? (
-          documents.length === 0 && !activeTag ? (
-            <Card className="flex flex-col items-start gap-3 p-6 text-sm text-muted">
-              <p>No documents yet. Your agent pushes its first plan straight from Claude Code:</p>
-              <code className="rounded bg-[var(--state-neutral-bg)] px-2 py-1 font-mono text-xs text-[var(--state-neutral)]">
-                /consensum-push-plan
-              </code>
-              <p>
-                That needs an{" "}
-                <Link href="/settings/tokens" className="font-medium text-primary hover:underline">
-                  API token
-                </Link>{" "}
-                — or create a document manually below.
-              </p>
+          showGettingStarted ? (
+            <Card className="flex flex-col gap-4 p-6" data-testid="getting-started">
+              <h3 className="text-lg font-semibold text-foreground">Get your first plan reviewed</h3>
+              <ol className="flex list-decimal flex-col gap-3 pl-5 text-sm text-foreground">
+                <li>
+                  <Link href="/settings/tokens" className="text-primary underline underline-offset-2">
+                    Create an API token
+                  </Link>
+                </li>
+                <li>
+                  Point your agent at this instance:
+                  <div className="mt-2">
+                    <CliSetupBlock baseUrl={baseUrl()} tokenHint="paste your token here" />
+                  </div>
+                </li>
+                <li>
+                  Run <code className="font-mono text-[0.95em]">/consensum-push-plan</code> in Claude Code — the
+                  plan appears here for review.
+                </li>
+              </ol>
+              <p className="text-sm text-muted">Or create a document manually below.</p>
             </Card>
           ) : (
             <Card className="p-6 text-sm text-muted">
               {activeTag
                 ? "No documents with this tag."
-                : "Nothing else — documents waiting on you are listed above."}
+                : documents.length === 0
+                  ? "No documents yet — create one below."
+                  : "Nothing else — documents waiting on you are listed above."}
             </Card>
           )
         ) : (

@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { CopyButton } from "@/components/ui/CopyButton";
+import { CliSetupBlock } from "@/components/CliSetupBlock";
 
 type TokenRow = { id: string; label: string; lastUsedAt: Date | string | null; createdAt: Date | string };
 
@@ -156,20 +157,7 @@ export default function TokenManager({
         </ul>
       )}
 
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold text-foreground">CLI setup</h2>
-          <CopyButton
-            label="Copy commands"
-            value={`export CONSENSUM_BASE_URL="${baseUrl || "http://localhost:3000"}"\nexport CONSENSUM_API_TOKEN="csm_…"   # the token shown above\n# /consensum-push-plan and /consensum-pull-feedback ship in this repo's dist/claude/commands/`}
-          />
-        </div>
-        <pre className="overflow-x-auto rounded-[var(--radius-app)] border border-border bg-[var(--state-neutral-bg)] p-4 text-xs text-foreground">
-{`export CONSENSUM_BASE_URL="${baseUrl || "http://localhost:3000"}"
-export CONSENSUM_API_TOKEN="csm_…"   # the token shown above
-# /consensum-push-plan and /consensum-pull-feedback ship in this repo's dist/claude/commands/`}
-        </pre>
-      </div>
+      <CliSetupBlock baseUrl={baseUrl} title="CLI setup" />
     </section>
   );
 }
