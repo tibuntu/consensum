@@ -17,15 +17,23 @@ interface Participant {
 export default function ShareDialog({
   documentId,
   visibility: initialVisibility,
+  tags: initialTags,
+  onTagsChange,
   onVisibilityChange,
   onClose,
 }: {
   documentId: string;
   visibility: string;
+  tags: string[];
+  onTagsChange?: (tags: string[]) => void;
   onVisibilityChange?: (v: string) => void;
   onClose: () => void;
 }) {
   const [visibility, setVisibility] = useState(initialVisibility);
+  const [tags, setTags] = useState<string[]>(initialTags);
+  const [tagInput, setTagInput] = useState("");
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [tagError, setTagError] = useState<string | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
@@ -50,6 +58,41 @@ export default function ShareDialog({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  useEffect(() => {
+    fetch("/api/tags")
+      .then(async (r) => {
+        if (r.ok) setAllTags((await r.json()).tags ?? []);
+      })
+      .catch(() => {});
+  }, []);
+
+  async function saveTags(next: string[]) {
+    const previous = tags;
+    setTags(next);
+    setTagError(null);
+    const res = await fetch(`/api/documents/${documentId}/settings`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tags: next }),
+    }).catch(() => null);
+    if (!res || !res.ok) {
+      setTags(previous);
+      setTagError("Couldn't update tags. Please try again.");
+      return;
+    }
+    const data = await res.json();
+    const saved: string[] = data.tags ?? next;
+    setTags(saved);
+    onTagsChange?.(saved);
+  }
+
+  function addTag() {
+    const name = tagInput.trim().toLowerCase();
+    setTagInput("");
+    if (!name || tags.includes(name)) return;
+    saveTags([...tags, name]);
+  }
 
   async function changeVisibility(next: string) {
     const previous = visibility;
@@ -158,6 +201,54 @@ export default function ShareDialog({
             <option value="LINK">Anyone with link</option>
           </select>
         </label>
+
+        <div className="flex flex-col gap-2 border-t border-border pt-3">
+          <span className="text-sm font-medium text-foreground">Tags</span>
+          <div className="flex flex-wrap gap-1">
+            {tags.map((t) => (
+              <span
+                key={t}
+                data-testid={`tag-${t}`}
+                className="inline-flex items-center gap-1 rounded-full bg-primary-subtle px-2 py-0.5 text-xs text-foreground"
+              >
+                {t}
+                <button aria-label={`remove tag ${t}`} onClick={() => saveTags(tags.filter((x) => x !== t))}>
+                  ×
+                </button>
+              </span>
+            ))}
+            {tags.length === 0 && <span className="text-xs text-muted">No tags yet.</span>}
+          </div>
+          <div className="flex gap-2">
+            <input
+              aria-label="new tag"
+              list="all-tag-suggestions"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addTag();
+                }
+              }}
+              placeholder="add a tag"
+              className="min-w-0 flex-1 rounded-[var(--radius-app)] border border-border bg-surface px-2 py-1 text-sm text-foreground"
+            />
+            <datalist id="all-tag-suggestions">
+              {allTags.map((t) => (
+                <option key={t} value={t} />
+              ))}
+            </datalist>
+            <Button size="sm" onClick={addTag} disabled={!tagInput.trim()}>
+              Add
+            </Button>
+          </div>
+          {tagError && (
+            <p role="alert" className="text-sm text-danger">
+              {tagError}
+            </p>
+          )}
+        </div>
 
         {manageError && (
           <p role="alert" className="text-sm text-danger">
