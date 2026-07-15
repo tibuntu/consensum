@@ -950,15 +950,18 @@ export default function DocumentView({
               </Button>
             )}
             {isOwner && (
-              <Button
-                variant="ghost"
-                size="sm"
-                data-testid="delete-document"
-                className="text-[var(--danger)] sm:ml-1"
-                onClick={() => setConfirmingDelete(true)}
-              >
-                Delete
-              </Button>
+              <>
+                <span aria-hidden className="hidden h-5 w-px bg-border sm:block" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  data-testid="delete-document"
+                  className="text-[var(--danger)]"
+                  onClick={() => setConfirmingDelete(true)}
+                >
+                  Delete
+                </Button>
+              </>
             )}
           </div>
         </div>

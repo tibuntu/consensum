@@ -139,13 +139,27 @@ export async function DocumentsHome({
           </Link>
         </div>
         {shown.length === 0 ? (
-          <Card className="p-6 text-sm text-muted">
-            {activeTag
-              ? "No documents with this tag."
-              : documents.length === 0
-                ? "No documents yet — create one below."
+          documents.length === 0 && !activeTag ? (
+            <Card className="flex flex-col items-start gap-3 p-6 text-sm text-muted">
+              <p>No documents yet. Your agent pushes its first plan straight from Claude Code:</p>
+              <code className="rounded bg-[var(--state-neutral-bg)] px-2 py-1 font-mono text-xs text-[var(--state-neutral)]">
+                /consensum-push-plan
+              </code>
+              <p>
+                That needs an{" "}
+                <Link href="/settings/tokens" className="font-medium text-primary hover:underline">
+                  API token
+                </Link>{" "}
+                — or create a document manually below.
+              </p>
+            </Card>
+          ) : (
+            <Card className="p-6 text-sm text-muted">
+              {activeTag
+                ? "No documents with this tag."
                 : "Nothing else — documents waiting on you are listed above."}
-          </Card>
+            </Card>
+          )
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {shown.map((doc) => (
