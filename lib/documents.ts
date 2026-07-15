@@ -71,6 +71,12 @@ export async function listDocuments(userId: string, opts?: { includeArchived?: b
   });
 }
 
+/** Total docs visible to the user, archived included — gates the first-run
+ *  card so a user whose docs are all archived isn't treated as brand-new. */
+export function countVisibleDocuments(userId: string) {
+  return prisma.document.count({ where: visibleToUser(userId) });
+}
+
 /** Archive (hide + read-only) or unarchive a document. The settings route owns
  *  the canManage gate, mirroring setVisibility. Note: the update bumps
  *  @updatedAt, so unarchiving deliberately surfaces the doc atop the list. */
