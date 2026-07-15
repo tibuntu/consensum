@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.17.0](https://github.com/tibuntu/consensum/compare/v0.16.0...v0.17.0) (2026-07-15)
+
+
+### Features
+
+* **m10:** archive toggle, read-only banner, and tag editor on the document page ([9623696](https://github.com/tibuntu/consensum/commit/96236964a6aab4eb756ececfb5ff4a08fe44d062))
+* **m10:** home filter bar with tag chips and show-archived toggle ([894778a](https://github.com/tibuntu/consensum/commit/894778a4a19bb9262b4448208faf8c71b002aa95))
+* **m10:** settings route archives and tags documents; global tag suggestions endpoint ([33e85a0](https://github.com/tibuntu/consensum/commit/33e85a05ca7c24ff60776495f6055d8a53e9b502))
+
+
+### Bug Fixes
+
+* **deps:** bump pnpm 11.12.0 -&gt; 11.13.0 ([6ba99a3](https://github.com/tibuntu/consensum/commit/6ba99a362fa104565e8bceaeb7a9d61374a94100))
+* **deps:** update pnpm to v11.12.0 ([31e9103](https://github.com/tibuntu/consensum/commit/31e9103ed475833fe4fae6eef3390c0763d08767))
+* **m10:** add archived to resolveAccess mocks so tsc passes ([192240e](https://github.com/tibuntu/consensum/commit/192240e19bd13089d6d21c61ed5fbeb50a5acb43))
+* **m10:** preserve query string in the / to /home rewrite so tag/archived filters work ([5b2d2e4](https://github.com/tibuntu/consensum/commit/5b2d2e42bbbc791191425c7c0476955a08595581))
+
 ## [0.16.0](https://github.com/tibuntu/consensum/compare/v0.15.0...v0.16.0) (2026-07-13)
 
 
