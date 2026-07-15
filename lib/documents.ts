@@ -72,7 +72,8 @@ export async function listDocuments(userId: string, opts?: { includeArchived?: b
 }
 
 /** Archive (hide + read-only) or unarchive a document. The settings route owns
- *  the canManage gate, mirroring setVisibility. */
+ *  the canManage gate, mirroring setVisibility. Note: the update bumps
+ *  @updatedAt, so unarchiving deliberately surfaces the doc atop the list. */
 export async function setArchived(id: string, archived: boolean): Promise<void> {
   await prisma.document.update({ where: { id }, data: { archivedAt: archived ? new Date() : null } });
 }
