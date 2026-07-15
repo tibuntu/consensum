@@ -1,5 +1,5 @@
 "use client";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ReactMarkdown, { type ExtraProps } from "react-markdown";
@@ -24,6 +24,39 @@ import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Card } from "@/components/ui/Card";
 import { Badge, stateTone } from "@/components/ui/Badge";
+
+const REVIEWER_HINT_KEY = "consensum:reviewer-hint-dismissed";
+// Same external-store shape as lib/theme.ts: useSyncExternalStore reads this
+// via getServerSnapshot on the server/first client render (no mismatch) and
+// re-renders with the real client value right after hydration — no effect,
+// no setState-in-effect lint violation.
+const reviewerHintListeners = new Set<() => void>();
+function emitReviewerHintChange(): void {
+  reviewerHintListeners.forEach((l) => l());
+}
+function subscribeReviewerHint(cb: () => void): () => void {
+  reviewerHintListeners.add(cb);
+  return () => {
+    reviewerHintListeners.delete(cb);
+  };
+}
+// Storage-restricted browsers throw on any localStorage access; treat that as
+// "dismissed" so the hint can never reappear on every load.
+function isReviewerHintDismissed(): boolean {
+  try {
+    return localStorage.getItem(REVIEWER_HINT_KEY) === "1";
+  } catch {
+    return true;
+  }
+}
+function persistReviewerHintDismissed(): void {
+  try {
+    localStorage.setItem(REVIEWER_HINT_KEY, "1");
+  } catch {
+    // ignore — worst case the hint reappears next visit
+  }
+  emitReviewerHintChange();
+}
 
 export interface ClientComment {
   id: string;
@@ -182,6 +215,14 @@ export default function DocumentView({
   const [generalBody, setGeneralBody] = useState("");
   const [generalSeverity, setGeneralSeverity] = useState("");
   const [shareOpen, setShareOpen] = useState(false);
+  // getServerSnapshot ("dismissed") makes SSR/first-paint match the client;
+  // the real localStorage value takes over right after hydration.
+  const reviewerHintDismissed = useSyncExternalStore(subscribeReviewerHint, isReviewerHintDismissed, () => true);
+  // Gate matches the verdict buttons (!isOwner && canReview) plus "never reviewed before".
+  const showReviewerHint = !isOwner && canReview && myReviewedVersion == null && !reviewerHintDismissed;
+  const dismissReviewerHint = useCallback(() => {
+    persistReviewerHintDismissed();
+  }, []);
   const [visibility, setVisibility] = useState(visibilityProp);
   const [links, setLinks] = useState(doc.links);
   const [newLinkUrl, setNewLinkUrl] = useState("");
@@ -538,6 +579,7 @@ export default function DocumentView({
       setSelection(null);
       setPendingBody("");
       setFocusedId(created.id);
+      dismissReviewerHint();
     }
   }
 
@@ -578,6 +620,7 @@ export default function DocumentView({
       setSuggesting(false);
       setSuggestDraft("");
       setFocusedId(created.id);
+      dismissReviewerHint();
     }
   }
 
@@ -610,6 +653,7 @@ export default function DocumentView({
       setGeneralBody("");
       setGeneralSeverity("");
       setFocusedId(created.id);
+      dismissReviewerHint();
     }
   }
 
@@ -776,8 +820,9 @@ export default function DocumentView({
             : a
         )
       );
+      dismissReviewerHint();
     }
-  }, []);
+  }, [dismissReviewerHint]);
 
   const toggleThread = useCallback(async (annotationId: string, nextStatus: string) => {
     const res = await fetch(`/api/annotations/${annotationId}`, {
@@ -965,6 +1010,23 @@ export default function DocumentView({
         {archived && (
           <Card data-testid="archived-banner" className="mb-4 p-3 text-sm text-muted">
             This document is archived and read-only. Unarchive it to resume reviewing.
+          </Card>
+        )}
+        {mode === "review" && showReviewerHint && (
+          <Card data-testid="reviewer-hint" className="mb-4 flex items-start justify-between gap-3 p-3 text-sm text-muted">
+            <span>
+              Select any text in the plan to comment or suggest an edit. When you&apos;re done, choose{" "}
+              <strong className="text-foreground">Approve</strong> or{" "}
+              <strong className="text-foreground">Request changes</strong>.
+            </span>
+            <button
+              type="button"
+              aria-label="dismiss reviewer hint"
+              onClick={dismissReviewerHint}
+              className="shrink-0 text-muted hover:text-foreground"
+            >
+              ✕
+            </button>
           </Card>
         )}
         {mode === "edit" ? (
