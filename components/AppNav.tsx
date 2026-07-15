@@ -16,7 +16,7 @@ export function AppNav({ email }: { email: string }) {
   const { unread } = useNotifications();
   return (
     <header className="border-b border-border bg-surface">
-      <div className="mx-auto flex max-w-[90rem] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-6">
           <Link href="/" className="font-mono font-semibold text-foreground">◆ Consensum</Link>
           <nav className="flex items-center gap-1 text-sm">
@@ -31,7 +31,7 @@ export function AppNav({ email }: { email: string }) {
                 >
                   {l.label}
                   {l.href === "/inbox" && unread > 0 && (
-                    <span className="ml-1.5 rounded-full bg-danger px-1.5 text-xs text-danger-fg">{unread}</span>
+                    <span className="ml-1.5 rounded-full bg-primary px-1.5 text-xs text-primary-fg">{unread}</span>
                   )}
                 </Link>
               );

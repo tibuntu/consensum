@@ -201,7 +201,7 @@ export default function CommentSidebar({
           ))}
           {orphaned.length > 0 && (
             <div data-testid="orphaned-section" className="flex flex-col gap-2">
-              <h3 className="text-xs font-semibold uppercase text-muted">Orphaned comments</h3>
+              <h3 className="text-xs font-semibold uppercase text-muted">Outdated comments</h3>
               {orphaned.map((a) => (
                 <ThreadCard key={a.id} annotation={a} status="ORPHANED" focused={focusedId === a.id} isOwner={isOwner} canReview={canReview}
                   onSelect={onSelectThread} onAddComment={onAddComment} onToggleThread={onToggleThread} onApplySuggestion={onApplySuggestion} />

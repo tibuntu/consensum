@@ -28,3 +28,19 @@ export function leadingH1Line(markdown: string): number | null {
   // ATX H1: optional up-to-3 leading spaces, exactly one '#', then space/tab or EOL.
   return /^ {0,3}#(?: |\t|$)/.test(lines[i]) ? i + 1 : null;
 }
+
+/**
+ * The source text of the leading ATX H1 (marker and any closing #s stripped),
+ * or null when the document doesn't open with one. Lets callers demote the
+ * leading H1 only when it actually duplicates the document title — a body that
+ * opens with a DIFFERENT heading is real content and keeps its rank.
+ */
+export function leadingH1Text(markdown: string): string | null {
+  const line = leadingH1Line(markdown);
+  if (line == null) return null;
+  return markdown
+    .split("\n")[line - 1]
+    .replace(/^ {0,3}#[ \t]*/, "")
+    .replace(/[ \t]+#+[ \t]*$/, "")
+    .trim();
+}

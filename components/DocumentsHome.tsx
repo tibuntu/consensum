@@ -116,10 +116,10 @@ export async function DocumentsHome({
               key={t}
               href={homeHref(activeTag === t ? undefined : t, showArchived)}
               data-testid={`tag-chip-${t}`}
-              className={`inline-flex items-center rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wider ${
+              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wider transition-colors ${
                 activeTag === t
-                  ? "bg-[var(--state-open-bg)] text-[var(--state-open)]"
-                  : "bg-[var(--state-neutral-bg)] text-[var(--state-neutral)] hover:text-foreground"
+                  ? "border-primary bg-primary-subtle text-primary"
+                  : "border-border bg-surface text-muted hover:border-primary/40 hover:bg-primary-subtle hover:text-foreground"
               }`}
             >
               {t}
@@ -128,19 +128,38 @@ export async function DocumentsHome({
           <Link
             href={homeHref(activeTag, !showArchived)}
             data-testid="toggle-archived"
-            className="ml-auto text-sm text-muted hover:text-foreground"
+            className={`ml-auto inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+              showArchived
+                ? "border-primary bg-primary-subtle text-primary"
+                : "border-border bg-surface text-muted hover:border-primary/40 hover:text-foreground"
+            }`}
           >
+            {showArchived && <span aria-hidden>✓</span>}
             {showArchived ? "Hide archived" : "Show archived"}
           </Link>
         </div>
         {shown.length === 0 ? (
-          <Card className="p-6 text-sm text-muted">
-            {activeTag
-              ? "No documents with this tag."
-              : documents.length === 0
-                ? "No documents yet — create one below."
+          documents.length === 0 && !activeTag ? (
+            <Card className="flex flex-col items-start gap-3 p-6 text-sm text-muted">
+              <p>No documents yet. Your agent pushes its first plan straight from Claude Code:</p>
+              <code className="rounded bg-[var(--state-neutral-bg)] px-2 py-1 font-mono text-xs text-[var(--state-neutral)]">
+                /consensum-push-plan
+              </code>
+              <p>
+                That needs an{" "}
+                <Link href="/settings/tokens" className="font-medium text-primary hover:underline">
+                  API token
+                </Link>{" "}
+                — or create a document manually below.
+              </p>
+            </Card>
+          ) : (
+            <Card className="p-6 text-sm text-muted">
+              {activeTag
+                ? "No documents with this tag."
                 : "Nothing else — documents waiting on you are listed above."}
-          </Card>
+            </Card>
+          )
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {shown.map((doc) => (

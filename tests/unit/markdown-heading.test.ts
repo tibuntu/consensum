@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { startsWithH1 } from "@/lib/markdown-heading";
+import { startsWithH1, leadingH1Text } from "@/lib/markdown-heading";
 
 describe("startsWithH1", () => {
   it("detects a leading ATX H1", () => {
@@ -34,5 +34,22 @@ describe("startsWithH1", () => {
 
   it("does not treat Setext underlines as a leading H1", () => {
     expect(startsWithH1("Title\n=====\n")).toBe(false);
+  });
+});
+
+describe("leadingH1Text", () => {
+  it("returns the heading text without the marker", () => {
+    expect(leadingH1Text("# Q3 Roadmap\n\nbody")).toBe("Q3 Roadmap");
+    expect(leadingH1Text("\n   # Padded Title  ")).toBe("Padded Title");
+  });
+
+  it("strips ATX closing hashes", () => {
+    expect(leadingH1Text("# Title ##")).toBe("Title");
+  });
+
+  it("is null when the doc does not open with an H1", () => {
+    expect(leadingH1Text("Intro\n\n# Later")).toBe(null);
+    expect(leadingH1Text("## Subhead")).toBe(null);
+    expect(leadingH1Text("")).toBe(null);
   });
 });

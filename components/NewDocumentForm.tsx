@@ -45,6 +45,7 @@ export default function NewDocumentForm() {
           placeholder="e.g. Q3 Platform Roadmap"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          className="max-w-xl"
         />
       </label>
       <label className="flex flex-col gap-1 text-sm text-foreground">
@@ -67,7 +68,7 @@ export default function NewDocumentForm() {
           max={10}
           value={requiredApprovals}
           onChange={(e) => setRequiredApprovals(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
-          className="w-24"
+          className="max-w-24"
         />
       </label>
       {error && (

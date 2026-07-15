@@ -32,7 +32,7 @@ export default function RegisterPage() {
 
   if (oidcEnabled) {
     return (
-      <div className="flex min-h-[80vh] items-center justify-center px-4">
+      <div className="flex min-h-svh items-center justify-center px-4">
         <Card className="w-full max-w-sm p-6">
           <div className="flex flex-col gap-3">
             <span className="font-mono text-sm font-semibold text-primary">◆ Consensum</span>
@@ -51,7 +51,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-[80vh] items-center justify-center px-4">
+    <div className="flex min-h-svh items-center justify-center px-4">
       <Card className="w-full max-w-sm p-6">
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
           <span className="font-mono text-sm font-semibold text-primary">◆ Consensum</span>

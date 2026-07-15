@@ -6,7 +6,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
   const session = await getSession();
   const admin = session ? isAdmin(session.user) : false;
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-6">
+    <div className="w-full max-w-3xl">
       <SettingsNav isAdmin={admin} />
       {children}
     </div>

@@ -46,7 +46,7 @@ export default async function AppLayout({
     >
       <div className="min-h-screen bg-background">
         <AppNav email={session.user.email} />
-        <main className="mx-auto max-w-[90rem] px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+        <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">{children}</main>
       </div>
     </NotificationProvider>
   );
