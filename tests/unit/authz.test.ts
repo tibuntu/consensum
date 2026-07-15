@@ -20,7 +20,7 @@ describe("resolveAccess", () => {
     const id = await createDocument(owner.id, "Plan", "body");
 
     const access = await resolveAccess(owner.id, id);
-    expect(access).toEqual({ role: "OWNER", canView: true, canReview: true, canManage: true, visibility: "PRIVATE" });
+    expect(access).toEqual({ role: "OWNER", canView: true, canReview: true, canManage: true, visibility: "PRIVATE", archived: false });
 
     await prisma.document.delete({ where: { id } });
   });
@@ -32,7 +32,7 @@ describe("resolveAccess", () => {
     await prisma.documentParticipant.create({ data: { documentId: id, userId: reviewer.id, role: "REVIEWER" } });
 
     const access = await resolveAccess(reviewer.id, id);
-    expect(access).toEqual({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "PRIVATE" });
+    expect(access).toEqual({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "PRIVATE", archived: false });
 
     await prisma.document.delete({ where: { id } });
   });
@@ -44,7 +44,7 @@ describe("resolveAccess", () => {
     await prisma.documentParticipant.create({ data: { documentId: id, userId: viewer.id, role: "VIEWER" } });
 
     const access = await resolveAccess(viewer.id, id);
-    expect(access).toEqual({ role: "VIEWER", canView: true, canReview: false, canManage: false, visibility: "PRIVATE" });
+    expect(access).toEqual({ role: "VIEWER", canView: true, canReview: false, canManage: false, visibility: "PRIVATE", archived: false });
 
     await prisma.document.delete({ where: { id } });
   });
@@ -61,12 +61,36 @@ describe("resolveAccess", () => {
     expect(before).toBeNull();
 
     const access = await resolveAccess(stranger.id, id);
-    expect(access).toEqual({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
+    expect(access).toEqual({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK", archived: false });
 
     const after = await prisma.documentParticipant.findUnique({
       where: { documentId_userId: { documentId: id, userId: stranger.id } },
     });
     expect(after?.role).toBe("REVIEWER");
+
+    await prisma.document.delete({ where: { id } });
+  });
+
+  it("archived doc: owner keeps manage but loses review", async () => {
+    const owner = await makeUser();
+    const id = await createDocument(owner.id, "Plan", "body");
+    await prisma.document.update({ where: { id }, data: { archivedAt: new Date() } });
+
+    const access = await resolveAccess(owner.id, id);
+    expect(access).toEqual({ role: "OWNER", canView: true, canReview: false, canManage: true, visibility: "PRIVATE", archived: true });
+
+    await prisma.document.delete({ where: { id } });
+  });
+
+  it("archived doc: reviewer participant loses review", async () => {
+    const owner = await makeUser();
+    const reviewer = await makeUser();
+    const id = await createDocument(owner.id, "Plan", "body");
+    await prisma.documentParticipant.create({ data: { documentId: id, userId: reviewer.id, role: "REVIEWER" } });
+    await prisma.document.update({ where: { id }, data: { archivedAt: new Date() } });
+
+    const access = await resolveAccess(reviewer.id, id);
+    expect(access).toEqual({ role: "REVIEWER", canView: true, canReview: false, canManage: false, visibility: "PRIVATE", archived: true });
 
     await prisma.document.delete({ where: { id } });
   });

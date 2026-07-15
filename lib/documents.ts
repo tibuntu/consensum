@@ -54,12 +54,28 @@ export async function deleteDocument(id: string): Promise<void> {
   ]);
 }
 
-export async function listDocuments(userId: string) {
+/** Where-fragment for "documents this user can see" — a participant row = access. */
+export const visibleToUser = (userId: string) => ({ participants: { some: { userId } } });
+
+export async function listDocuments(userId: string, opts?: { includeArchived?: boolean }) {
   return prisma.document.findMany({
-    where: { participants: { some: { userId } } },
+    where: {
+      ...visibleToUser(userId),
+      ...(opts?.includeArchived ? {} : { archivedAt: null }),
+    },
     orderBy: { updatedAt: "desc" },
-    include: { owner: { select: { name: true, email: true } } },
+    include: {
+      owner: { select: { name: true, email: true } },
+      tags: { select: { tag: { select: { name: true } } }, orderBy: { tag: { name: "asc" } } },
+    },
   });
+}
+
+/** Archive (hide + read-only) or unarchive a document. The settings route owns
+ *  the canManage gate, mirroring setVisibility. Note: the update bumps
+ *  @updatedAt, so unarchiving deliberately surfaces the doc atop the list. */
+export async function setArchived(id: string, archived: boolean): Promise<void> {
+  await prisma.document.update({ where: { id }, data: { archivedAt: archived ? new Date() : null } });
 }
 
 const DECISIVE = ["APPROVE", "REQUEST_CHANGES"];
@@ -97,6 +113,7 @@ export async function listReviewQueue(userId: string) {
       where: {
         ownerId: { not: userId },
         state: { not: "CLOSED" },
+        archivedAt: null,
         participants: { some: { userId, required: true } },
         ...noCurrentDecisiveVerdict,
       },
@@ -107,6 +124,7 @@ export async function listReviewQueue(userId: string) {
       where: {
         ownerId: { not: userId },
         state: { in: ["OPEN", "CHANGES_REQUESTED"] },
+        archivedAt: null,
         participants: { some: { userId, role: "REVIEWER", required: false } },
         ...noCurrentDecisiveVerdict,
       },
@@ -125,6 +143,7 @@ export async function getDocumentDetail(id: string) {
     include: {
       currentVersion: true,
       owner: { select: { name: true, email: true } },
+      tags: { select: { tag: { select: { name: true } } }, orderBy: { tag: { name: "asc" } } },
       versions: {
         orderBy: { versionNumber: "asc" },
         select: { versionNumber: true, createdAt: true, createdBy: { select: { name: true, email: true } } },

@@ -110,12 +110,14 @@ model Document {
   currentVersion    DocumentVersion? @relation("CurrentVersion", fields: [currentVersionId], references: [id])
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
+  archivedAt        DateTime?
   versions          DocumentVersion[] @relation("DocumentVersions")
   annotations       Annotation[]
   reviews           Review[]
   notifications     Notification[]
   participants      DocumentParticipant[]
   implementationLinks ImplementationLink[]
+  tags              DocumentTag[]
 
   @@unique([ownerId, idempotencyKey])
   @@index([ownerId])
@@ -297,4 +299,22 @@ model RegistrationAllowlistEntry {
   value     String   @unique
   createdAt DateTime @default(now())
   createdBy String
+}
+
+model Tag {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  createdAt DateTime      @default(now())
+  documents DocumentTag[]
+}
+
+model DocumentTag {
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tagId      String
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([documentId, tagId])
+  @@index([tagId])
 }

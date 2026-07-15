@@ -70,6 +70,8 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
       canReview={access.canReview}
       canManage={access.canManage}
       visibility={access.visibility}
+      archived={access.archived}
+      initialTags={doc.tags.map((t) => t.tag.name)}
     />
   );
 }

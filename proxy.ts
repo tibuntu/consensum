@@ -10,7 +10,10 @@ export function proxy(request: NextRequest) {
   // shares the app layout; the rewrite keeps "/" as the visible URL.
   if (pathname === "/") {
     if (!session) return NextResponse.next();
-    return NextResponse.rewrite(new URL("/home", request.url));
+    // Preserve the query string (e.g. ?tag=, ?archived=) — new URL() would drop it.
+    const target = new URL("/home", request.url);
+    target.search = request.nextUrl.search;
+    return NextResponse.rewrite(target);
   }
   // /home is only an internal rewrite target, never a public URL.
   if (pathname === "/home") return NextResponse.redirect(new URL("/", request.url));

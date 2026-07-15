@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api";
 import { resolveAccess, documentIdForAnnotation } from "@/lib/authz";
 import { applySuggestion, OrphanedAnchorError } from "@/lib/annotations";
-import { ConcurrencyError } from "@/lib/versions";
+import { ConcurrencyError, ArchivedError } from "@/lib/versions";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -26,6 +26,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   } catch (e) {
     if (e instanceof ConcurrencyError) return NextResponse.json({ error: "stale version" }, { status: 409 });
     if (e instanceof OrphanedAnchorError) return NextResponse.json({ error: "anchor text changed; cannot apply" }, { status: 422 });
+    if (e instanceof ArchivedError) return NextResponse.json({ error: "document is archived" }, { status: 409 });
     throw e;
   }
 }

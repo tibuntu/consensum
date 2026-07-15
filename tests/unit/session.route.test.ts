@@ -24,7 +24,7 @@ const fakeSession = { sessionId: "s1", documentId: "doc1", leaderId: "u1", leade
 
 function auth(ok = true) {
   vi.mocked(api.requireUser).mockResolvedValueOnce(user as never);
-  vi.mocked(authz.resolveAccess).mockResolvedValueOnce(ok ? { role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" } : null);
+  vi.mocked(authz.resolveAccess).mockResolvedValueOnce(ok ? { role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK", archived: false } : null);
 }
 
 describe("POST /api/documents/[id]/session", () => {
@@ -93,7 +93,7 @@ describe("POST /api/documents/[id]/session", () => {
 
   it("falls back to email for a blank name", async () => {
     vi.mocked(api.requireUser).mockResolvedValueOnce({ id: "u1", name: "", email: "a@b.co" } as never);
-    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK" });
+    vi.mocked(authz.resolveAccess).mockResolvedValueOnce({ role: "REVIEWER", canView: true, canReview: true, canManage: false, visibility: "LINK", archived: false });
     vi.mocked(session.startSession).mockReturnValueOnce(fakeSession as never);
     await POST(req({ action: "start" }), ctx);
     expect(session.startSession).toHaveBeenCalledWith("doc1", { userId: "u1", name: "a@b.co" });

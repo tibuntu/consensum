@@ -132,6 +132,8 @@ export default function DocumentView({
   canReview,
   canManage,
   visibility: visibilityProp,
+  archived,
+  initialTags,
 }: {
   doc: ClientDocument;
   isOwner: boolean;
@@ -141,6 +143,8 @@ export default function DocumentView({
   canReview: boolean;
   canManage: boolean;
   visibility: string;
+  archived: boolean;
+  initialTags: string[];
 }) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -173,6 +177,8 @@ export default function DocumentView({
   const [session, setSession] = useState<ReviewSession | null>(null);
   const [sessionPending, setSessionPending] = useState(false);
   const [generalOpen, setGeneralOpen] = useState(false);
+  const [tags, setTags] = useState<string[]>(initialTags);
+  const [archivePending, setArchivePending] = useState(false);
   const [generalBody, setGeneralBody] = useState("");
   const [generalSeverity, setGeneralSeverity] = useState("");
   const [shareOpen, setShareOpen] = useState(false);
@@ -851,6 +857,17 @@ export default function DocumentView({
     }
   }
 
+  async function toggleArchived() {
+    setArchivePending(true);
+    const res = await fetch(`/api/documents/${doc.id}/settings`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ archived: !archived }),
+    }).catch(() => null);
+    setArchivePending(false);
+    if (res?.ok) router.refresh();
+  }
+
   return (
     <div className="flex w-full flex-col gap-6 lg:flex-row">
       {confirmingDelete && (
@@ -870,7 +887,7 @@ export default function DocumentView({
         </div>
       )}
       {shareOpen && (
-        <ShareDialog documentId={doc.id} visibility={visibility} onVisibilityChange={setVisibility} onClose={() => setShareOpen(false)} />
+        <ShareDialog documentId={doc.id} visibility={visibility} tags={tags} onTagsChange={setTags} onVisibilityChange={setVisibility} onClose={() => setShareOpen(false)} />
       )}
       <div className="min-w-0 flex-1">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
@@ -898,7 +915,7 @@ export default function DocumentView({
                 {copied ? "Copied!" : "Copy"}
               </Button>
             )}
-            {mode === "review" && editEnabled && (
+            {mode === "review" && editEnabled && !archived && (
               <Button variant="secondary" size="sm" onClick={() => { setDraft(markdown); setMode("edit"); }}>Edit</Button>
             )}
             <Link
@@ -918,6 +935,17 @@ export default function DocumentView({
                 Share
               </Button>
             )}
+            {canManage && (
+              <Button
+                variant="secondary"
+                size="sm"
+                data-testid="archive-document"
+                disabled={archivePending}
+                onClick={toggleArchived}
+              >
+                {archived ? "Unarchive" : "Archive"}
+              </Button>
+            )}
             {isOwner && (
               <Button
                 variant="ghost"
@@ -933,6 +961,11 @@ export default function DocumentView({
         </div>
         {mode === "review" && myReviewedVersion != null && myReviewedVersion < versionNumber && (
           <StaleReviewBanner key={`${myReviewedVersion}-${versionNumber}`} documentId={doc.id} reviewedVersion={myReviewedVersion} currentVersion={versionNumber} />
+        )}
+        {archived && (
+          <Card data-testid="archived-banner" className="mb-4 p-3 text-sm text-muted">
+            This document is archived and read-only. Unarchive it to resume reviewing.
+          </Card>
         )}
         {mode === "edit" ? (
           <DocumentEditor value={draft} onChange={setDraft} onSave={saveVersion} onCancel={() => { setDraft(markdown); setMode("review"); }} saving={saving} error={saveError} />
