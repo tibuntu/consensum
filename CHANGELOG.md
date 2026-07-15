@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.18.0](https://github.com/tibuntu/consensum/compare/v0.17.0...v0.18.0) (2026-07-15)
+
+
+### Features
+
+* close out remaining UI review findings ([a69d5d5](https://github.com/tibuntu/consensum/commit/a69d5d5e5887c0c90060e6436446627766104ef1))
+* **onboarding:** getting-started card on the empty home page ([aa22830](https://github.com/tibuntu/consensum/commit/aa22830433639335f86c8843f7d2b59933b442cb))
+* **onboarding:** one-time reviewer hint on the document page ([ae1c375](https://github.com/tibuntu/consensum/commit/ae1c3756f919c802eadcff4b0ea342b1038a015d))
+* redesign landing page around the agent-team-agent review loop ([411e110](https://github.com/tibuntu/consensum/commit/411e11064d2051cf4b51abf26d7053ae9e0011f3))
+* unify page containers and polish review-surface semantics ([b44a329](https://github.com/tibuntu/consensum/commit/b44a329580f017f51ef672ac1cf5e63ae6405bfe))
+
+
+### Bug Fixes
+
+* **nav:** settings link lands on API tokens and highlights on all settings pages ([9c0fd67](https://github.com/tibuntu/consensum/commit/9c0fd6710fbe634037ee9407ffc920a25b798d9b))
+
 ## [0.17.0](https://github.com/tibuntu/consensum/compare/v0.16.0...v0.17.0) (2026-07-15)
 
 
