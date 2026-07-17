@@ -26,4 +26,9 @@ describe("notificationLabel", () => {
     expect(notificationLabel("review_requested", "Blair")).toBe("Blair requested your review");
     expect(notificationLabel("review_requested", null)).toBe("Your review was requested");
   });
+
+  test("labels ownership_claimed with and without an actor", () => {
+    expect(notificationLabel("ownership_claimed", "Kim")).toBe("Kim claimed ownership of your plan");
+    expect(notificationLabel("ownership_claimed", null)).toBe("Plan ownership claimed");
+  });
 });

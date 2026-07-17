@@ -74,3 +74,14 @@ describe("review_requested notification type", () => {
     expect(p.review_requested).toEqual({ inApp: true, email: true, desktop: false });
   });
 });
+
+describe("ownership_claimed notification type", () => {
+  test("defaults: inApp on, desktop off, no email channel", () => {
+    const p = parsePrefs(undefined);
+    expect(p.ownership_claimed).toEqual({ inApp: true, desktop: false });
+  });
+  test("email is not a valid cell", () => {
+    expect(isValidCell("ownership_claimed", "email")).toBe(false);
+    expect(isValidCell("ownership_claimed", "inApp")).toBe(true);
+  });
+});

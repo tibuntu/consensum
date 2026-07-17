@@ -16,6 +16,7 @@ const TYPE_LABELS: Record<NotificationType, string> = {
   shared: "Document shared",
   review_requested: "Review requests",
   implementation: "Implementation links",
+  ownership_claimed: "Ownership claims",
 };
 const CHANNEL_LABELS: Record<NotificationChannel, string> = {
   inApp: "In-app",

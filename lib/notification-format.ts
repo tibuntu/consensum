@@ -20,6 +20,8 @@ export function notificationLabel(type: string, actorName?: string | null): stri
       return who ? `${who} requested your review` : "Your review was requested";
     case "implementation":
       return who ? `${who} linked an implementation` : "Implementation linked";
+    case "ownership_claimed":
+      return who ? `${who} claimed ownership of your plan` : "Plan ownership claimed";
     default:
       return type;
   }

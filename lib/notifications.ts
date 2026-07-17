@@ -77,6 +77,34 @@ export async function notifyShared(documentId: string, recipientId: string, acto
   publish(`user-${recipientId}`, { type: "notification.created", notification: payload });
 }
 
+/** Notify the previous owner that a reviewer claimed ownership of their plan.
+ *  In-app + desktop only (never emailed); respects the recipient's inApp pref. */
+export async function notifyOwnershipClaimed(documentId: string, recipientId: string, actorId: string) {
+  const [doc, actor, recipient] = await Promise.all([
+    prisma.document.findUnique({ where: { id: documentId }, select: { title: true } }),
+    prisma.user.findUnique({ where: { id: actorId }, select: { name: true, email: true } }),
+    prisma.user.findUnique({ where: { id: recipientId }, select: { notificationPrefs: true } }),
+  ]);
+  const prefs = parsePrefs(recipient?.notificationPrefs);
+  if (!isEnabled(prefs, "ownership_claimed", "inApp")) return;
+
+  const actorName = actor?.name?.trim() || actor?.email || "Someone";
+  const row = await prisma.notification.create({
+    data: { userId: recipientId, documentId, actorId, type: "ownership_claimed" },
+  });
+  const payload: ClientNotification = {
+    id: row.id,
+    type: row.type,
+    documentId,
+    documentTitle: doc?.title ?? "",
+    actorId: row.actorId,
+    actorName,
+    read: row.read,
+    createdAt: row.createdAt.toISOString(),
+  };
+  publish(`user-${recipientId}`, { type: "notification.created", notification: payload });
+}
+
 /** Notify a single participant they've been made a required reviewer. In-app +
  *  desktop + email (respects the recipient's prefs). Fired on a false→true
  *  required transition, and in place of `shared` when a new participant is
