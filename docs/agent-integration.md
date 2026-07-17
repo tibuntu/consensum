@@ -156,3 +156,11 @@ After a claim the previous owner is demoted to REVIEWER (keeping full read
 and review access, and the ability to claim back later) and receives an
 `ownership_claimed` notification. The claimer then continues with the
 normal `/consensum-pull-feedback` / `/consensum-loop` cycle.
+
+Trust model: on LINK-visibility plans — the default for agent-pushed plans —
+any authenticated user with the plan URL is auto-joined as REVIEWER and can
+therefore claim; the URL is the capability, same as for reviewing. The
+safety valves are that the previous owner keeps access, is notified, and can
+claim back. Note that `GET /api/plans/[id]` also returns `agentContext` to
+every viewer (it was previously owner-only) — handover context is
+team-visible by design.
