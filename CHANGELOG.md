@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.20.0](https://github.com/tibuntu/consensum/compare/v0.19.0...v0.20.0) (2026-07-17)
+
+
+### Features
+
+* **agent:** push and restore session-state artifacts in loop/pull-plan ([6705446](https://github.com/tibuntu/consensum/commit/6705446614682ea7c16f9e42ca7ddd9ef6518559))
+* **plans:** add PlanArtifact model for session-state handover ([26bdd2d](https://github.com/tibuntu/consensum/commit/26bdd2d5ec4ea4da8300a4c0da3e287844bd4931))
+* **plans:** artifacts endpoints for session-state handover ([903d07b](https://github.com/tibuntu/consensum/commit/903d07b0b667c6f6d05bb53c9af9eb34ca61be87))
+* **ui:** add nav help dialog with agent setup instructions ([8462619](https://github.com/tibuntu/consensum/commit/846261906af772f709c706acb045ffff671a6908))
+
+
+### Bug Fixes
+
+* **deps:** dedupe @codemirror/language to single version ([c733f0a](https://github.com/tibuntu/consensum/commit/c733f0a1c472731f65c92877c30cbd20a9ac448d))
+* **deps:** update codemirror to v6.5.1 ([01c0e54](https://github.com/tibuntu/consensum/commit/01c0e542c208345f4f6801fbfe677344b81cb75f))
+* **e2e:** scope register-error alert locator to the form in admin spec ([3971723](https://github.com/tibuntu/consensum/commit/39717231616309a447de19b55d1e82f2ac9f6087))
+* **plans:** validate artifact gitSha as hex to protect the receiving shell ([4c379bf](https://github.com/tibuntu/consensum/commit/4c379bff994b29918c53fb929b0a0e17e1e8614d))
+
 ## [0.19.0](https://github.com/tibuntu/consensum/compare/v0.18.0...v0.19.0) (2026-07-17)
 
 
