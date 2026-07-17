@@ -8,6 +8,9 @@ import { prisma } from "@/lib/db";
 // so they are a trust boundary: no separators, no leading dot, bounded length.
 // Content is opaque — never parsed (tasks.json format varies across clients).
 const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
+// gitSha reaches the receiver's shell (merge-base staleness check), so it is
+// the same trust boundary as name: hex only, bounded length.
+const GIT_SHA_RE = /^[0-9a-fA-F]{3,64}$/;
 const MAX_ARTIFACTS_PER_PLAN = 10;
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -40,8 +43,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (Buffer.byteLength(a.content, "utf8") > maxBytes) {
       return NextResponse.json({ error: `content exceeds ${maxBytes} bytes` }, { status: 413, headers: authd.headers });
     }
-    if (a.gitSha !== undefined && typeof a.gitSha !== "string") {
-      return NextResponse.json({ error: "gitSha must be a string" }, { status: 400, headers: authd.headers });
+    if (a.gitSha !== undefined && (typeof a.gitSha !== "string" || !GIT_SHA_RE.test(a.gitSha))) {
+      return NextResponse.json({ error: "gitSha must be a hex commit SHA" }, { status: 400, headers: authd.headers });
     }
   }
 

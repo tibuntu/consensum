@@ -120,9 +120,15 @@ describe("POST /api/plans/[id]/artifacts", () => {
     await deleteDocument(docId);
   });
 
-  test("malformed bodies → 400 (no artifacts array, empty array, non-string content, non-string gitSha)", async () => {
+  test("malformed bodies → 400 (no artifacts array, empty array, non-string content, non-string gitSha, non-hex gitSha)", async () => {
     const { token, docId } = await makePlan();
-    for (const body of [{}, { artifacts: [] }, { artifacts: [{ name: "a", content: 5 }] }, { artifacts: [{ name: "a", content: "x", gitSha: 5 }] }]) {
+    for (const body of [
+      {},
+      { artifacts: [] },
+      { artifacts: [{ name: "a", content: 5 }] },
+      { artifacts: [{ name: "a", content: "x", gitSha: 5 }] },
+      { artifacts: [{ name: "a", content: "x", gitSha: "abc; echo pwned" }] },
+    ]) {
       const res = await POST(postReq(token, body), ctx(docId));
       expect(res.status, JSON.stringify(body)).toBe(400);
     }
