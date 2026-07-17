@@ -1,9 +1,10 @@
 # Agent integration
 
-The hero loop is driven by two Claude Code slash commands shipped in
+The hero loop is driven by three Claude Code slash commands shipped in
 [`dist/claude/commands/`](../dist/claude/commands/):
-[`/consensum-push-plan`](../dist/claude/commands/consensum-push-plan.md) and
-[`/consensum-pull-feedback`](../dist/claude/commands/consensum-pull-feedback.md). They talk
+[`/consensum-push-plan`](../dist/claude/commands/consensum-push-plan.md),
+[`/consensum-pull-feedback`](../dist/claude/commands/consensum-pull-feedback.md), and
+[`/consensum-pull-plan`](../dist/claude/commands/consensum-pull-plan.md). They talk
 to your instance via the machine API.
 
 ## Install
@@ -102,6 +103,8 @@ Bearer token, owner-scoped:
 |----------|---------|
 | `POST /api/plans` | Push a plan; returns `{ id, reviewUrl }`. Scope `plans:write`. |
 | `PATCH /api/plans/[id]` | Post a revised version (optimistic-locked on `baseVersionNumber`). Scope `plans:write`. |
+| `GET /api/plans/[id]` | Pull a plan: `{ id, title, state, markdown, versionNumber, agentContext, role, archived }`. `versionNumber` is the `baseVersionNumber` for a later `PATCH`; `role` tells the caller whether a claim is needed. Scope `feedback:read`. |
+| `POST /api/plans/[id]/claim` | Take over a plan (REVIEWER only): swaps ownership to the caller, demotes the previous owner to REVIEWER, and notifies them. 409 when already owner, archived, or a concurrent claim won. Scope `plans:write`. |
 | `GET /api/plans/[id]/feedback` | Structured feedback (`schemaVersion`, threads with severity/category/scope — `scope: "document"` marks whole-plan general comments with `quote: null`, reviews, rollups, markdown). Supports `?include=` / `?exclude=` (`blocking`, `unresolved`, `resolved`, `orphaned`). Scope `feedback:read`. |
 | `GET /api/plans/[id]/feedback/wait?timeoutMs=` | Long-poll: blocks until the decision/state changes or the (clamped) timeout, then returns the same body with a `timedOut` flag. Scope `feedback:read`. |
 | `PATCH /api/plans/[id]/settings` | Update review settings (`requiredApprovals`, `requireBlockerResolution`); returns the fields changed plus the resulting `state`. Scope `plans:write`. |
@@ -142,3 +145,14 @@ curl -s -X POST "$CONSENSUM_BASE_URL/api/plans/<id>/links" \
 ```
 
 Requires the `plans:write` scope. `label` is optional; `kind` is one of `pr | commit | branch | other` (default `other`). Returns `201 {link}`. Links appear in an "Implementation" section on the document page, and participants get an in-app notification. `/consensum-loop` does this automatically after implementing.
+
+## Plan handover
+
+When a plan's author is unavailable, a colleague runs
+`/consensum-pull-plan <review-url>` with their own token. The command pulls
+the plan (`GET /api/plans/[id]`), and — because revision and feedback are
+owner-gated — offers to claim ownership (`POST /api/plans/[id]/claim`).
+After a claim the previous owner is demoted to REVIEWER (keeping full read
+and review access, and the ability to claim back later) and receives an
+`ownership_claimed` notification. The claimer then continues with the
+normal `/consensum-pull-feedback` / `/consensum-loop` cycle.
