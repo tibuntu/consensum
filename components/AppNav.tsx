@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SignOutButton } from "@/components/SignOutButton";
+import { HelpDialog } from "@/components/HelpDialog";
 import { ThemeToggle } from "./ThemeToggle";
 import { useNotifications } from "@/components/NotificationProvider";
 
@@ -13,7 +14,7 @@ const LINKS = [
   { href: "/settings/tokens", match: "/settings", label: "Settings", testid: "settings-link" },
 ];
 
-export function AppNav({ email }: { email: string }) {
+export function AppNav({ email, baseUrl }: { email: string; baseUrl: string }) {
   const pathname = usePathname();
   const { unread } = useNotifications();
   return (
@@ -42,6 +43,7 @@ export function AppNav({ email }: { email: string }) {
         </div>
         <div className="flex items-center gap-4 text-sm">
           <span data-testid="current-user" className="max-w-[45vw] truncate text-muted sm:max-w-[220px] md:max-w-none">{email}</span>
+          <HelpDialog baseUrl={baseUrl} />
           <ThemeToggle />
           <SignOutButton />
         </div>

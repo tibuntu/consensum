@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { listNotifications, unreadCount } from "@/lib/notifications";
 import { prisma } from "@/lib/db";
 import { AppNav } from "@/components/AppNav";
+import { baseUrl } from "@/lib/config";
 import { NotificationProvider } from "@/components/NotificationProvider";
 import { parsePrefs } from "@/lib/notification-prefs";
 import { NOTIFICATION_TYPES } from "@/lib/enums";
@@ -45,7 +46,7 @@ export default async function AppLayout({
       initialItems={initialItems}
     >
       <div className="min-h-screen bg-background">
-        <AppNav email={session.user.email} />
+        <AppNav email={session.user.email} baseUrl={baseUrl()} />
         <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">{children}</main>
       </div>
     </NotificationProvider>
