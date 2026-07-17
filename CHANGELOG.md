@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.19.0](https://github.com/tibuntu/consensum/compare/v0.18.0...v0.19.0) (2026-07-17)
+
+
+### Features
+
+* **agent:** /consensum-pull-plan command for plan handover ([7462a7c](https://github.com/tibuntu/consensum/commit/7462a7cf3711936d341bc9c016d06867a37dac14))
+* **api:** GET /api/plans/[id] returns plan content for handover ([4f40c26](https://github.com/tibuntu/consensum/commit/4f40c264502bf215be49e8b3a50fdc425aacf4a4))
+* **api:** POST /api/plans/[id]/claim transfers plan ownership to a reviewer ([72d6d94](https://github.com/tibuntu/consensum/commit/72d6d948c9d49a6f5481778ef52a3e30564547af))
+* **notifications:** ownership_claimed notification type ([aa3e1c1](https://github.com/tibuntu/consensum/commit/aa3e1c149715570d1575084bf44a0a52ac531c02))
+
+
+### Bug Fixes
+
+* **api:** keep claimer participant row, dismiss stale reviews, recompute state on claim ([7a5b8d6](https://github.com/tibuntu/consensum/commit/7a5b8d69f56d3a8500acb27e6a1fed33b0828f13))
+
 ## [0.18.0](https://github.com/tibuntu/consensum/compare/v0.17.0...v0.18.0) (2026-07-15)
 
 
