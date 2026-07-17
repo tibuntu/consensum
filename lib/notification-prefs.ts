@@ -16,6 +16,7 @@ export const DEFAULT_PREFS: NotificationPrefs = {
   shared: { inApp: true, desktop: false },
   review_requested: { inApp: true, email: true, desktop: false },
   implementation: { inApp: true, desktop: false },
+  ownership_claimed: { inApp: true, desktop: false },
 };
 
 function freshDefaults(): NotificationPrefs {
@@ -27,6 +28,7 @@ function freshDefaults(): NotificationPrefs {
     shared: { ...DEFAULT_PREFS.shared },
     review_requested: { ...DEFAULT_PREFS.review_requested },
     implementation: { ...DEFAULT_PREFS.implementation },
+    ownership_claimed: { ...DEFAULT_PREFS.ownership_claimed },
   };
 }
 
