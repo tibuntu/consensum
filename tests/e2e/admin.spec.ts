@@ -11,9 +11,12 @@ async function loginOrRegister(page: Page, email: string, name: string) {
   await page.getByLabel("password").fill(PASSWORD);
   await page.getByRole("button", { name: "Sign up" }).click();
   // New account → navigates to "/"; existing account → stays on /register with
-  // a role="alert" error. The app has continuous background traffic (presence
-  // heartbeat), so "networkidle" never fires — race the two real outcomes instead.
-  await Promise.race([page.waitForURL("/"), page.getByRole("alert").waitFor()]);
+  // a role="alert" error inside the form. Scope to the form: Next's route
+  // announcer is also role="alert", so a bare getByRole("alert") both resolves
+  // instantly (announcer alone) and trips strict mode once the error renders.
+  // The app has continuous background traffic (presence heartbeat), so
+  // "networkidle" never fires — race the two real outcomes instead.
+  await Promise.race([page.waitForURL("/"), page.locator("form").getByRole("alert").waitFor()]);
   if (new URL(page.url()).pathname !== "/") {
     await page.goto("/login");
     await page.getByLabel("email").fill(email);
