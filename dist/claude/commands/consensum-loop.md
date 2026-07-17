@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(curl:*), Bash(jq:*), Bash(sleep:*)
+allowed-tools: Bash(curl:*), Bash(jq:*), Bash(sleep:*), Bash(git:*)
 description: Wait for a Consensum plan's verdict and auto-proceed — implement on approval, auto-revise on changes-requested.
 ---
 
@@ -47,5 +47,21 @@ Loop until the decision is terminal **and acted upon**:
    On HTTP 409 (`stale version`), re-`GET .../feedback`, take the new `currentVersion`, and retry once. Announce the revision, then **continue looping** — but do **not** re-revise on the *same* feedback: a revision keeps the reviewer's `changes_requested` until they re-review, so wait for the `reviews`/thread set to actually change (a new verdict or new comments) before treating it as a fresh round. Track the prior reviewer state to detect this.
 
    **Conflicting reviewers:** if `rollup.reviewersRequestingChanges >= 2` or `rollup.reviewerSplit` is true, reviewers disagree (or some approve while others reject) — do not guess a reconciliation; surface the opposing threads and pause for an agreed direction rather than auto-revising.
+
+   **Push session state (after each successful revision PATCH):** so a colleague can pick the plan up mid-flight with `/consensum-pull-plan`, push the plan's progress artifacts. Locate the local tasks file (`docs/superpowers/plans/<plan>.md.tasks.json`, next to the plan markdown this loop is revising) and write a short implementation-status summary — what's done, what's in flight, the working branch name, and any gotchas the next person needs — to a local scratch file (e.g. `/tmp/consensum-status.md`); free-form text must never be inlined into the shell command. Then:
+   ```
+   curl -s -X POST "$CONSENSUM_BASE_URL/api/plans/<id>/artifacts" \
+     -H "Authorization: Bearer $CONSENSUM_API_TOKEN" -H 'content-type: application/json' \
+     -d "$(jq -n --rawfile t <path-to-tasks.json> --rawfile s <path-to-status-file> --arg sha "$(git rev-parse HEAD)" \
+       '{artifacts:[{name:"tasks.json",content:$t,gitSha:$sha},{name:"status.md",content:$s,gitSha:$sha}]}')"
+   ```
+   If no local tasks file exists, push only `status.md`:
+   ```
+   curl -s -X POST "$CONSENSUM_BASE_URL/api/plans/<id>/artifacts" \
+     -H "Authorization: Bearer $CONSENSUM_API_TOKEN" -H 'content-type: application/json' \
+     -d "$(jq -n --rawfile s <path-to-status-file> --arg sha "$(git rev-parse HEAD)" \
+       '{artifacts:[{name:"status.md",content:$s,gitSha:$sha}]}')"
+   ```
+   Artifact-push failure is **non-fatal**: warn and continue the loop — the revision already landed.
 
 4. **Stop conditions:** approved (→ implemented), or no terminal decision after a generous number of waits — then report it's still pending and stop. Never loop indefinitely. (Rationale for the differing caps: the interactive commands stop after ~5 minutes since a human is present to re-run them; the plan-mode `ExitPlanMode` hook waits up to 4 days because it must block an *unattended* agent through a full asynchronous team review. Match your cap to how long your reviewers realistically take.)
