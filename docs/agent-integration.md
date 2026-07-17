@@ -105,6 +105,8 @@ Bearer token, owner-scoped:
 | `PATCH /api/plans/[id]` | Post a revised version (optimistic-locked on `baseVersionNumber`). Scope `plans:write`. |
 | `GET /api/plans/[id]` | Pull a plan: `{ id, title, state, markdown, versionNumber, agentContext, role, archived }`. `versionNumber` is the `baseVersionNumber` for a later `PATCH`; `role` tells the caller whether a claim is needed. Scope `feedback:read`. |
 | `POST /api/plans/[id]/claim` | Take over a plan (REVIEWER only): swaps ownership to the caller, demotes the previous owner to REVIEWER, and notifies them. 409 when already owner, archived, or a concurrent claim won. Scope `plans:write`. |
+| `POST /api/plans/[id]/artifacts` | Push plan-attached progress artifacts (batch upsert, latest-wins per `name`): `{ artifacts: [{ name, content, gitSha? }] }`. Owner-only; content is opaque (never parsed). Max 10 artifacts per plan, each ≤ `MAX_PLAN_BYTES` (default 1 MB). Scope `plans:write`. |
+| `GET /api/plans/[id]/artifacts` | Pull progress artifacts: `{ artifacts: [{ name, content, gitSha, pushedAt }] }`. Readable by anyone who can view the plan — deliberately pre-claim, so a colleague can inspect progress before taking over. Scope `feedback:read`. |
 | `GET /api/plans/[id]/feedback` | Structured feedback (`schemaVersion`, threads with severity/category/scope — `scope: "document"` marks whole-plan general comments with `quote: null`, reviews, rollups, markdown). Supports `?include=` / `?exclude=` (`blocking`, `unresolved`, `resolved`, `orphaned`). Scope `feedback:read`. |
 | `GET /api/plans/[id]/feedback/wait?timeoutMs=` | Long-poll: blocks until the decision/state changes or the (clamped) timeout, then returns the same body with a `timedOut` flag. Scope `feedback:read`. |
 | `PATCH /api/plans/[id]/settings` | Update review settings (`requiredApprovals`, `requireBlockerResolution`); returns the fields changed plus the resulting `state`. Scope `plans:write`. |
@@ -164,3 +166,12 @@ safety valves are that the previous owner keeps access, is notified, and can
 claim back. Note that `GET /api/plans/[id]` also returns `agentContext` to
 every viewer (it was previously owner-only) — handover context is
 team-visible by design.
+
+Since m14, handover also carries **session state**: `/consensum-loop` pushes
+the plan's `tasks.json` (when a local task file exists) and a free-text
+`status.md` summary (stamped with the head commit SHA) after every revision
+push, and `/consensum-pull-plan`
+restores the task file next to the pulled plan and warns when the pushed SHA
+is not an ancestor of the local checkout. Artifacts are readable before
+claiming, so "should I take this over?" can be answered by looking at the
+odometer, not just the destination.
