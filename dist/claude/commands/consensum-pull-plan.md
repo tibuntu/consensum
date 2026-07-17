@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(curl:*), Bash(jq:*)
+allowed-tools: Bash(curl:*), Bash(jq:*), Bash(sed:*), Bash(tr:*), Bash(grep:*)
 description: Pull a Consensum plan into this session and optionally claim ownership (handover).
 ---
 
