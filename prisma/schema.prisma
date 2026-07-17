@@ -30,6 +30,7 @@ model User {
   notifications    Notification[]
   documentParticipations DocumentParticipant[]
   implementationLinks ImplementationLink[]
+  planArtifacts    PlanArtifact[]
 }
 
 model Session {
@@ -115,6 +116,7 @@ model Document {
   participants      DocumentParticipant[]
   implementationLinks ImplementationLink[]
   tags              DocumentTag[]
+  artifacts         PlanArtifact[]
 
   @@unique([ownerId, idempotencyKey])
   @@index([ownerId])
@@ -314,4 +316,22 @@ model DocumentTag {
 
   @@id([documentId, tagId])
   @@index([tagId])
+}
+
+// Plan-attached progress artifacts (m14 session-state handover): the plan's
+// tasks.json + a free-text status summary, pushed by the agent at loop
+// checkpoints. Latest-wins per (documentId, name); content is opaque text.
+model PlanArtifact {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  name       String
+  content    String
+  gitSha     String?
+  pushedById String
+  pushedBy   User     @relation(fields: [pushedById], references: [id])
+  pushedAt   DateTime @updatedAt
+
+  @@unique([documentId, name])
+  @@index([pushedById])
 }
