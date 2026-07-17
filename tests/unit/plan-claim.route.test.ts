@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { prisma } from "@/lib/db";
 import { POST } from "@/app/api/plans/[id]/claim/route";
-import { createDocument, deleteDocument } from "@/lib/documents";
+import { createDocument, deleteDocument, listDocuments } from "@/lib/documents";
 import { generateToken } from "@/lib/tokens";
 
 let n = 0;
@@ -52,7 +52,8 @@ describe("POST /api/plans/[id]/claim", () => {
     const claimerRow = await prisma.documentParticipant.findUnique({
       where: { documentId_userId: { documentId: docId, userId: reviewer.id } },
     });
-    expect(claimerRow).toBeNull();
+    expect(claimerRow).not.toBeNull();
+    expect(claimerRow?.required).toBe(false);
 
     const notif = await prisma.notification.findFirst({
       where: { documentId: docId, userId: owner.id, type: "ownership_claimed" },
@@ -111,6 +112,30 @@ describe("POST /api/plans/[id]/claim", () => {
     const res = await POST(claimReq(token), ctx(docId));
     expect(res.status).toBe(200);
     expect((await prisma.document.findUnique({ where: { id: docId } }))?.ownerId).toBe(stranger.id);
+    await deleteDocument(docId);
+  });
+
+  test("claimed plan stays visible in the new owner's document list", async () => {
+    const { reviewer, token, docId } = await makePlanWithReviewer();
+    expect((await POST(claimReq(token), ctx(docId))).status).toBe(200);
+    const row = await prisma.documentParticipant.findUnique({
+      where: { documentId_userId: { documentId: docId, userId: reviewer.id } },
+    });
+    expect(row).not.toBeNull();
+    expect(row?.required).toBe(false);
+    const docs = await listDocuments(reviewer.id);
+    expect(docs.map((d) => d.id)).toContain(docId);
+    await deleteDocument(docId);
+  });
+
+  test("claimer's prior review is dismissed so it can't approve their own plan", async () => {
+    const { reviewer, token, docId } = await makePlanWithReviewer();
+    const version = await prisma.documentVersion.findFirst({ where: { documentId: docId, versionNumber: 1 } });
+    const review = await prisma.review.create({
+      data: { documentId: docId, reviewerId: reviewer.id, verdict: "APPROVE", onVersionId: version!.id },
+    });
+    expect((await POST(claimReq(token), ctx(docId))).status).toBe(200);
+    expect((await prisma.review.findUnique({ where: { id: review.id } }))?.dismissed).toBe(true);
     await deleteDocument(docId);
   });
 });

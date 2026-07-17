@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireApiUser } from "@/lib/api";
 import { resolveAccess } from "@/lib/authz";
 import { notifyOwnershipClaimed } from "@/lib/notifications";
+import { recomputeStateAndDispatch } from "@/lib/reviews";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const authd = await requireApiUser(req);
@@ -23,11 +24,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const previousOwnerId = doc.ownerId;
   const claimed = await prisma.$transaction(async (tx) => {
-    // Guard on the owner we read — a concurrent claim that won first makes this a no-op.
-    // idempotencyKey belongs to the previous owner's client namespace ( @@unique([ownerId,
-    // idempotencyKey]) ), so it must not travel with the document.
+    // Guard on the owner we read (+archivedAt: null) — a concurrent claim or
+    // archive that won first makes this a no-op. idempotencyKey belongs to the
+    // previous owner's client namespace ( @@unique([ownerId, idempotencyKey]) ),
+    // so it must not travel with the document.
     const res = await tx.document.updateMany({
-      where: { id, ownerId: previousOwnerId },
+      where: { id, ownerId: previousOwnerId, archivedAt: null },
       data: { ownerId: authd.user.id, idempotencyKey: null },
     });
     if (res.count === 0) return false;
@@ -36,12 +38,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       create: { documentId: id, userId: previousOwnerId, role: "REVIEWER" },
       update: { role: "REVIEWER" },
     });
-    await tx.documentParticipant.deleteMany({ where: { documentId: id, userId: authd.user.id } });
+    // Keep the claimer's own participant row (visibleToUser requires one — see
+    // lib/documents.ts) but reset `required`: an owner can't review their own
+    // doc, so a required row would deadlock the approval gate.
+    await tx.documentParticipant.upsert({
+      where: { documentId_userId: { documentId: id, userId: authd.user.id } },
+      create: { documentId: id, userId: authd.user.id },
+      update: { required: false },
+    });
+    // Dismiss any review the claimer left while still a REVIEWER — it must not
+    // count toward the approval gate on their own plan (precedent: lib/sharing.ts removeParticipant).
+    await tx.review.updateMany({ where: { documentId: id, reviewerId: authd.user.id }, data: { dismissed: true } });
     return true;
   });
   if (!claimed) return NextResponse.json({ error: "ownership changed, retry" }, { status: 409, headers: authd.headers });
 
-  await notifyOwnershipClaimed(id, previousOwnerId, authd.user.id);
+  await notifyOwnershipClaimed(id, previousOwnerId, authd.user.id).catch(() => {});
+  await recomputeStateAndDispatch(authd.user.id, id).catch(() => {});
   return NextResponse.json(
     { id, role: "OWNER", versionNumber: doc.currentVersion?.versionNumber ?? 0 },
     { headers: authd.headers },
