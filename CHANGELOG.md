@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.1](https://github.com/tibuntu/consensum/compare/v0.20.0...v0.20.1) (2026-07-18)
+
+
+### Bug Fixes
+
+* **deps:** update pnpm to v11.13.1 ([f428c2c](https://github.com/tibuntu/consensum/commit/f428c2c7ff99176f55b2d1b5b3eb83dfe605461c))
+
 ## [0.20.0](https://github.com/tibuntu/consensum/compare/v0.19.0...v0.20.0) (2026-07-17)
 
 
