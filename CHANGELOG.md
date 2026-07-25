@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.20.2](https://github.com/tibuntu/consensum/compare/v0.20.1...v0.20.2) (2026-07-25)
+
+
+### Bug Fixes
+
+* **deps:** update better-auth monorepo to v1.6.24 ([5f3e033](https://github.com/tibuntu/consensum/commit/5f3e0332bcd1d4a7b7126ece44280c04efc39ac5))
+* **deps:** update dependency better-sqlite3 to v13 ([a41e1c0](https://github.com/tibuntu/consensum/commit/a41e1c06207152ae70a6dfcc2250c083d996437a))
+* **deps:** update dependency react to v19.2.8 ([6c9e544](https://github.com/tibuntu/consensum/commit/6c9e544ca908208588b32e3dcdb005e68edf6f2a))
+* **deps:** update dependency react-dom to v19.2.8 ([a797fb8](https://github.com/tibuntu/consensum/commit/a797fb802ea30b415317d1d1d525f723e3a6cd8b))
+* **deps:** update nextjs monorepo to v16.2.11 ([4bd4667](https://github.com/tibuntu/consensum/commit/4bd4667be76a3b214dbb6ddea81d7e279049cd69))
+* **deps:** update pnpm to v11.14.0 ([2735174](https://github.com/tibuntu/consensum/commit/2735174e37de6e379ad4026e64b8753ab8c7ab26))
+* **deps:** update pnpm to v11.15.0 ([e76b719](https://github.com/tibuntu/consensum/commit/e76b719da9ab146b10e3ae4af95444241854672c))
+* **deps:** update pnpm to v11.16.0 ([76cfd1d](https://github.com/tibuntu/consensum/commit/76cfd1df3c184a4e587d93127502185353d39c60))
+* **deps:** update prisma monorepo to v7.9.0 ([f111465](https://github.com/tibuntu/consensum/commit/f111465981bf38ebc812cdc43554efa75f75f2a4))
+
 ## [0.20.1](https://github.com/tibuntu/consensum/compare/v0.20.0...v0.20.1) (2026-07-18)
 
 
