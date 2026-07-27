@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.20.3](https://github.com/tibuntu/consensum/compare/v0.20.2...v0.20.3) (2026-07-27)
+
+
+### Bug Fixes
+
+* **deps:** override sharp and find-my-way to clear HIGH CVEs ([51bf271](https://github.com/tibuntu/consensum/commit/51bf27109d02c9bdc99d257171b9a48931fd217b))
+* **deps:** update better-auth monorepo to v1.6.25 ([0b4c642](https://github.com/tibuntu/consensum/commit/0b4c642c3b505facdccfa4d7a5ec06c01bec8b7f))
+* **deps:** update pnpm to v11.17.0 ([466a37e](https://github.com/tibuntu/consensum/commit/466a37e3c85adaf23fa2c9279831b6ad36b18592))
+* **docker:** override find-my-way in the migrator tree to clear CVE-2026-47219 ([1804222](https://github.com/tibuntu/consensum/commit/18042225bde75a22c5b7bde27ba6beee39888be3))
+
 ## [0.20.2](https://github.com/tibuntu/consensum/compare/v0.20.1...v0.20.2) (2026-07-25)
 
 
