@@ -6,5 +6,9 @@
   "dependencies": {
     "prisma": "7.9.0",
     "dotenv": "17.4.2"
+  },
+  "comment:overrides": "This tree is installed with npm, outside the pnpm workspace, so the overrides in pnpm-workspace.yaml do NOT reach it — fixable CVEs here need a second entry below or the Trivy image gate stays red. find-my-way arrives via prisma -> @prisma/dev, which pins it exactly (9.6.0 = CVE-2026-47219, HTTP/2 DoS). Kept as a range, not a pin, so a later prisma bump can float it up instead of us silently downgrading its transitive dep.",
+  "overrides": {
+    "find-my-way": "^9.7.0"
   }
 }
