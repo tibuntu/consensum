@@ -5,6 +5,13 @@ overrides:
   # @uiw/react-codemirror stack resolved 6.6, and two copies break CodeMirror's
   # singleton in the production bundle (the editor never mounts).
   '@codemirror/state': 6.7.1
+  # Trivy gates the docker image on fixable HIGH CVEs. Both of these ship in the
+  # Next standalone bundle as transitive deps (sharp via next's optionalDependencies,
+  # find-my-way via @prisma/dev), so the fix has to come from an override.
+  # sharp: GHSA-f88m-g3jw-g9cj (libvips) — fixed in 0.35.0
+  # find-my-way: CVE-2026-47219 (HTTP/2 DoS) — fixed in 9.7.0
+  sharp: 0.35.3
+  find-my-way: 9.7.0
 # pnpm 11 replaced onlyBuiltDependencies/ignoredBuiltDependencies with a single
 # allowBuilds map (true = run build scripts, false = skip). strictDepBuilds is on
 # by default, so every dependency with a build script must be listed explicitly.
