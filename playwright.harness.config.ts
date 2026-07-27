@@ -13,6 +13,12 @@ const HARNESS_DB = process.env.HARNESS_DB_URL ?? "file:./data/harness.db";
 export default defineConfig({
   testDir: "./tests/harness",
   timeout: 180_000,
+  // `next dev` compiles on demand, so the first test to touch a page or API route
+  // pays the compile cost inside its assertions — the default 5s expect timeout
+  // loses that race (register's sign-up fetch compiles /api/auth/[...all]).
+  // Retries stay at 0: each run writes the evidence transcripts, so a retry would
+  // overwrite them with a partial set.
+  expect: { timeout: 30_000 },
   retries: 0,
   workers: 1,
   reporter: [["list"]],
