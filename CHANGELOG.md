@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.4](https://github.com/tibuntu/consensum/compare/v0.20.3...v0.20.4) (2026-07-28)
+
+
+### Bug Fixes
+
+* **deps:** update nextjs monorepo to v16.2.12 ([a6feffd](https://github.com/tibuntu/consensum/commit/a6feffd93af3124174186629c41e72695b911497))
+
 ## [0.20.3](https://github.com/tibuntu/consensum/compare/v0.20.2...v0.20.3) (2026-07-27)
 
 
