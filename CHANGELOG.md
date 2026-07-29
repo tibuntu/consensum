@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.5](https://github.com/tibuntu/consensum/compare/v0.20.4...v0.20.5) (2026-07-29)
+
+
+### Bug Fixes
+
+* **deps:** update prisma monorepo to v7.9.1 ([a36e5f5](https://github.com/tibuntu/consensum/commit/a36e5f5270c403b91b328be3ce7ab8a14aec4942))
+
 ## [0.20.4](https://github.com/tibuntu/consensum/compare/v0.20.3...v0.20.4) (2026-07-28)
 
 
