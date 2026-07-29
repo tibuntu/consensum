@@ -4,7 +4,7 @@
   "private": true,
   "description": "Minimal Prisma CLI install used ONLY to run `prisma migrate deploy` at container start. The application runtime is the self-contained Next.js standalone build; this isolated tree keeps the heavy prisma-CLI dependencies (Studio, the pglite dev DB, mysql/postgres drivers) and all devDependencies out of the shipped image. Versions are pinned to match the root package.json / pnpm-lock.yaml.",
   "dependencies": {
-    "prisma": "7.9.0",
+    "prisma": "7.9.1",
     "dotenv": "17.4.2"
   },
   "comment:overrides": "This tree is installed with npm, outside the pnpm workspace, so the overrides in pnpm-workspace.yaml do NOT reach it — fixable CVEs here need a second entry below or the Trivy image gate stays red. find-my-way arrives via prisma -> @prisma/dev, which pins it exactly (9.6.0 = CVE-2026-47219, HTTP/2 DoS). Kept as a range, not a pin, so a later prisma bump can float it up instead of us silently downgrading its transitive dep.",
