@@ -44,7 +44,7 @@
     "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@tailwindcss/typography": "^0.5.19",
-    "@types/better-sqlite3": "^7.6.13",
+    "@types/better-sqlite3": "^9.0.0",
     "@types/node": "^24.0.0",
     "@types/nodemailer": "^8.0.0",
     "@types/pg": "^8.20.0",
