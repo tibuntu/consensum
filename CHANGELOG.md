@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.20.8](https://github.com/tibuntu/consensum/compare/v0.20.7...v0.20.8) (2026-08-07)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @codemirror/lang-markdown to v6.5.2 ([b6031c8](https://github.com/tibuntu/consensum/commit/b6031c86e0d8c9e145c633080deb84bbf71e9da3))
+* **deps:** update dependency better-auth to v1.6.26 ([69cd9ff](https://github.com/tibuntu/consensum/commit/69cd9ffd4f2a7583e7cc0cb267f554d2ce7d026e))
+* **deps:** update dependency better-sqlite3 to v13.0.3 ([d2f01a0](https://github.com/tibuntu/consensum/commit/d2f01a0c03c2cd9c160d9fcd548061da8614ecd0))
+* **deps:** update dependency next to v16.3.0 ([ffb712d](https://github.com/tibuntu/consensum/commit/ffb712d23f2fdc1ba28cfeb350c87221b5a64e81))
+* **deps:** update dependency nodemailer to v9.0.4 ([4e1f3c8](https://github.com/tibuntu/consensum/commit/4e1f3c88020cbb989d14377790da492eec653385))
+
 ## [0.20.7](https://github.com/tibuntu/consensum/compare/v0.20.6...v0.20.7) (2026-08-04)
 
 
