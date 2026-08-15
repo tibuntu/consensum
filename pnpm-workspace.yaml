@@ -11,7 +11,7 @@ overrides:
   # sharp: GHSA-f88m-g3jw-g9cj (libvips) — fixed in 0.35.0
   # find-my-way: CVE-2026-47219 (HTTP/2 DoS) — fixed in 9.7.0
   sharp: 0.35.3
-  find-my-way: 9.7.0
+  find-my-way: 9.8.0
 # pnpm 11 replaced onlyBuiltDependencies/ignoredBuiltDependencies with a single
 # allowBuilds map (true = run build scripts, false = skip). strictDepBuilds is on
 # by default, so every dependency with a build script must be listed explicitly.
