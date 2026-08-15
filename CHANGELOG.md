@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.20.9](https://github.com/tibuntu/consensum/compare/v0.20.8...v0.20.9) (2026-08-15)
+
+
+### Bug Fixes
+
+* **deps:** update dependency better-auth to v1.6.27 ([796004f](https://github.com/tibuntu/consensum/commit/796004fdf57e9a04a07f0ffe40366058a289502f))
+* **deps:** update dependency next to v16.3.1 ([4d8ddee](https://github.com/tibuntu/consensum/commit/4d8ddee36f5b0e2e3325892789fbd5b0d6d7aa0d))
+* **deps:** update dependency nodemailer to v9.0.5 ([da660de](https://github.com/tibuntu/consensum/commit/da660de8a7a7d13aa55e090cdadc3aca6052fe5d))
+* **deps:** update dependency pg to v8.23.0 ([ad941d6](https://github.com/tibuntu/consensum/commit/ad941d667e011bae362114fbac2579ae4b035604))
+* **deps:** update pnpm to v11.21.0 ([25e6026](https://github.com/tibuntu/consensum/commit/25e60265aa67f9357bbd39cf476f138f212a51e0))
+
 ## [0.20.8](https://github.com/tibuntu/consensum/compare/v0.20.7...v0.20.8) (2026-08-07)
 
 
