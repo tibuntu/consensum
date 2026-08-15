@@ -11,6 +11,7 @@
     "github>tibuntu/renovate-presets:dockerComposeCommitType",
     "helpers:pinGitHubActionDigests"
   ],
+  "schedule": ["* * * * 0"],
   "packageRules": [
     {
       "description": "Hold every update for 2 days after release so it clears pnpm's minimumReleaseAge supply-chain gate (24h cutoff in CI). Avoids ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION on freshly published versions.",
