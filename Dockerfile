@@ -26,7 +26,7 @@ ENV BUILD_STANDALONE=1
 # Which Prisma client to bake into the image: sqlite (default, single-container)
 # or postgres. Build the multi-replica image with `--build-arg DB_PROVIDER=postgres`.
 ARG DB_PROVIDER=sqlite
-RUN DB_PROVIDER=$DB_PROVIDER pnpm dlx prisma generate
+RUN DB_PROVIDER=$DB_PROVIDER pnpm exec prisma generate
 # `next build` evaluates route modules, which construct the module-level PrismaClient
 # in lib/db.ts. Give it a DATABASE_URL whose scheme matches the baked client so
 # construction succeeds; Prisma connects lazily, so no database is contacted at build.
