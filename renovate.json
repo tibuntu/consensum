@@ -39,6 +39,11 @@
       "enabled": false
     },
     {
+      "description": "better-auth 1.7 is a breaking change despite the minor version. Account gains a required `issuer` field and its unique index moves from [accountId, providerId] to [issuer, accountId], so prisma/schema.prisma and both migration trees need a hand-authored migration that backfills existing rows. genericOAuth also now throws at init when discovery is unreachable instead of logging and continuing, which would break auth boot in lib/oidc.ts whenever the IdP is briefly down. 1.7.2 also wants better-call 1.4.0, which the pnpm.overrides pin above holds at 1.3.6. Hold until that migration lands.",
+      "matchPackageNames": ["better-auth"],
+      "enabled": false
+    },
+    {
       "description": "ESLint 10 is not yet supported by eslint-config-next 16.x (its rules use a removed API, breaking `eslint .`). Hold the major until eslint-config-next supports it.",
       "matchPackageNames": ["eslint"],
       "matchUpdateTypes": ["major"],
