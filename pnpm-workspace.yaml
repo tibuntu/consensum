@@ -11,7 +11,7 @@ overrides:
   # sharp: GHSA-f88m-g3jw-g9cj (libvips) — fixed in 0.35.0
   # find-my-way: CVE-2026-47219 (HTTP/2 DoS) — fixed in 9.7.0
   sharp: 0.35.4
-  find-my-way: 9.7.0
+  find-my-way: 9.9.0
   # deepmerge-ts: CVE-2026-40345 (stack exhaustion on recursive graphs) — fixed in 8.0.0.
   # Pulled in by @prisma/config, which pins 7.1.5 and ships in the runtime image.
   deepmerge-ts: 8.0.2
