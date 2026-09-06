@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.20.10](https://github.com/tibuntu/consensum/compare/v0.20.9...v0.20.10) (2026-09-06)
+
+
+### Bug Fixes
+
+* **deps:** drop unused root better-sqlite3 dependency ([cdc1104](https://github.com/tibuntu/consensum/commit/cdc11049f2f05cbbe9548d758526d60c08351df2))
+* **deps:** hold better-auth at 1.6.27 ([bd6b2ff](https://github.com/tibuntu/consensum/commit/bd6b2ff89015afa22961c7b6518027df7e6a4dd3))
+* **deps:** override deepmerge-ts to 8.0.2 for CVE-2026-40345 ([64bb0fe](https://github.com/tibuntu/consensum/commit/64bb0fee4044fa0e9fda11ff0bba1d90018b613b))
+* **deps:** update all minor dependencies ([abbb336](https://github.com/tibuntu/consensum/commit/abbb3362ba1919a0982eafb9b056a05f56f5cce0))
+* **deps:** update dependency @codemirror/state to v6.7.2 ([5c5d831](https://github.com/tibuntu/consensum/commit/5c5d831c4a04b12ed84730adafc25576f4552254))
+* **deps:** update dependency @codemirror/state to v6.7.3 ([0ae5381](https://github.com/tibuntu/consensum/commit/0ae538142b12fd9af9a47ba7d148fbcf67c910ca))
+* **deps:** update dependency @codemirror/state to v6.7.4 ([9f46f1e](https://github.com/tibuntu/consensum/commit/9f46f1ecc7a7d7ea1579a8479de77a99d4e479d5))
+* **deps:** update dependency better-auth to v1.7.2 ([7eeb289](https://github.com/tibuntu/consensum/commit/7eeb28956994b48ffd1cf4982d6ff639bc204f7e))
+* **deps:** update dependency next to v16.3.4 ([5f3196d](https://github.com/tibuntu/consensum/commit/5f3196dd5ddd4610752993267c2be23bee90c2fa))
+* **deps:** update dependency nodemailer to v10 ([315b5a4](https://github.com/tibuntu/consensum/commit/315b5a4b3efafbaef1ec029ee29a7a903ea901a2))
+* **deps:** update dependency sharp to v0.35.4 ([b904872](https://github.com/tibuntu/consensum/commit/b904872a686806c91455e4c54a2f3c2cf326b5b8))
+* **deps:** update pnpm to v12 ([9a46ee8](https://github.com/tibuntu/consensum/commit/9a46ee8cbb01660b5622c0f6561363f644bf8fba))
+* **docker:** override deepmerge-ts in the npm-installed migrator tree too ([5edf5cd](https://github.com/tibuntu/consensum/commit/5edf5cde5bd1be57cf4814946cf1ac10f426e19e))
+* **docker:** run prisma generate from the locked dependency, not dlx ([f150858](https://github.com/tibuntu/consensum/commit/f15085822b7a6e0ba858f89faed5bd09da1eea24))
+
 ## [0.20.9](https://github.com/tibuntu/consensum/compare/v0.20.8...v0.20.9) (2026-08-15)
 
 
