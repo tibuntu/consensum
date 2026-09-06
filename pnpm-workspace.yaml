@@ -12,6 +12,9 @@ overrides:
   # find-my-way: CVE-2026-47219 (HTTP/2 DoS) — fixed in 9.7.0
   sharp: 0.35.3
   find-my-way: 9.7.0
+  # deepmerge-ts: CVE-2026-40345 (stack exhaustion on recursive graphs) — fixed in 8.0.0.
+  # Pulled in by @prisma/config, which pins 7.1.5 and ships in the runtime image.
+  deepmerge-ts: 8.0.2
 # pnpm 11 replaced onlyBuiltDependencies/ignoredBuiltDependencies with a single
 # allowBuilds map (true = run build scripts, false = skip). strictDepBuilds is on
 # by default, so every dependency with a build script must be listed explicitly.
