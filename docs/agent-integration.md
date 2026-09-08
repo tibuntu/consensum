@@ -31,8 +31,11 @@ curl -fsSL https://raw.githubusercontent.com/tibuntu/consensum/main/scripts/inst
 curl -fsSL https://raw.githubusercontent.com/tibuntu/consensum/main/scripts/install.sh | bash -s -- --with-hook
 ```
 
-From a checkout, run the same script locally: `./scripts/install.sh [--with-hook]`. Then
-point it at your instance:
+From a checkout, run the same script locally: `./scripts/install.sh [--with-hook]`.
+
+### Point the commands at your instance
+
+Whichever route you used, the commands and the hook read two env vars:
 
 ```bash
 export CONSENSUM_BASE_URL="http://localhost:3000"
