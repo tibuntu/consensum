@@ -44,7 +44,15 @@ Loop until the decision is terminal **and acted upon**:
      -H 'content-type: application/json' \
      -d "$(jq -n --arg m "<revised markdown>" --argjson v <currentVersionNumber> '{markdown:$m, baseVersionNumber:$v}')"
    ```
-   On HTTP 409 (`stale version`), re-`GET .../feedback`, take the new `currentVersion`, and retry once. Announce the revision, then **continue looping** — but do **not** re-revise on the *same* feedback: a revision keeps the reviewer's `changes_requested` until they re-review, so wait for the `reviews`/thread set to actually change (a new verdict or new comments) before treating it as a fresh round. Track the prior reviewer state to detect this.
+   On HTTP 409 (`stale version`), re-`GET .../feedback`, take the new `currentVersion`, and retry once. Announce the revision, then **continue looping** — but do **not** re-revise on the *same* feedback: a revision keeps the reviewer's `changes_requested` until they re-review, so wait for the `reviews`/thread set to actually change (a new verdict or new comments) before treating it as a fresh round — comments with `mine: true` are your own replies, not reviewer activity, and must be ignored when checking for that change. Track the prior reviewer state to detect this.
+
+   **Reply to each actionable thread.** The PATCH response carries the new version number at `version.versionNumber` (absent only when `unchanged: true` — the markdown didn't actually change; in that case re-`GET .../feedback` and use `currentVersion` instead). For every thread that was in the actionable list pulled above, post one reply: `Addressed in v<N>: <one-sentence summary of what changed>` for a thread you fixed, or `Not changed: <reason>` for one you deliberately left alone. Write the reply text to a local file first — free text is never inlined into the shell command — then:
+   ```
+   curl -s -X POST "$CONSENSUM_BASE_URL/api/plans/<id>/threads/<threadId>/comments" \
+     -H "Authorization: Bearer $CONSENSUM_API_TOKEN" -H 'content-type: application/json' \
+     -d "$(jq -n --rawfile b <path-to-reply-file> '{body:$b}')"
+   ```
+   A reply failure is **non-fatal**: warn and continue — the revision already landed. Replying only reports status; resolving a thread remains the reviewer's action.
 
    **Conflicting reviewers:** if `rollup.reviewersRequestingChanges >= 2` or `rollup.reviewerSplit` is true, reviewers disagree (or some approve while others reject) — do not guess a reconciliation; surface the opposing threads and pause for an agreed direction rather than auto-revising.
 

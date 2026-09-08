@@ -52,11 +52,20 @@ Requires env vars: `CONSENSUM_BASE_URL` and `CONSENSUM_API_TOKEN`. The plan id i
 
    c. Group and present threads in severity order: **BLOCKER → MAJOR → MINOR → NIT → (null/unset last)**. For each thread show:
       - `quote` (the anchored text). Threads may carry `scope: "document"` — these are whole-plan general comments, so `quote` is legitimately `null`; present them as plan-wide concerns rather than anchored feedback (in the `markdown` transcript they appear as `## [SEV] General comment` sections before the inline threads).
-      - the **full** comment thread (every `comments[].body`, oldest first) — not just the latest, so earlier still-unaddressed points aren't missed
+      - the **full** comment thread (every `comments[].body`, oldest first) — not just the latest, so earlier still-unaddressed points aren't missed. Each comment also carries `comments[].mine`, true for a reply this agent posted earlier — skip those when judging whether a reviewer has responded.
       - `category`, `raisedOnVersion`
       - for a RESOLVED thread, its `resolution` (`FIXED` / `WONTFIX` / `OBSOLETE`) — `WONTFIX` / `OBSOLETE` need no action
 
-   d. Revise the plan to address every comment, prioritising BLOCKERs first. If the user approves the revision, post it back with `PATCH $CONSENSUM_BASE_URL/api/plans/$ARGUMENTS` `{ markdown, baseVersionNumber }`.
+   d. Draft the revision, and for every thread shown above draft a one-line reply: `Addressed in v<N>: <what changed>` (N = the version this revision becomes — `currentVersion + 1`) or `Not changed: <reason>` for a thread deliberately left alone. Show the user the revised markdown **and** the drafted replies together before posting anything. If the user approves:
+
+      1. Post the revision: `PATCH $CONSENSUM_BASE_URL/api/plans/$ARGUMENTS` `{ markdown, baseVersionNumber }`. Confirm the new version number from the response's `version.versionNumber` (or, if `unchanged: true`, re-`GET .../feedback` and use `currentVersion`) before sending replies that cite it.
+      2. Post each reply, body written to a local file first — never inlined into the shell command:
+         ```
+         curl -s -X POST "$CONSENSUM_BASE_URL/api/plans/$ARGUMENTS/threads/<threadId>/comments" \
+           -H "Authorization: Bearer $CONSENSUM_API_TOKEN" -H 'content-type: application/json' \
+           -d "$(jq -n --rawfile b <path-to-reply-file> '{body:$b}')"
+         ```
+         A reply failure is non-fatal: warn and continue — the revision already landed. Replying only reports status; resolving a thread remains the reviewer's action.
 
    e. **Binding rule — do not proceed while blocked.** Severity is advisory, but `mustResolve` is binding: the plan is only safe to implement when `decision == "approved"` **and** `rollup.mustResolve == 0`. If `decision == "approved"` but `rollup.mustResolve > 0`, the team approved with open blockers still on the board — do **not** silently implement; surface those blocker threads to the user and hold for an explicit go-ahead.
 

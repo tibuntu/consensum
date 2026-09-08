@@ -118,6 +118,7 @@ Bearer token, owner-scoped:
 | `GET /api/plans/[id]/feedback` | Structured feedback (`schemaVersion`, threads with severity/category/scope — `scope: "document"` marks whole-plan general comments with `quote: null`, reviews, rollups, markdown). Supports `?include=` / `?exclude=` (`blocking`, `unresolved`, `resolved`, `orphaned`). Scope `feedback:read`. |
 | `GET /api/plans/[id]/feedback/wait?timeoutMs=` | Long-poll: blocks until the decision/state changes or the (clamped) timeout, then returns the same body with a `timedOut` flag. Scope `feedback:read`. |
 | `PATCH /api/plans/[id]/settings` | Update review settings (`requiredApprovals`, `requireBlockerResolution`); returns the fields changed plus the resulting `state`. Scope `plans:write`. |
+| `POST /api/plans/[id]/threads/[threadId]/comments` | Reply to a review thread (`threadId` is a `threads[].id` from `feedback`): `{ body }`. Owner-only. Returns `201 {comment}`; `409` if the plan is archived. Scope `plans:write`. |
 
 For CI or headless agents that can't hold a connection open, register an
 [outbound webhook](operations.md#outbound-webhooks) instead of long-polling.
@@ -155,6 +156,18 @@ curl -s -X POST "$CONSENSUM_BASE_URL/api/plans/<id>/links" \
 ```
 
 Requires the `plans:write` scope. `label` is optional; `kind` is one of `pr | commit | branch | other` (default `other`). Returns `201 {link}`. Links appear in an "Implementation" section on the document page, and participants get an in-app notification. `/consensum-loop` does this automatically after implementing.
+
+### Reply to threads
+
+After posting a revision, the agent can reply to the threads it acted on — the same convention as a PR author replying "done in abc123" instead of leaving a reviewer to diff for it:
+
+```bash
+curl -s -X POST "$CONSENSUM_BASE_URL/api/plans/<id>/threads/<threadId>/comments" \
+  -H "Authorization: Bearer $CONSENSUM_API_TOKEN" -H 'content-type: application/json' \
+  -d '{"body":"Addressed in v3: switched to the managed Postgres instance."}'
+```
+
+`threadId` is a `threads[].id` from `feedback`. By convention, reply `Addressed in v<N>: <what changed>` for a thread the revision fixed, or `Not changed: <reason>` for one deliberately left alone. Replies show up in the thread under the token owner's name, exactly like a reply posted from the web UI, and the feedback payload marks the agent's own replies with `comments[].mine: true` so a subsequent pull can tell them apart from reviewer activity. Posting a reply does not resolve the thread — that stays the reviewer's action. `/consensum-loop` and `/consensum-pull-feedback` do this automatically after each revision.
 
 ## Plan handover
 
