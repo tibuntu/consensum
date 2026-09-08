@@ -13,6 +13,10 @@ import {
   planHash,
   approvedMatch,
   pruneState,
+  parseReviewersEnv,
+  parseTagsEnv,
+  envFlag,
+  createBody,
 } from "../../dist/claude/hooks/consensum-hook-core.mjs";
 
 const approved = { decision: "approved", approvals: 1, reviews: [], threads: [] };
@@ -162,6 +166,69 @@ describe("pruneState — bounded state file now that approvals are kept", () => 
 
   it("handles empty input", () => {
     expect(pruneState({}, now)).toEqual({});
+  });
+});
+
+describe("parseReviewersEnv", () => {
+  it("parses comma-separated emails, only the exact :required suffix sets required", () => {
+    expect(parseReviewersEnv("alice@x.com:required, bob@x.com")).toEqual([
+      { email: "alice@x.com", required: true },
+      { email: "bob@x.com", required: false },
+    ]);
+  });
+
+  it("trims, drops empty items, and lowercases emails", () => {
+    expect(parseReviewersEnv(" Alice@X.com , , BOB@x.com:REQUIRED ")).toEqual([
+      { email: "alice@x.com", required: false },
+      { email: "bob@x.com", required: true },
+    ]);
+  });
+
+  it("undefined/empty -> []", () => {
+    expect(parseReviewersEnv(undefined)).toEqual([]);
+    expect(parseReviewersEnv("")).toEqual([]);
+  });
+});
+
+describe("parseTagsEnv", () => {
+  it("splits, trims, drops empties", () => {
+    expect(parseTagsEnv(" infra , security ,, ops ")).toEqual(["infra", "security", "ops"]);
+  });
+
+  it("undefined -> []", () => {
+    expect(parseTagsEnv(undefined)).toEqual([]);
+  });
+});
+
+describe("envFlag", () => {
+  it("true for 1/true/yes case-insensitively", () => {
+    for (const v of ["1", "true", "TRUE", "yes", "Yes"]) expect(envFlag(v)).toBe(true);
+  });
+
+  it("false otherwise, including undefined", () => {
+    for (const v of ["0", "false", "no", "", undefined]) expect(envFlag(v)).toBe(false);
+  });
+});
+
+describe("createBody", () => {
+  const plan = "# Deploy Plan\n\nbody";
+
+  it("keys absent when env is empty", () => {
+    const body = createBody(plan, {});
+    expect(body).toEqual({ title: "Deploy Plan", markdown: plan });
+  });
+
+  it("includes reviewers and tags parsed from env", () => {
+    const body = createBody(plan, { CONSENSUM_REVIEWERS: "alice@x.com:required", CONSENSUM_TAGS: "infra,security" });
+    expect(body.reviewers).toEqual([{ email: "alice@x.com", required: true }]);
+    expect(body.tags).toEqual(["infra", "security"]);
+    expect(body.requireBlockerResolution).toBeUndefined();
+  });
+
+  it("requireBlockerResolution present only when the flag is set", () => {
+    expect(createBody(plan, { CONSENSUM_REQUIRE_BLOCKER_RESOLUTION: "true" }).requireBlockerResolution).toBe(true);
+    expect(createBody(plan, { CONSENSUM_REQUIRE_BLOCKER_RESOLUTION: "0" }).requireBlockerResolution).toBeUndefined();
+    expect("requireBlockerResolution" in createBody(plan, {})).toBe(false);
   });
 });
 

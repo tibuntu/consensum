@@ -11,6 +11,50 @@ export function titleFromMarkdown(md) {
   return (m && m[1].trim()) || "Plan";
 }
 
+// CONSENSUM_REVIEWERS env parsing: "alice@x.com:required, bob@x.com" ->
+// [{ email: "alice@x.com", required: true }, { email: "bob@x.com", required: false }].
+// Comma-separated, trimmed, empties dropped; only the exact ":required" suffix
+// (case-insensitive) sets required, and emails are lowercased for the
+// case-insensitive dedupe the server already does.
+export function parseReviewersEnv(value) {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => {
+      const required = /:required$/i.test(s);
+      const email = (required ? s.slice(0, -":required".length) : s).trim().toLowerCase();
+      return { email, required };
+    });
+}
+
+// CONSENSUM_TAGS env parsing: comma-separated, trimmed, empties dropped.
+export function parseTagsEnv(value) {
+  if (!value) return [];
+  return value.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+// Loose boolean env flag: "1" | "true" | "yes" (case-insensitive) -> true.
+export function envFlag(value) {
+  return ["1", "true", "yes"].includes((value || "").toLowerCase());
+}
+
+// The POST /api/plans create body, built from the plan markdown and the
+// process env — reviewers/tags/blocker-gate are opt-in defaults an agent can
+// set once per project instead of threading them through every push.
+export function createBody(plan, env) {
+  const reviewers = parseReviewersEnv(env.CONSENSUM_REVIEWERS);
+  const tags = parseTagsEnv(env.CONSENSUM_TAGS);
+  return {
+    title: titleFromMarkdown(plan),
+    markdown: plan,
+    ...(reviewers.length ? { reviewers } : {}),
+    ...(tags.length ? { tags } : {}),
+    ...(envFlag(env.CONSENSUM_REQUIRE_BLOCKER_RESOLUTION) ? { requireBlockerResolution: true } : {}),
+  };
+}
+
 // HTTP header values must be ByteStrings (Latin-1) — fetch() throws on any
 // char > U+00FF, so a plan title with an em dash would fail the create closed.
 // Percent-encode the title portion (pure ASCII) and bound its length: a

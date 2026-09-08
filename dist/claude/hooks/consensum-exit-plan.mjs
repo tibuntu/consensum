@@ -26,7 +26,10 @@
 // push failure, plan vanished, or an unexpected error — it refuses (deny/block)
 // with a clear, in-band message rather than silently proceeding with an
 // un-reviewed plan. To deliberately bypass review (e.g. Consensum not used on
-// this project), set CONSENSUM_SKIP=1 (or remove the hook). State is scoped per
+// this project), set CONSENSUM_SKIP=1 (or remove the hook). Optional push-time
+// defaults, read via createBody() in consensum-hook-core.mjs: CONSENSUM_REVIEWERS
+// ("a@x.com:required,b@x.com"), CONSENSUM_TAGS ("infra,security"), and
+// CONSENSUM_REQUIRE_BLOCKER_RESOLUTION ("1"/"true"/"yes"). State is scoped per
 // Claude Code `session_id`, so a fresh session creates a new plan while a
 // re-fired ExitPlanMode in the same session PATCHes a new version of the same
 // plan. On approval the state entry records the approved content's hash (the
@@ -44,7 +47,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   idempotencyKeyFor,
-  titleFromMarkdown,
+  createBody,
   buildDigest,
   decide,
   allowPayload,
@@ -159,7 +162,7 @@ async function runGate({ cwd, sessionId, plan, entry, proceed, refuse }) {
   if (!entry?.planId) {
     // Idempotency-Key makes a retried create return the same plan instead of a duplicate.
     const idemKey = idempotencyKeyFor(sessionId, plan);
-    const created = await api("POST", "/api/plans", { title: titleFromMarkdown(plan), markdown: plan }, { "Idempotency-Key": idemKey });
+    const created = await api("POST", "/api/plans", createBody(plan, process.env), { "Idempotency-Key": idemKey });
     if (created.status >= 400 || !created.json?.id) {
       // Fail CLOSED: the push failed, so the plan was not reviewed.
       refuse(
@@ -170,6 +173,9 @@ async function runGate({ cwd, sessionId, plan, entry, proceed, refuse }) {
     entry = { planId: created.json.id, baseVersionNumber: 1, lastFingerprint: undefined };
     reviewUrl = created.json.reviewUrl || `${BASE}/app/documents/${entry.planId}`;
     process.stderr.write(`[consensum] Plan posted for review: ${reviewUrl}\n`);
+    for (const r of created.json.reviewers || []) {
+      if (r.status !== "added") process.stderr.write(`[consensum] reviewer ${r.email}: ${r.status}\n`);
+    }
   }
   updateState(cwd, (all) => {
     all[sessionId] = { ...entry, updatedAt: new Date().toISOString() };
