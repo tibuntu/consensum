@@ -1,13 +1,25 @@
 # Agent integration
 
 The hero loop is driven by three Claude Code slash commands shipped in
-[`dist/claude/commands/`](../dist/claude/commands/):
-[`/consensum-push-plan`](../dist/claude/commands/consensum-push-plan.md),
-[`/consensum-pull-feedback`](../dist/claude/commands/consensum-pull-feedback.md), and
-[`/consensum-pull-plan`](../dist/claude/commands/consensum-pull-plan.md). They talk
+[`plugins/consensum/commands/`](../plugins/consensum/commands/):
+[`/consensum-push-plan`](../plugins/consensum/commands/consensum-push-plan.md),
+[`/consensum-pull-feedback`](../plugins/consensum/commands/consensum-pull-feedback.md), and
+[`/consensum-pull-plan`](../plugins/consensum/commands/consensum-pull-plan.md). They talk
 to your instance via the machine API.
 
 ## Install
+
+Install via the in-repo Claude Code plugin marketplace:
+
+```
+/plugin marketplace add tibuntu/consensum
+/plugin install consensum@consensum                                   # slash commands, user scope
+/plugin install consensum-review-gate@consensum --scope project       # optional auto-proceed hook, per project
+```
+
+Plugins are versioned and update with the marketplace, unlike a one-time copy.
+
+### Without plugins
 
 Install the commands with the one-liner (no checkout needed):
 
@@ -43,10 +55,14 @@ so the agent can revise.
 
 For a fully hands-off loop — the agent waits for the verdict and **proceeds on its own**
 once approved — Consensum ships a Claude Code hook on the `ExitPlanMode` tool
-([`dist/claude/hooks/consensum-exit-plan.mjs`](../dist/claude/hooks/consensum-exit-plan.mjs)),
-which `--with-hook` installs into your project's `.claude/hooks/` and registers in that
-project's `.claude/settings.json`. When the agent finishes planning, the hook **blocks
-inside the plan-exit call**: it pushes the plan, waits on `/feedback/wait`, and then
+([`consensum-exit-plan.mjs`](../plugins/consensum-review-gate/hooks/consensum-exit-plan.mjs)).
+The `consensum-review-gate` plugin registers it on both events via its
+[`hooks/hooks.json`](../plugins/consensum-review-gate/hooks/hooks.json); the `--with-hook`
+script route (installing the same script into your project's `.claude/hooks/` and
+jq-merging the registration into that project's `.claude/settings.json`) and manually
+editing `.claude/settings.json` remain for projects not using plugins. When the agent
+finishes planning, the hook **blocks inside the plan-exit call**: it pushes the plan,
+waits on `/feedback/wait`, and then
 
 - **Approved** → returns `allow`; the agent exits plan mode and implements automatically.
 - **Changes requested** → returns `deny` with a consolidated feedback digest; the agent
@@ -89,7 +105,7 @@ gate has a matching fail-closed `block` on the backstop (missing token, push fai
 plan deleted mid-review, wait-window expiry, unexpected error).
 
 For plans pushed **outside** plan mode,
-[`/consensum-loop <id> [intervalMinutes]`](../dist/claude/commands/consensum-loop.md) does
+[`/consensum-loop <id> [intervalMinutes]`](../plugins/consensum/commands/consensum-loop.md) does
 the same wait-then-act loop on demand.
 
 > **Permission mode is not auto-applied.** A team-chosen "implement with Accept Edits / Auto"

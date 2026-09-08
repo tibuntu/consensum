@@ -68,13 +68,23 @@ integration. To run from source for development, see [CONTRIBUTING.md](CONTRIBUT
 
 ## Connecting your agent
 
-Install the Claude Code slash commands (and the optional auto-proceed hook):
+Install via the in-repo Claude Code plugin marketplace:
+
+```
+/plugin marketplace add tibuntu/consensum
+/plugin install consensum@consensum                                   # slash commands, user scope
+/plugin install consensum-review-gate@consensum --scope project       # optional auto-proceed hook, per project
+```
+
+Without plugins, the curl one-liner still works:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/tibuntu/consensum/main/scripts/install.sh | bash
 ```
 
-Then `/consensum-push-plan` posts a plan and `/consensum-pull-feedback` pulls the verdict
+That installs four slash commands — `/consensum-push-plan`, `/consensum-pull-feedback`,
+`/consensum-loop`, and `/consensum-pull-plan` — plus the optional auto-proceed hook.
+`/consensum-push-plan` posts a plan and `/consensum-pull-feedback` pulls the verdict
 back. Full setup, the hands-off hook, and the machine-API reference are in
 [docs/agent-integration.md](docs/agent-integration.md).
 

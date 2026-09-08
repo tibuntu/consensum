@@ -21,8 +21,8 @@ prisma/         Schema (User, Session, Account, Document, DocumentVersion, Annot
 scripts/        install.sh and tooling
 docker/         Container build/runtime support files
 tests/          Vitest unit tests + Playwright e2e (auth, review, versioning, nav)
-dist/claude/    Shipped Claude Code integration — slash commands + the ExitPlanMode hook
-                (installed via scripts/install.sh)
+plugins/        Two Claude Code plugins (slash commands, ExitPlanMode hook), listed in
+                the in-repo marketplace at .claude-plugin/
 docs/adr/       Architecture Decision Records (ADRs)
 ```
 
