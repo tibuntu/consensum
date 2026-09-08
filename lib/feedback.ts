@@ -21,7 +21,7 @@ interface DetailAnnotation {
   suggestedText?: string | null;
   appliedInVersion?: { versionNumber: number } | null;
   createdAt?: Date | string;
-  comments: { id?: string; body: string; author?: Author; createdAt?: Date | string }[];
+  comments: { id?: string; body: string; author?: Author; authorId?: string; createdAt?: Date | string }[];
 }
 interface DetailVersion { versionNumber: number; createdAt?: Date | string; createdBy?: Author }
 
@@ -62,7 +62,9 @@ export interface FeedbackThread {
   appliedInVersion: { versionNumber: number } | null;
   suggestedText: string | null;
   createdAt: string | null;
-  comments: { id: string; author: string; body: string; createdAt: string | null }[];
+  // True when this comment's author is the caller the feedback was built for —
+  // lets an agent recognise its own thread replies (see lib/annotations.ts addComment).
+  comments: { id: string; author: string; body: string; createdAt: string | null; mine: boolean }[];
 }
 
 export type Decision = "pending" | "approved" | "changes_requested";
@@ -113,7 +115,7 @@ function rank(t: FeedbackThread): number {
   return 2;
 }
 
-export function consolidateFeedback(detail: FeedbackDetail) {
+export function consolidateFeedback(detail: FeedbackDetail, callerId?: string) {
   const threads: FeedbackThread[] = detail.annotations.map((a) => ({
     id: a.id ?? "",
     quote: a.anchorExact,
@@ -134,7 +136,13 @@ export function consolidateFeedback(detail: FeedbackDetail) {
     appliedInVersion: a.appliedInVersion ?? null,
     suggestedText: a.suggestedText ?? null,
     createdAt: toIso(a.createdAt),
-    comments: a.comments.map((c) => ({ id: c.id ?? "", author: authorName(c.author ?? null), body: c.body, createdAt: toIso(c.createdAt) })),
+    comments: a.comments.map((c) => ({
+      id: c.id ?? "",
+      author: authorName(c.author ?? null),
+      body: c.body,
+      createdAt: toIso(c.createdAt),
+      mine: callerId != null && c.authorId === callerId,
+    })),
   }));
   const reviews = detail.reviews.map((r) => ({
     id: r.id ?? "",
@@ -245,10 +253,13 @@ export function consolidateFeedback(detail: FeedbackDetail) {
   };
 }
 
-export async function getPlanFeedback(documentId: string, filter?: { include?: string[]; exclude?: string[] }) {
+export async function getPlanFeedback(
+  documentId: string,
+  filter?: { include?: string[]; exclude?: string[]; callerId?: string }
+) {
   const detail = await getDocumentDetail(documentId);
   if (!detail) return null;
-  const consolidated = consolidateFeedback(detail as unknown as FeedbackDetail);
+  const consolidated = consolidateFeedback(detail as unknown as FeedbackDetail, filter?.callerId);
   if (filter && (filter.include?.length || filter.exclude?.length)) {
     return { ...consolidated, threads: filterThreads(consolidated.threads, filter) };
   }

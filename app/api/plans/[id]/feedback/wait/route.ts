@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/api";
 import { resolveAccess } from "@/lib/authz";
 import { clampTimeout, waitForFeedbackChange } from "@/lib/feedback-wait";
+import { getPlanFeedback } from "@/lib/feedback";
 
 const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_MAX_MS = 60000;
@@ -20,7 +21,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const requested = raw === null ? undefined : Number(raw);
   const timeoutMs = clampTimeout(requested, maxMs, DEFAULT_TIMEOUT_MS);
 
-  const result = await waitForFeedbackChange(id, timeoutMs);
+  const result = await waitForFeedbackChange(id, timeoutMs, {
+    readSnapshot: (docId) => getPlanFeedback(docId, { callerId: authd.user.id }),
+  });
   if (result === null) return NextResponse.json({ error: "not found" }, { status: 404, headers: authd.headers });
   return NextResponse.json(result, { headers: { ...authd.headers, "Cache-Control": "no-store" } });
 }

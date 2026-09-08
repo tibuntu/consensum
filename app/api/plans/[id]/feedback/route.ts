@@ -19,7 +19,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const url = new URL(req.url);
   const include = csv(url.searchParams.get("include"));
   const exclude = csv(url.searchParams.get("exclude"));
-  const feedback = await getPlanFeedback(id, { include, exclude });
+  const feedback = await getPlanFeedback(id, { include, exclude, callerId: authd.user.id });
   if (!feedback) return NextResponse.json({ error: "not found" }, { status: 404, headers: authd.headers });
   return NextResponse.json(feedback, { headers: authd.headers });
 }

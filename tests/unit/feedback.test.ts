@@ -191,6 +191,39 @@ describe("resolution reason echo (F7)", () => {
   });
 });
 
+describe("comments[].mine (machine-token replies)", () => {
+  it("marks the caller's own comment as mine, leaving the other comment mine: false", () => {
+    const r = consolidateFeedback(
+      {
+        state: "OPEN",
+        annotations: [
+          baseThread({
+            id: "ann_mine",
+            comments: [
+              { id: "c1", body: "which provider?", author: { name: "Reviewer" }, authorId: "reviewer-1" },
+              { id: "c2", body: "Addressed in v2", author: { name: "Owner" }, authorId: "owner-1" },
+            ],
+          }),
+        ],
+        reviews: [],
+      },
+      "owner-1"
+    );
+    const thread = r.threads.find((t) => t.id === "ann_mine")!;
+    expect(thread.comments[0].mine).toBe(false);
+    expect(thread.comments[1].mine).toBe(true);
+  });
+
+  it("defaults to mine: false when no caller id is supplied", () => {
+    const r = consolidateFeedback({
+      state: "OPEN",
+      annotations: [baseThread({ id: "ann_nocaller", comments: [{ body: "hi", author: { name: "Sam" }, authorId: "sam-1" }] })],
+      reviews: [],
+    });
+    expect(r.threads[0].comments[0].mine).toBe(false);
+  });
+});
+
 describe("reviewer-conflict signals (F4)", () => {
   it("counts distinct reviewers requesting changes and flags an approve/reject split", () => {
     const r = consolidateFeedback({
