@@ -1,5 +1,6 @@
 {
   "name": "consensum",
+  "description": "Claude Code integration for Consensum: plan-review slash commands and the opt-in review-gate hook.",
   "owner": { "name": "Timo Hankamer", "url": "https://github.com/tibuntu" },
   "plugins": [
     { "name": "consensum", "source": "./plugins/consensum", "description": "Slash commands for the Consensum plan-review loop: /consensum-push-plan, /consensum-pull-feedback, /consensum-loop, /consensum-pull-plan." },

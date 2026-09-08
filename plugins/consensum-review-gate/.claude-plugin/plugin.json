@@ -2,6 +2,7 @@
   "name": "consensum-review-gate",
   "description": "Opt-in ExitPlanMode hook that pushes every plan-mode exit to Consensum and blocks until the team approves. Install at project scope only.",
   "version": "0.20.10",
+  "author": { "name": "Timo Hankamer", "url": "https://github.com/tibuntu" },
   "homepage": "https://github.com/tibuntu/consensum",
   "license": "Apache-2.0"
 }
