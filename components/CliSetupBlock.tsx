@@ -14,7 +14,7 @@ export function CliSetupBlock({
 }) {
   const snippet = `export CONSENSUM_BASE_URL="${baseUrl}"
 export CONSENSUM_API_TOKEN="csm_…"   # ${tokenHint}
-# /consensum-push-plan and /consensum-pull-feedback ship in this repo's dist/claude/commands/`;
+# /consensum-push-plan and /consensum-pull-feedback ship in this repo's plugins/consensum/commands/`;
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">

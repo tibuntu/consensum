@@ -17,7 +17,7 @@ import {
   parseTagsEnv,
   envFlag,
   createBody,
-} from "../../dist/claude/hooks/consensum-hook-core.mjs";
+} from "../../plugins/consensum-review-gate/hooks/consensum-hook-core.mjs";
 
 const approved = { decision: "approved", approvals: 1, reviews: [], threads: [] };
 const changes = (over: Record<string, unknown> = {}) => ({

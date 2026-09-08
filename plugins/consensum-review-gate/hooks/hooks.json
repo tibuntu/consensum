@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "PermissionRequest": [
+      { "matcher": "ExitPlanMode", "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/consensum-exit-plan.mjs\"", "timeout": 345600 } ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "ExitPlanMode", "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/consensum-exit-plan.mjs\"", "timeout": 345600 } ] }
+    ]
+  }
+}

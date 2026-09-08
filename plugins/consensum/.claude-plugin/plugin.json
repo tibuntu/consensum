@@ -1,0 +1,7 @@
+{
+  "name": "consensum",
+  "description": "Slash commands for the Consensum plan-review loop: /consensum-push-plan, /consensum-pull-feedback, /consensum-loop, /consensum-pull-plan.",
+  "version": "0.20.10",
+  "homepage": "https://github.com/tibuntu/consensum",
+  "license": "Apache-2.0"
+}

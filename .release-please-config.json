@@ -7,7 +7,9 @@
       "include-component-in-tag": false,
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
-        "lib/version.ts"
+        "lib/version.ts",
+        { "type": "json", "path": "plugins/consensum/.claude-plugin/plugin.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "plugins/consensum-review-gate/.claude-plugin/plugin.json", "jsonpath": "$.version" }
       ],
       "changelog-sections": [
         {
