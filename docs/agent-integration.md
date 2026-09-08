@@ -27,6 +27,14 @@ export CONSENSUM_BASE_URL="http://localhost:3000"
 export CONSENSUM_API_TOKEN="<token from Settings → API tokens>"
 ```
 
+Optionally, set these to route every pushed plan to the right people by default:
+
+```bash
+export CONSENSUM_REVIEWERS="alice@x.com:required,bob@x.com"   # comma-separated emails; ":required" marks a must-approve reviewer
+export CONSENSUM_TAGS="infra,security"                         # comma-separated tag names applied to every push
+export CONSENSUM_REQUIRE_BLOCKER_RESOLUTION="true"             # "1"/"true"/"yes": gate approval on every BLOCKER thread being resolved
+```
+
 `/consensum-push-plan` posts the current plan and returns a review URL. Once the team weighs
 in, `/consensum-pull-feedback <id>` pulls the consolidated verdict, threads, and digest back
 so the agent can revise.
@@ -101,7 +109,7 @@ Bearer token, owner-scoped:
 
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /api/plans` | Push a plan; returns `{ id, reviewUrl }`. Scope `plans:write`. |
+| `POST /api/plans` | Push a plan; returns `{ id, reviewUrl }`. Optional `reviewers` (array of emails or `{email, required}`, max 20) and `tags` (array of strings, max 20) route the plan to reviewers and apply tags on create — the response echoes `reviewers: [{email, status}]` (`status` is `"added"` or an error like `"no_account"`) and `tags: [...]` when supplied. An idempotent replay (repeated key) does not re-apply either. Scope `plans:write`. |
 | `PATCH /api/plans/[id]` | Post a revised version (optimistic-locked on `baseVersionNumber`). Scope `plans:write`. |
 | `GET /api/plans/[id]` | Pull a plan: `{ id, title, state, markdown, versionNumber, agentContext, role, archived }`. `versionNumber` is the `baseVersionNumber` for a later `PATCH`; `role` tells the caller whether a claim is needed. Scope `feedback:read`. |
 | `POST /api/plans/[id]/claim` | Take over a plan (REVIEWER only): swaps ownership to the caller, demotes the previous owner to REVIEWER, and notifies them. 409 when already owner, archived, or a concurrent claim won. Scope `plans:write`. |
