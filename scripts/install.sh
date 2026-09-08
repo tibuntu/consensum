@@ -2,14 +2,18 @@
 #
 # Install the Consensum Claude Code integration.
 #
+# Prefer the Claude Code plugin route (versioned, updatable — see
+# docs/agent-integration.md). This script is the no-plugin fallback.
+#
 # Remote (no checkout needed):
 #   curl -fsSL https://raw.githubusercontent.com/tibuntu/consensum/main/scripts/install.sh | bash
 #   curl -fsSL https://raw.githubusercontent.com/tibuntu/consensum/main/scripts/install.sh | bash -s -- --with-hook
 #
 # Local (from a checkout): scripts/install.sh [options]
 #
-#   Slash commands (/consensum-push-plan, /consensum-pull-feedback, /consensum-loop)
-#   install to ~/.claude/commands by default — invoked explicitly, safe everywhere.
+#   Slash commands (/consensum-push-plan, /consensum-pull-feedback, /consensum-loop,
+#   /consensum-pull-plan) install to ~/.claude/commands by default — invoked
+#   explicitly, safe everywhere.
 #
 #   The ExitPlanMode auto-proceed hook is OPT-IN per project (--with-hook): it pushes
 #   every plan-mode exit to Consensum for review, so it installs into a single
@@ -30,14 +34,14 @@ set -euo pipefail
 REPO="${CONSENSUM_REPO:-tibuntu/consensum}"
 REF="${CONSENSUM_REF:-main}"
 RAW_BASE="${CONSENSUM_RAW_BASE:-https://raw.githubusercontent.com/${REPO}/${REF}}"
-COMMANDS=(consensum-push-plan.md consensum-pull-feedback.md consensum-loop.md)
+COMMANDS=(consensum-push-plan.md consensum-pull-feedback.md consensum-loop.md consensum-pull-plan.md)
 
 # If run from a checkout, copy from disk; if piped via curl, download from RAW_BASE.
 SRC=""
 _self="${BASH_SOURCE[0]:-}"
 if [ -n "$_self" ] && [ -f "$_self" ]; then
   _dir="$(cd "$(dirname "$_self")/.." && pwd)"
-  [ -f "$_dir/dist/claude/commands/consensum-push-plan.md" ] && SRC="$_dir"
+  [ -f "$_dir/plugins/consensum/commands/consensum-push-plan.md" ] && SRC="$_dir"
 fi
 
 # defaults / args
@@ -78,7 +82,7 @@ provide() {
 echo "Installing Consensum slash commands -> $COMMANDS_DIR"
 [ -n "$SRC" ] || echo "  (downloading from $RAW_BASE)"
 for f in "${COMMANDS[@]}"; do
-  provide "dist/claude/commands/$f" "$COMMANDS_DIR/$f"
+  provide "plugins/consensum/commands/$f" "$COMMANDS_DIR/$f"
   info "$f"
 done
 
@@ -86,10 +90,10 @@ done
 if [ "$WITH_HOOK" -eq 1 ]; then
   SETTINGS="$PROJECT_DIR/.claude/settings.json"
   echo "Installing ExitPlanMode hook -> $PROJECT_DIR/.claude"
-  provide "dist/claude/hooks/consensum-exit-plan.mjs" "$PROJECT_DIR/.claude/hooks/consensum-exit-plan.mjs"
+  provide "plugins/consensum-review-gate/hooks/consensum-exit-plan.mjs" "$PROJECT_DIR/.claude/hooks/consensum-exit-plan.mjs"
   info "hooks/consensum-exit-plan.mjs"
   # The entry hook imports ./consensum-hook-core.mjs at runtime, so it must ship too.
-  provide "dist/claude/hooks/consensum-hook-core.mjs" "$PROJECT_DIR/.claude/hooks/consensum-hook-core.mjs"
+  provide "plugins/consensum-review-gate/hooks/consensum-hook-core.mjs" "$PROJECT_DIR/.claude/hooks/consensum-hook-core.mjs"
   info "hooks/consensum-hook-core.mjs"
 
   read -r -d '' HOOK_ENTRY <<'JSON' || true
