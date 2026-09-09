@@ -2,18 +2,28 @@
 
 ## [0.21.0](https://github.com/tibuntu/consensum/compare/v0.20.10...v0.21.0) (2026-09-09)
 
+This release ships the Claude Code integration as **two installable plugins**, lets a pushed plan **reach its reviewers on its own** instead of waiting for someone to share the URL, and gives the agent **a voice in review threads**, so reviewers read what a revision changed instead of diffing for it.
 
-### Features
+### New features
 
-* **api:** accept reviewers and tags on plan push ([60c48ae](https://github.com/tibuntu/consensum/commit/60c48ae4d0b149f71d1ad1d78b0957cd1c6bd7fa))
-* **api:** let the plan owner reply to review threads via machine token ([edb4d4b](https://github.com/tibuntu/consensum/commit/edb4d4bfc51c489639a901687eab702d883808d0))
-* **feedback:** mark the caller's own comments with mine ([9b6046c](https://github.com/tibuntu/consensum/commit/9b6046c733892435b046407cce720741e36d25bd))
-* **hook:** route reviewers, tags, and blocker gate from env ([15ad218](https://github.com/tibuntu/consensum/commit/15ad21854768ee2d9a8319e01d8ea556da3003f3))
+**Install as Claude Code plugins.** The slash commands and the auto-proceed hook now live in an in-repo plugin marketplace. Add it once with `/plugin marketplace add tibuntu/consensum`, then install `consensum` for the four slash commands and, per project, `consensum-review-gate` for the `ExitPlanMode` hook. They are two plugins on purpose: the hook fails closed and denies every plan-mode exit when no API token is set, so it must never land in every project by accident. Install it with `--scope project`. Plugin versions follow the release, so updating the marketplace updates the prompts, something a one-time copy never did. The `curl | bash` install script still works for setups without plugins.
 
+**Pushed plans reach their reviewers.** Until now a plan pushed by an agent was visible only to its owner. Nobody was notified, and the hook could wait days for a review nobody knew about. `POST /api/plans` now accepts `reviewers` (emails, optionally marked required) and `tags`. Reviewers get the usual review-requested notification, required ones must approve before the plan can reach *approved*, and the response lists each reviewer's status, so a typo in an email never fails the push. Set the defaults once and every push picks them up:
 
-### Bug Fixes
+```bash
+export CONSENSUM_REVIEWERS="alice@example.com:required,bob@example.com"
+export CONSENSUM_TAGS="infra,security"
+```
 
-* **install:** ship consensum-pull-plan and point at the plugin paths ([d54d44b](https://github.com/tibuntu/consensum/commit/d54d44b1cfbbaf770950ae9b4ff2eea1c9650f04))
+`/consensum-push-plan` also takes `--reviewers` and `--tags` for a one-off override. A third variable, `CONSENSUM_REQUIRE_BLOCKER_RESOLUTION=1`, makes the hook push with the server-side blocker gate switched on: the plan cannot reach *approved* while a BLOCKER thread is still open. The gate itself is not new; the hook just had no way to ask for it.
+
+**The agent answers review threads.** Reviewers used to learn whether their point was addressed by diffing two versions, and an open BLOCKER stayed open until a human noticed the fix had landed. The owner's token can now reply to a thread via `POST /api/plans/{id}/threads/{threadId}/comments`. `/consensum-loop` and `/consensum-pull-feedback` use it after every revision and post one line per thread, `Addressed in v3: …` or `Not changed: …`. Replies appear in the thread under your name, exactly like a comment from the web UI, and reviewers get the usual notification. Resolving the thread stays the reviewer's call. So the agent can tell its own replies from reviewer activity, the feedback payload marks them with `comments[].mine`.
+
+### Fixes & improvements
+
+* The install script never copied `/consensum-pull-plan`, although the command has shipped since 0.19.0. It does now.
+
+> **Upgrading:** The integration files moved from `dist/claude/` to `plugins/consensum/commands/` and `plugins/consensum-review-gate/hooks/`. Copies installed by the script keep working but do not update themselves; re-run the script or switch to the plugins. If you switch a project to the `consensum-review-gate` plugin, remove the hook entries the script wrote to that project's `.claude/settings.json`, otherwise two gates run on every plan-mode exit. All API changes are additive: existing tokens and scopes suffice, and the feedback `schemaVersion` stays at 2.
 
 ## [0.20.10](https://github.com/tibuntu/consensum/compare/v0.20.9...v0.20.10) (2026-09-06)
 
