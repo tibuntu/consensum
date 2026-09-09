@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.21.0](https://github.com/tibuntu/consensum/compare/v0.20.10...v0.21.0) (2026-09-09)
+
+
+### Features
+
+* **api:** accept reviewers and tags on plan push ([60c48ae](https://github.com/tibuntu/consensum/commit/60c48ae4d0b149f71d1ad1d78b0957cd1c6bd7fa))
+* **api:** let the plan owner reply to review threads via machine token ([edb4d4b](https://github.com/tibuntu/consensum/commit/edb4d4bfc51c489639a901687eab702d883808d0))
+* **feedback:** mark the caller's own comments with mine ([9b6046c](https://github.com/tibuntu/consensum/commit/9b6046c733892435b046407cce720741e36d25bd))
+* **hook:** route reviewers, tags, and blocker gate from env ([15ad218](https://github.com/tibuntu/consensum/commit/15ad21854768ee2d9a8319e01d8ea556da3003f3))
+
+
+### Bug Fixes
+
+* **install:** ship consensum-pull-plan and point at the plugin paths ([d54d44b](https://github.com/tibuntu/consensum/commit/d54d44b1cfbbaf770950ae9b4ff2eea1c9650f04))
+
 ## [0.20.10](https://github.com/tibuntu/consensum/compare/v0.20.9...v0.20.10) (2026-09-06)
 
 
