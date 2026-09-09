@@ -42,3 +42,4 @@ test-results/
 
 # Internal GSD planning artifacts — not tracked in the public repo
 docs/superpowers/
+.vitest/
