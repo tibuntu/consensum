@@ -2,7 +2,7 @@
   "name": "consensum",
   "version": "0.21.0",
   "private": true,
-  "packageManager": "pnpm@12.3.4",
+  "packageManager": "pnpm@12.4.1",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -30,8 +30,8 @@
     "next": "16.3.4",
     "nodemailer": "^10.0.0",
     "pg": "^8.21.0",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"
   },
