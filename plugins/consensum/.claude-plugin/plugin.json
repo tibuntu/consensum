@@ -1,7 +1,7 @@
 {
   "name": "consensum",
   "description": "Slash commands for the Consensum plan-review loop: /consensum-push-plan, /consensum-pull-feedback, /consensum-loop, /consensum-pull-plan.",
-  "version": "0.21.0",
+  "version": "0.21.1",
   "author": {
     "name": "Timo Hankamer",
     "url": "https://github.com/tibuntu"
