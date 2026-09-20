@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.21.1](https://github.com/tibuntu/consensum/compare/v0.21.0...v0.21.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **deps:** update all minor dependencies ([39983c0](https://github.com/tibuntu/consensum/commit/39983c036336c71c0a95aecfbc56ad9e9d8bf190))
+* **deps:** update all patch dependencies ([80f55a7](https://github.com/tibuntu/consensum/commit/80f55a757d473be8e105ecd4a65f13fe4533b87f))
+* **deps:** update dependency dotenv to v18 ([7db8350](https://github.com/tibuntu/consensum/commit/7db8350ef39b000a98e9313351c76c244774d596))
+
 ## [0.21.0](https://github.com/tibuntu/consensum/compare/v0.20.10...v0.21.0) (2026-09-09)
 
 This release ships the Claude Code integration as **two installable plugins**, lets a pushed plan **reach its reviewers on its own** instead of waiting for someone to share the URL, and gives the agent **a voice in review threads**, so reviewers read what a revision changed instead of diffing for it.
